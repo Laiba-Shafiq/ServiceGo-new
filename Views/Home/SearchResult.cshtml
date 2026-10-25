@@ -1,0 +1,1438 @@
+﻿@model IEnumerable<ServiceGo.Models.Register>
+@using System.Linq
+@using System.Collections.Generic
+
+@{
+    Layout = null;
+
+    var selectedCity =
+        ViewBag.SelectedCity as string ?? "All Locations";
+
+    var selectedService =
+        ViewBag.SelectedService as string ?? "All Categories";
+
+    var searchCities =
+        ViewBag.ProviderCities as IEnumerable<string>
+        ?? Enumerable.Empty<string>();
+
+    var searchMessage =
+        ViewBag.SearchMessage as string;
+
+    var resultList =
+        Model?.ToList()
+        ?? new List<ServiceGo.Models.Register>();
+}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="utf-8" />
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0" />
+
+    <title>ServiceGo - Find Providers</title>
+
+    <link rel="icon"
+          href="@Url.Content("~/images/Logo.png")"
+          type="image/x-icon" />
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+          rel="stylesheet" />
+
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" />
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap"
+          rel="stylesheet" />
+
+    <style>
+
+        :root {
+            --orange: #f28b20;
+            --orange-dark: #dd7610;
+            --ink: #172533;
+            --muted: #74808a;
+            --cream: #fff8ef;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            min-height: 100%;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: #f8fafc;
+            color: var(--ink);
+        }
+
+        a {
+            text-decoration: none;
+        }
+
+
+        /* Top bar */
+
+        .topbar {
+            background: #fff;
+            border-top: 3px solid var(--orange);
+            box-shadow: 0 5px 20px rgba(23,37,51,.06);
+        }
+
+        .topbar-inner {
+            min-height: 74px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+        }
+
+        .brand {
+            display: inline-flex;
+            align-items: center;
+            gap: 0;
+            color: var(--ink);
+            font-weight: 800;
+            font-size: 1.35rem;
+        }
+
+            .brand img {
+                width: 42px;
+                height: 42px;
+                object-fit: contain;
+                margin-right: 7px;
+            }
+
+            .brand span {
+                color: var(--orange);
+            }
+
+        .home-link {
+            color: #52606b;
+            font-weight: 600;
+            padding: 9px 14px;
+            border-radius: 12px;
+            transition: .2s;
+        }
+
+            .home-link:hover {
+                background: #fff2e2;
+                color: var(--orange-dark);
+            }
+
+
+        /* Hero */
+
+        .hero {
+            padding: 46px 0 35px;
+            background: linear-gradient( 135deg, #fff7ed 0%, #fff 55%, #fff5e7 100% );
+            border-bottom: 1px solid #f1e8de;
+        }
+
+        .eyebrow {
+            color: var(--orange-dark);
+            font-size: .78rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+        }
+
+        .hero h1 {
+            font-size: clamp(2rem,4vw,3rem);
+            font-weight: 800;
+            margin: 8px 0 10px;
+        }
+
+        .hero p {
+            color: var(--muted);
+            margin: 0;
+            max-width: 720px;
+            line-height: 1.7;
+        }
+
+
+        /* Search */
+
+        .search-shell {
+            margin-top: 28px;
+            background: #fff;
+            border: 1px solid #eee5dc;
+            border-radius: 22px;
+            padding: 12px;
+            box-shadow: 0 18px 45px rgba(23,37,51,.09);
+        }
+
+        .search-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            gap: 10px;
+        }
+
+        .field-wrap {
+            position: relative;
+        }
+
+            .field-wrap i {
+                position: absolute;
+                left: 15px;
+                top: 50%;
+                transform: translateY(-50%);
+                color: var(--orange);
+                z-index: 2;
+            }
+
+            .field-wrap select {
+                width: 100%;
+                height: 52px;
+                border: 1px solid #e7e1da;
+                border-radius: 15px;
+                padding: 0 14px 0 43px;
+                color: #34414c;
+                font-weight: 600;
+                background: #fff;
+                outline: none;
+                cursor: pointer;
+            }
+
+                .field-wrap select:focus {
+                    border-color: #f2b66f;
+                    box-shadow: 0 0 0 4px rgba(242,139,32,.10);
+                }
+
+        .search-btn {
+            height: 52px;
+            border: 0;
+            border-radius: 15px;
+            background: var(--orange);
+            color: #fff;
+            padding: 0 28px;
+            font-weight: 800;
+            box-shadow: 0 8px 18px rgba(242,139,32,.20);
+            cursor: pointer;
+        }
+
+            .search-btn:hover {
+                background: var(--orange-dark);
+            }
+
+
+        /* Results */
+
+        .results-area {
+            padding: 35px 0 65px;
+        }
+
+        .results-head {
+            display: flex;
+            align-items: end;
+            justify-content: space-between;
+            gap: 15px;
+            margin-bottom: 22px;
+        }
+
+            .results-head h2 {
+                margin: 3px 0 0;
+                font-size: 1.55rem;
+                font-weight: 800;
+            }
+
+        .result-count {
+            color: #89939c;
+            font-size: .86rem;
+            font-weight: 600;
+        }
+
+        .active-filter {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            margin-top: 9px;
+            padding: 6px 11px;
+            border-radius: 30px;
+            background: #fff2e2;
+            color: #c86a0c;
+            font-size: .73rem;
+            font-weight: 700;
+        }
+
+
+        /* Provider list */
+
+        #providerList {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .provider-item {
+            width: 100%;
+            margin: 0;
+        }
+
+        .provider-card {
+            width: 100%;
+            background: #fff;
+            border: 1px solid #eee9e3;
+            border-radius: 17px;
+            box-shadow: 0 7px 20px rgba(23,37,51,.055);
+            transition: .22s ease;
+            overflow: hidden;
+        }
+
+            .provider-card:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 12px 26px rgba(23,37,51,.09);
+                border-color: #f4d7b5;
+            }
+
+        .provider-body {
+            padding: 13px 17px;
+        }
+
+        .provider-top {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            min-width: 0;
+        }
+
+        /* Small circular profile picture */
+
+        .provider-photo-wrap {
+            width: 65px;
+            height: 65px;
+            min-width: 65px;
+            border-radius: 50%;
+            overflow: hidden;
+            background: #fff2e2;
+            border: 3px solid #f4b15e;
+            box-shadow: 0 3px 10px rgba(0,0,0,.07);
+        }
+
+        .provider-photo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .provider-main {
+            min-width: 0;
+            flex: 1;
+        }
+
+        .provider-name-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .provider-name {
+            color: var(--ink);
+            font-size: .98rem;
+            font-weight: 800;
+            margin: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .provider-id {
+            color: #a0a8ae;
+            font-size: .66rem;
+            margin-top: 2px;
+        }
+
+        .rating {
+            color: #d77a12;
+            background: #fff7ed;
+            border-radius: 9px;
+            padding: 5px 8px;
+            white-space: nowrap;
+            font-size: .70rem;
+            font-weight: 800;
+        }
+
+        .verified-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 5px;
+            color: #e37c16;
+            font-size: .66rem;
+            font-weight: 800;
+        }
+
+        .provider-details {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 7px;
+            margin-top: 10px;
+        }
+
+        .meta-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: #f7f8f9;
+            color: #65717b;
+            border-radius: 9px;
+            padding: 5px 8px;
+            font-size: .67rem;
+            font-weight: 600;
+        }
+
+        .services-line {
+            color: #65717b;
+            font-size: .71rem;
+            line-height: 1.4;
+            margin-top: 7px;
+        }
+
+            .services-line strong {
+                color: #3f4c55;
+                margin-right: 3px;
+            }
+
+
+        /* Card actions */
+
+        .card-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 9px;
+        }
+
+        .btn-profile,
+        .btn-book {
+            border-radius: 9px;
+            padding: 7px 14px;
+            text-align: center;
+            font-size: .69rem;
+            font-weight: 800;
+            transition: .2s;
+        }
+
+        .btn-profile {
+            color: #42505a;
+            background: #f5f6f7;
+            border: 1px solid #e5e8ea;
+        }
+
+        .btn-book {
+            color: #fff;
+            background: var(--orange);
+        }
+
+        .btn-profile:hover {
+            background: #eceff1;
+            color: #25323c;
+        }
+
+        .btn-book:hover {
+            background: var(--orange-dark);
+            color: #fff;
+        }
+
+
+        /* Load more */
+
+        .load-more-wrap {
+            text-align: center;
+            margin-top: 25px;
+        }
+
+        .load-more-btn {
+            border: 0;
+            border-radius: 13px;
+            background: #fff2e2;
+            color: #c86a0c;
+            padding: 11px 24px;
+            font-size: .78rem;
+            font-weight: 800;
+            box-shadow: 0 5px 15px rgba(23,37,51,.05);
+            transition: .2s;
+            cursor: pointer;
+        }
+
+            .load-more-btn:hover {
+                background: #ffe4c5;
+                transform: translateY(-1px);
+            }
+
+        .loaded-note {
+            color: #89939c;
+            font-size: .75rem;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+
+
+        /* Empty result */
+
+        .empty {
+            background: #fff;
+            border: 1px solid #eee9e3;
+            border-radius: 24px;
+            padding: 60px 25px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(23,37,51,.05);
+        }
+
+        .empty-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 15px;
+            display: grid;
+            place-items: center;
+            border-radius: 50%;
+            background: #fff2e2;
+            color: var(--orange);
+            font-size: 1.5rem;
+        }
+
+        .empty h3 {
+            font-size: 1.25rem;
+            font-weight: 800;
+        }
+
+        .empty p {
+            color: var(--muted);
+            margin: 0;
+        }
+
+        .alert-soft {
+            border: 0;
+            border-radius: 14px;
+            background: #fff2e2;
+            color: #a95d0d;
+            font-size: .82rem;
+            font-weight: 600;
+        }
+
+
+        /* Footer - public homepage style */
+
+        footer {
+            background: #fff8ef;
+            color: #172533;
+            padding: 34px 0 22px;
+            border-top: 1px solid #f0e4d5;
+        }
+
+        .footer-grid {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr 1fr;
+            gap: 40px;
+        }
+
+        .footer-title {
+            color: var(--orange-dark);
+            font-weight: 800;
+            margin-bottom: 10px;
+            font-size: .9rem;
+        }
+
+        .footer-link {
+            display: block;
+            color: #5f6970;
+            font-size: .78rem;
+            margin-bottom: 8px;
+            transition: .2s;
+        }
+
+            .footer-link:hover {
+                color: var(--orange-dark);
+                transform: translateX(2px);
+            }
+
+        .footer-about {
+            color: #6d757c;
+            font-size: .76rem;
+            margin: 0;
+        }
+
+        .footer-bottom {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            border-top: 1px solid #eadcca;
+            margin-top: 28px;
+            padding-top: 16px;
+        }
+
+        .footer-text {
+            color: #7d858b;
+            font-size: .72rem;
+        }
+
+        .developer {
+            color: #59636b;
+            font-size: .72rem;
+            font-weight: 600;
+        }
+
+            .developer span {
+                color: var(--orange-dark);
+                font-weight: 800;
+            }
+
+
+        /* Responsive */
+
+        @@media(max-width:767px) {
+
+            .topbar-inner {
+                min-height: 64px;
+            }
+
+            .search-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .hero {
+                padding: 34px 0 28px;
+            }
+
+            .results-head {
+                display: block;
+            }
+
+            .result-count {
+                margin-top: 10px;
+            }
+
+            .provider-body {
+                padding: 12px;
+            }
+
+            .provider-photo-wrap {
+                width: 58px;
+                height: 58px;
+                min-width: 58px;
+            }
+
+            .provider-name {
+                font-size: .90rem;
+            }
+
+            .rating {
+                font-size: .65rem;
+                padding: 4px 6px;
+            }
+
+            .provider-details {
+                margin-top: 8px;
+            }
+
+            .card-actions {
+                margin-top: 8px;
+            }
+
+            .btn-profile,
+            .btn-book {
+                padding: 7px 10px;
+                font-size: .66rem;
+            }
+
+            .footer-grid {
+                grid-template-columns: 1fr;
+                gap: 22px;
+            }
+
+            .footer-bottom {
+                display: block;
+                text-align: center;
+            }
+
+            .developer {
+                margin-top: 7px;
+            }
+        }
+    </style>
+
+
+    <style>
+        .topbar .brand span {
+            color: #000000 !important;
+        }
+    </style>
+
+</head>
+
+<body>
+
+
+    <!-- Top bar -->
+
+    <header class="topbar">
+
+        <div class="container topbar-inner">
+
+            <a href="@Url.Action("Index", "Home")"
+               class="brand">
+
+                <img src="@Url.Content("~/images/Logo.png")"
+                     alt="ServiceGo" />
+
+                Service<span>Go</span>
+
+            </a>
+
+
+            <a href="@Url.Action("Index", "Home")"
+               class="home-link">
+
+                <i class="bi bi-house me-1"></i>
+                Home
+
+            </a>
+
+        </div>
+
+    </header>
+
+
+    <!-- Hero / search -->
+
+    <section class="hero">
+
+        <div class="container">
+
+            <div class="eyebrow">
+                Find your local professional
+            </div>
+
+            <h1>
+                Search Verified Service Providers
+            </h1>
+
+            <p>
+                Choose a service and city to see approved providers
+                available in your area.
+            </p>
+
+
+            <form method="get"
+                  action="@Url.Action("SearchResult", "Home")"
+                  class="search-shell">
+
+                <div class="search-grid">
+
+
+                    <!-- City -->
+
+                    <div class="field-wrap">
+
+                        <i class="bi bi-geo-alt-fill"></i>
+
+                        <select name="city"
+                                aria-label="Select city">
+
+                            <option value="All Locations"
+                                    selected="@(selectedCity.Equals("All Locations", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">
+                                All Locations
+                            </option>
+
+                            @foreach (var city in searchCities
+                                                        .Where(x => !string.IsNullOrWhiteSpace(x))
+                                                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                                                        .OrderBy(x => x))
+                            {
+                                <option value="@city"
+                                        selected="@(selectedCity.Equals(city, StringComparison.OrdinalIgnoreCase) ? "selected" : null)">
+                                    @city
+                                </option>
+                            }
+
+                        </select>
+
+                    </div>
+
+
+                    <!-- Service -->
+
+                    <div class="field-wrap">
+
+                        <i class="bi bi-tools"></i>
+
+                        <select name="service" class="form-select border-secondary" style="height: 50px;">
+                            <option value="">All Categories</option>
+
+                            @{
+                                string selectedService = Context.Request.Query["service"].ToString().Trim();
+                            }
+
+                            <option value="Plumber" selected="@(selectedService.Equals("Plumber", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">
+                                Plumber
+                            </option>
+
+                            <option value="Electrician" selected="@(selectedService.Equals("Electrician", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">
+                                Electrician
+                            </option>
+
+                            <option value="Carpenter" selected="@(selectedService.Equals("Carpenter", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">
+                                Carpenter
+                            </option>
+
+                            <option value="Car mechanic" selected="@(selectedService.Equals("Car mechanic", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">
+                                Car mechanic
+                            </option>
+
+                            <option value="AC Repair" selected="@(selectedService.Equals("AC Repair", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">
+                                AC Repair
+                            </option>
+
+                            <option value="Welder" selected="@(selectedService.Equals("Welder", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">
+                                Welder
+                            </option>
+                        </select>
+
+                    </div>
+
+
+                    <!-- Search button -->
+
+                    <button type="submit"
+                            class="search-btn">
+
+                        <i class="bi bi-search me-1"></i>
+                        Search
+
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </section>
+
+
+    <!-- Results -->
+
+    <main class="results-area">
+
+        <div class="container">
+
+
+            @if (!string.IsNullOrWhiteSpace(searchMessage))
+            {
+                <div class="alert alert-soft mb-4">
+                    @searchMessage
+                </div>
+            }
+
+
+            <div class="results-head">
+
+                <div>
+
+                    <div class="eyebrow">
+                        ServiceGo Providers
+                    </div>
+
+                    <h2>
+                        Available Professionals
+                    </h2>
+
+                    <div class="active-filter">
+
+                        <i class="bi bi-funnel-fill"></i>
+
+                        @selectedService · @selectedCity
+
+                    </div>
+
+                </div>
+
+
+                <div class="result-count"
+                     id="resultCount">
+
+                    @Math.Min(15, resultList.Count)
+                    of
+                    @resultList.Count
+                    provider(s) shown
+
+                </div>
+
+            </div>
+
+
+            @if (resultList.Count == 0)
+            {
+
+                <div class="empty">
+
+                    <div class="empty-icon">
+
+                        <i class="bi bi-search"></i>
+
+                    </div>
+
+                    <h3>
+                        No providers found
+                    </h3>
+
+                    <p>
+                        Try another city or service to see
+                        more approved providers.
+                    </p>
+
+                </div>
+
+            }
+            else
+            {
+
+                <div id="providerList">
+
+
+                    @for (var i = 0; i < resultList.Count; i++)
+                    {
+
+                        var provider =
+                        resultList[i];
+
+
+                        var profileImage =
+                        string.IsNullOrWhiteSpace(provider.ProfilePicPath)
+                        ? Url.Content("~/images/Worker.png")
+                        : provider.ProfilePicPath;
+
+
+                        var services =
+                        string.IsNullOrWhiteSpace(provider.SelectedServices)
+                        ? "Service provider"
+                        : provider.SelectedServices;
+
+
+                        var rating =
+                        provider.Rating < 0
+                        ? 0
+                        : provider.Rating;
+
+
+                        var reviews =
+                        provider.ReviewsCount < 0
+                        ? 0
+                        : provider.ReviewsCount;
+
+
+                        var hiddenClass =
+                        i >= 15
+                        ? "d-none provider-item"
+                        : "provider-item";
+
+
+                        <div class="@hiddenClass"
+                             data-provider-index="@i">
+
+
+                            <article class="provider-card">
+
+                                <div class="provider-body">
+
+
+                                    <!-- Provider top -->
+
+                                    <div class="provider-top">
+
+
+                                        <!-- Profile image -->
+
+                                        <div class="provider-photo-wrap">
+
+                                            <img src="@profileImage"
+                                                 class="provider-photo"
+                                                 alt="@provider.Name"
+                                                 loading="lazy" />
+
+                                        </div>
+
+
+                                        <!-- Provider info -->
+
+                                        <div class="provider-main">
+
+                                            <div class="provider-name-row">
+
+
+                                                <div style="min-width:0;">
+
+                                                    <h3 class="provider-name">
+                                                        @provider.Name
+                                                    </h3>
+
+                                                    <div class="provider-id">
+
+                                                        @(string.IsNullOrWhiteSpace(provider.ProviderId)
+                                                                                                        ? $"PRO-{provider.Id}"
+                                                                                                        : provider.ProviderId)
+
+                                            </div>
+
+                                                </div>
+
+
+                                                <!-- Rating -->
+
+                                                <div class="rating">
+
+                                                    <i class="bi bi-star-fill me-1"></i>
+
+                                                    @rating.ToString("0.0")
+
+                                                </div>
+
+                                            </div>
+
+
+                                            <div class="verified-badge">
+
+                                                <i class="bi bi-patch-check-fill"></i>
+
+                                                Verified Provider
+
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+
+
+                                    <!-- City / reviews -->
+
+                                    <div class="provider-details">
+
+                                        <span class="meta-pill">
+
+                                            <i class="bi bi-geo-alt-fill"></i>
+
+                                            @(provider.City ?? "Not specified")
+
+                                        </span>
+
+
+                                        <span class="meta-pill">
+
+                                            <i class="bi bi-chat-square-heart-fill"></i>
+
+                                            @reviews reviews
+
+                                        </span>
+
+                                    </div>
+
+
+                                    <!-- Services -->
+
+                                    <div class="services-line">
+
+                                        <strong>
+
+                                            <i class="bi bi-tools me-1"></i>
+                                            Services:
+
+                                        </strong>
+
+                                        @services
+
+                                    </div>
+
+
+                                    <!-- Actions -->
+
+                                    <div class="card-actions">
+
+                                        <a href="@Url.Action("ViewProfile", "Home", new { id = provider.Id })"
+                                           class="btn-profile">
+
+                                            <i class="bi bi-person me-1"></i>
+
+                                            View Profile
+
+                                        </a>
+
+
+                                        <a href="@Url.Action("Booking", "Home", new { id = provider.Id })"
+                                           class="btn-book">
+
+                                            <i class="bi bi-calendar-check me-1"></i>
+
+                                            Book Now
+
+                                        </a>
+
+                                    </div>
+
+
+                                </div>
+
+                            </article>
+
+                        </div>
+
+                                }
+
+                </div>
+
+
+                <!-- Load more -->
+                @if (resultList.Count > 15)
+                {
+
+                    <div class="load-more-wrap">
+
+                        <button type="button"
+                                id="loadMoreButton"
+                                class="load-more-btn">
+
+                            <i class="bi bi-plus-circle me-1"></i>
+
+                            Load More 15
+
+                        </button>
+
+
+                        <div class="loaded-note"
+                             id="loadedNote">
+
+                            Showing 15 of
+                            @resultList.Count
+                            providers
+
+                        </div>
+
+                    </div>
+
+                }
+
+            }
+
+        </div>
+
+    </main>
+
+
+    <!-- Footer -->
+
+    <footer>
+
+        <div class="container">
+
+            <div class="footer-grid">
+
+
+                <!-- Brand -->
+
+                <div>
+
+                    <a href="@Url.Action("Index", "Home")"
+                       class="brand">
+
+                        <img src="@Url.Content("~/images/Logo.png")"
+                             alt="ServiceGo" />
+
+                        Service<span>Go</span>
+
+                    </a>
+
+                    <p class="footer-about mt-2">
+
+                        Trusted local services, made simple.
+
+                    </p>
+
+                </div>
+
+
+                <!-- Quick links -->
+
+                <div>
+
+                    <div class="footer-title">
+                        Quick Links
+                    </div>
+
+                    <a class="footer-link"
+                       href="@Url.Action("Index", "Home")">
+
+                        Home
+
+                    </a>
+
+                    <a class="footer-link"
+                       href="@Url.Action("SearchResult", "Home")">
+
+                        Find Services
+
+                    </a>
+
+                    <a class="footer-link"
+                       href="@Url.Action("HelpCenter", "Home")">
+
+                        Help Center
+
+                    </a>
+
+                </div>
+
+
+                <!-- Support -->
+
+                <div>
+
+                    <div class="footer-title">
+                        Support
+                    </div>
+
+                    <a class="footer-link"
+                       href="mailto:servicego888@gmail.com">
+
+                        servicego888@gmail.com
+
+                    </a>
+
+                    <a class="footer-link"
+                       href="@Url.Action("Terms", "Home")">
+
+                        Terms of Service
+
+                    </a>
+
+                    <a class="footer-link"
+                       href="@Url.Action("Privacy", "Home")">
+
+                        Privacy Policy
+
+                    </a>
+
+                </div>
+
+            </div>
+
+
+            <!-- Footer bottom -->
+
+            <div class="footer-bottom">
+
+                <div class="footer-text">
+
+                    © @DateTime.Now.Year ServiceGo · All rights reserved.
+
+                </div>
+
+                <div class="developer">
+
+                    Developed by
+                    <span>Shafiqueens</span>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </footer>
+
+
+    <!-- Bootstrap -->
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+
+    <!-- Load more -->
+
+    <script>
+
+        document.addEventListener(
+            "DOMContentLoaded",
+            function () {
+
+                const loadButton =
+                    document.getElementById(
+                        "loadMoreButton"
+                    );
+
+
+                const resultCount =
+                    document.getElementById(
+                        "resultCount"
+                    );
+
+
+                const loadedNote =
+                    document.getElementById(
+                        "loadedNote"
+                    );
+
+
+                const cards =
+                    Array.from(
+                        document.querySelectorAll(
+                            "#providerList .provider-item"
+                        )
+                    );
+
+
+                const total =
+                    cards.length;
+
+
+                let visible =
+                    Math.min(
+                        15,
+                        total
+                    );
+
+
+                const batchSize =
+                    15;
+
+
+                function updateLoadMore() {
+
+                    if (resultCount) {
+
+                        resultCount.textContent =
+                            `${visible} of ${total} provider(s) shown`;
+
+                    }
+
+
+                    if (loadedNote) {
+
+                        loadedNote.textContent =
+                            visible >= total
+                                ? `All ${total} providers are shown`
+                                : `Showing ${visible} of ${total} providers`;
+
+                    }
+
+
+                    if (!loadButton) {
+                        return;
+                    }
+
+
+                    if (visible >= total) {
+
+                        loadButton.style.display =
+                            "none";
+
+                    }
+                    else {
+
+                        const remaining =
+                            total - visible;
+
+
+                        loadButton.style.display =
+                            "inline-block";
+
+
+                        loadButton.innerHTML =
+                            remaining <= batchSize
+
+                                ? `<i class="bi bi-plus-circle me-1"></i> Load More ${remaining}`
+
+                                : `<i class="bi bi-plus-circle me-1"></i> Load More 15`;
+
+                    }
+
+                }
+
+
+                if (loadButton) {
+
+                    loadButton.addEventListener(
+                        "click",
+                        function () {
+
+                            const nextVisible =
+                                Math.min(
+                                    visible + batchSize,
+                                    total
+                                );
+
+
+                            for (
+                                let i = visible;
+                                i < nextVisible;
+                                i++
+                            ) {
+
+                                cards[i]
+                                    .classList
+                                    .remove("d-none");
+
+                            }
+
+
+                            visible =
+                                nextVisible;
+
+
+                            updateLoadMore();
+
+                        }
+                    );
+
+                }
+
+
+                updateLoadMore();
+
+
+                // Automatically scroll to the results after Search is clicked.
+                const searchParams =
+                    new URLSearchParams(
+                        window.location.search
+                    );
+
+                if (
+                    searchParams.has("city") ||
+                    searchParams.has("service")
+                ) {
+                    const resultsArea =
+                        document.querySelector(
+                            ".results-area"
+                        );
+
+                    if (resultsArea) {
+                        setTimeout(
+                            function () {
+                                resultsArea.scrollIntoView({
+                                    behavior: "smooth",
+                                    block: "start"
+                                });
+                            },
+                            100
+                        );
+                    }
+                }
+
+            }
+        );
+
+    </script>
+
+
+</body>
+
+</html>

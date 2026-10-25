@@ -1,0 +1,2553 @@
+﻿@model List<ServiceGo.Models.Message>
+
+@using System
+@using System.Linq
+@using System.Text.Json
+@using System.Collections.Generic
+@{
+    Layout = null;
+
+    var chatsList = ViewBag.Chats as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
+    var activeCustomerId = ViewBag.ActiveCustomerCode as string ?? string.Empty;
+    var activeCustomerName = ViewBag.ActiveCustomerName as string ?? "Select a chat";
+    var activeCustomerProfileImage = ViewBag.ActiveCustomerProfileImage as string ?? string.Empty;
+
+    var providerProfileImage = ViewBag.ProviderProfileImage as string ?? string.Empty;
+    var providerUnreadCount = ViewBag.UnreadCount ?? 0;
+    var providerProfileImageUrl = string.IsNullOrWhiteSpace(providerProfileImage)
+        ? Url.Content("~/images/Profile icon.png")
+        : Url.Content(providerProfileImage);
+
+    var providerChats = new List<object>();
+
+    foreach (var c in chatsList)
+    {
+        var customerId = Convert.ToString(c.CustomerId) ?? string.Empty;
+        var customerName = Convert.ToString(c.CustomerName) ?? "Customer";
+        var customerImage = Convert.ToString(c.CustomerProfileImage);
+
+        var customerImageUrl = string.IsNullOrWhiteSpace(customerImage)
+            ? Url.Content("~/images/Profile icon.png")
+            : (customerImage.StartsWith("~")
+                ? Url.Content(customerImage)
+                : customerImage.StartsWith("/")
+                    ? customerImage
+                    : Url.Content("~/" + customerImage.TrimStart('/')));
+
+        var messages = new List<object>();
+
+        // Treat CUS-1, CUS1, 1 and the stored CustomerId as the same customer.
+        // This prevents the active chat from looking empty after reopening it.
+        string NormalizeCustomerId(string value)
+        {
+            value = (value ?? string.Empty).Trim();
+            if (value.StartsWith("CUS-", StringComparison.OrdinalIgnoreCase))
+                return value.Substring(4).Trim();
+            if (value.StartsWith("CUS", StringComparison.OrdinalIgnoreCase))
+                return value.Substring(3).Trim();
+            return value;
+        }
+
+        if (string.Equals(
+                NormalizeCustomerId(activeCustomerId),
+                NormalizeCustomerId(customerId),
+                StringComparison.OrdinalIgnoreCase) && Model != null)
+        {
+            foreach (var m in Model)
+            {
+                messages.Add(new
+                {
+                    id = m.MessageId,
+                    type = m.IsFromCustomer ? "received" : "sent",
+                    text = m.TextContent ?? string.Empty,
+                    time = m.Timestamp.ToString("hh:mm tt")
+                });
+            }
+        }
+
+        providerChats.Add(new
+        {
+            customerId,
+            name = customerName,
+            img = customerImageUrl,
+            messages
+        });
+    }
+
+    var providerMessagesConfig = new
+    {
+        chats = providerChats,
+        activeId = activeCustomerId,
+        activeName = activeCustomerName,
+        activeProfileImageUrl = string.IsNullOrWhiteSpace(activeCustomerProfileImage)
+            ? Url.Content("~/images/Profile icon.png")
+            : (activeCustomerProfileImage.StartsWith("~")
+                ? Url.Content(activeCustomerProfileImage)
+                : activeCustomerProfileImage.StartsWith("/")
+                    ? activeCustomerProfileImage
+                    : Url.Content("~/" + activeCustomerProfileImage.TrimStart('/'))),
+        walletLocked = ViewBag.WalletLocked is bool locked && locked,
+        defaultProfileImageUrl = Url.Content("~/images/Profile icon.png"),
+        messagesUrl = Url.Action("Messages", "Provider"),
+        sendMessageUrl = Url.Action("SendMessage", "Provider"),
+        sendAudioMessageUrl = Url.Action("SendAudioMessage", "Provider"),
+        deleteMessageUrl = Url.Action("DeleteMessage", "Provider"),
+        deleteChatUrl = Url.Action("DeleteChat", "Provider")
+    };
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ServiceGo - Provider Messages</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" />
+    <link rel="icon" href="@Url.Content("~/images/Logo.png")" type="image/x-icon" />
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- Servicego provider messages - all custom CSS merged here -->
+    <link rel="stylesheet" href="/css/servicego-provider-messages.css" />
+
+    <style>
+
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            display: flex;
+            background: #f2f2f2;
+            overflow-x: hidden;
+        }
+
+
+        /* Mobile menu button */
+
+        .mobile-menu-btn {
+            display: none;
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            z-index: 2000;
+            background: #f0ad4e;
+            border: none;
+            padding: 10px 12px;
+            border-radius: 6px;
+            color: #fff;
+            font-size: 20px;
+        }
+
+
+        /* Sidebar */
+
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 80px;
+            height: 100vh;
+            background: #d97600;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 1500;
+        }
+
+            .sidebar:hover {
+                width: 240px;
+            }
+
+            .sidebar img.logo {
+                width: 60px;
+                height: 60px;
+                margin: 20px 0;
+                background: #fff;
+                border-radius: 10%;
+                padding: 5px;
+                cursor: pointer;
+                object-fit: cover;
+            }
+
+
+        .provider-greeting {
+            color: #fff;
+            font-size: 15px;
+            font-weight: 700;
+            white-space: nowrap;
+            text-align: center;
+            margin: -6px 0 6px;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .sidebar:hover .provider-greeting {
+            opacity: 1;
+        }
+
+        @@media (max-width: 768px) {
+            .provider-greeting {
+                display: none;
+            }
+        }
+
+        .sidebar .nav {
+            width: 100%;
+            margin-top: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+            .sidebar .nav a {
+                display: flex;
+                align-items: center;
+                color: #fff;
+                text-decoration: none;
+                padding: 12px 20px;
+                border-radius: 10px;
+                width: 90%;
+                margin-bottom: 5px;
+                transition: all 0.3s ease;
+            }
+
+                .sidebar .nav a i {
+                    font-size: 1.4rem;
+                    margin-right: 15px;
+                }
+
+                .sidebar .nav a.active,
+                .sidebar .nav a:hover {
+                    background: #ffb74d !important;
+                    color: #fff !important;
+                    font-weight: 600;
+                }
+
+                    .sidebar .nav a.active i,
+                    .sidebar .nav a:hover i {
+                        color: #fff !important;
+                    }
+
+            .sidebar .nav span {
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            }
+
+        .sidebar:hover .nav span {
+            opacity: 1;
+        }
+
+
+        /* Main */
+
+        .main {
+            margin-left: 80px;
+            flex-grow: 1;
+            display: flex;
+            height: 100vh;
+            transition: margin-left 0.3s ease;
+        }
+
+        .sidebar:hover ~ .main {
+            margin-left: 240px;
+        }
+
+
+        /* Chat list */
+
+        .chat-list {
+            width: 320px;
+            background: #fff;
+            border-right: 1px solid #ddd;
+            overflow-y: auto;
+            transition: 0.3s;
+        }
+
+        .chat-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #f1f1f1;
+            transition: 0.3s;
+        }
+
+            .chat-item img {
+                width: 45px;
+                height: 45px;
+                border-radius: 50%;
+                margin-right: 10px;
+                object-fit: cover;
+            }
+
+            .chat-item:hover,
+            .chat-item.active {
+                background: #f0f2f5;
+            }
+
+            .chat-item.active {
+                background-color: #fff3e0 !important;
+                border-left: 4px solid #f0ad4e !important;
+            }
+
+        .chat-item {
+            position: relative;
+        }
+
+            .chat-item .chat-options {
+                margin-left: auto;
+                flex-shrink: 0;
+            }
+
+            .chat-item .chat-options-btn {
+                width: 34px;
+                height: 34px;
+                border: 0;
+                background: transparent;
+                border-radius: 50%;
+                color: #555;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+            }
+
+                .chat-item .chat-options-btn:hover {
+                    background: #f0f0f0;
+                    color: #d97600;
+                }
+
+
+        /* Chat window */
+
+        .chat-window {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #efeae2;
+            transition: transform 0.3s ease;
+        }
+
+        .chat-header {
+            padding: 15px;
+            background: #fff;
+            border-bottom: 1px solid #ddd;
+            font-weight: 700;
+            color: #000;
+            display: flex;
+            align-items: center;
+        }
+
+            .chat-header .back-btn {
+                display: none;
+                margin-right: 10px;
+                font-size: 1.2rem;
+                cursor: pointer;
+            }
+
+
+        /* Back button */
+
+        .back-btn {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 20px;
+            color: #000;
+            margin-right: 10px;
+            cursor: pointer;
+        }
+
+
+        /* Messages */
+
+        .messages {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .message {
+            max-width: 70%;
+            padding: 10px 15px;
+            border-radius: 15px;
+            font-size: 14px;
+        }
+
+        .sent {
+            background: #f0ad4e;
+            color: #fff;
+            margin-left: auto;
+        }
+
+        .received {
+            background: #fff;
+            color: #333;
+            margin-right: auto;
+        }
+
+        .message-bubble {
+            position: relative;
+            max-width: 75%;
+            word-wrap: break-word;
+            overflow-wrap: anywhere;
+            padding-top: 22px !important;
+            padding-right: 25px !important;
+        }
+
+        .message-options {
+            position: absolute;
+            top: 4px;
+            right: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            z-index: 10;
+        }
+
+        .msg-time {
+            font-size: 10px;
+            color: #666;
+            margin-top: 4px;
+            text-align: right;
+        }
+
+
+        /* Chat input */
+
+        .chat-input {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background: #fff;
+            border-top: 1px solid #ddd;
+            gap: 10px;
+        }
+
+            .chat-input input {
+                flex: 1;
+                border-radius: 25px;
+                padding: 8px 15px;
+                border: 1px solid #ccc;
+                outline: none;
+            }
+
+            .chat-input button {
+                border: none;
+                background: #f0ad4e;
+                color: #fff;
+                padding: 8px 12px;
+                border-radius: 50%;
+                cursor: pointer;
+            }
+
+                .chat-input button:disabled {
+                    opacity: 0.6;
+                    cursor: not-allowed;
+                }
+
+        #recordingStatus {
+            white-space: nowrap;
+        }
+
+
+        /* Mobile top header */
+
+        .mobile-top-header {
+            display: none;
+            background: #ffffff;
+            height: 70px;
+            min-height: 70px;
+            padding: 0 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+
+            /* Profile image */
+
+            .mobile-top-header .profile-thumb {
+                width: 40px !important;
+                height: 40px !important;
+                border-radius: 50% !important;
+                border: 2px solid #d97600 !important;
+                object-fit: cover !important;
+                cursor: pointer;
+                background: #fff;
+            }
+
+
+        /* Dropdown - general */
+
+        .dropdown-menu .dropdown-item {
+            font-weight: 600 !important;
+            padding: 8px 16px;
+            color: #333;
+        }
+
+        .dropdown-item.active,
+        .dropdown-item:active {
+            background-color: #fff3e0 !important;
+            color: #d97600 !important;
+        }
+
+        .dropdown-item:hover {
+            background-color: #fff8f0;
+            color: #f0ad4e;
+        }
+
+
+        /* Mobile responsive */
+
+        @@media (max-width: 768px) {
+            /* Mobile menu */
+            .mobile-menu-btn {
+                display: block;
+            }
+            /* Sidebar hidden on mobile */
+            .sidebar {
+                display: none !important;
+                left: -250px;
+                width: 240px;
+            }
+
+                .sidebar.active {
+                    left: 0;
+                }
+
+                .sidebar .nav span {
+                    opacity: 1;
+                }
+
+                .sidebar:hover ~ .main {
+                    margin-left: 0 !important;
+                }
+            /* Mobile top header */
+            .mobile-top-header {
+                display: flex !important;
+                height: 70px !important;
+                min-height: 70px !important;
+                padding: 0 15px !important;
+            }
+
+                .mobile-top .logo,
+                .mobile-top-header > img:first-child {
+                    width: 40px !important;
+                    height: 40px !important;
+                    object-fit: contain !important;
+                }
+
+                .mobile-top .profile-thumb,
+                .mobile-top-header .profile-thumb {
+                    width: 40px !important;
+                    height: 40px !important;
+                    object-fit: cover !important;
+                    border-radius: 50% !important;
+                    border: 2px solid #d97600 !important;
+                }
+            /* Main */
+            .main {
+                margin-left: 0 !important;
+                margin-top: 70px !important;
+                height: calc(100vh - 70px) !important;
+                width: 100vw !important;
+                max-width: 100% !important;
+                position: relative !important;
+                display: block !important;
+                background-color: #fff !important;
+                padding-left: 12px !important;
+                padding-right: 12px !important;
+            }
+
+                .main > *,
+                .page-container,
+                .job-card,
+                .wallet-card,
+                .profile-card,
+                .notification-card,
+                .notif-card {
+                    max-width: 100% !important;
+                }
+            /* Chat list */
+            .chat-list {
+                width: 100% !important;
+                max-width: 100% !important;
+                height: 100% !important;
+                max-height: 50vh;
+                display: block !important;
+                background: #fff !important;
+                padding: 0 !important;
+                border: none !important;
+            }
+
+                .chat-list.hide {
+                    display: none;
+                }
+            /* Chat items */
+            .chat-item {
+                width: 100% !important;
+                display: flex !important;
+                align-items: center;
+                padding: 15px 20px !important;
+                border-bottom: 1px solid #f0f0f0 !important;
+                margin: 0 !important;
+                background: #fff !important;
+            }
+                /* Keep active chat orange on mobile */
+                .chat-item.active {
+                    background-color: #fff3e0 !important;
+                    border-left: 4px solid #f0ad4e !important;
+                }
+            /* Chat window */
+            .chat-window {
+                position: absolute !important;
+                top: 0;
+                left: 0;
+                width: 100% !important;
+                height: 100% !important;
+                background: #fff !important;
+                display: none !important;
+                z-index: 100 !important;
+                transform: translateX(0);
+            }
+
+                .chat-window.show {
+                    display: flex;
+                    flex-direction: column;
+                    height: 100vh;
+                }
+            /* Open chat */
+            .main.chat-open .chat-list {
+                display: none !important;
+            }
+
+            .main.chat-open .chat-window {
+                display: flex !important;
+                flex-direction: column !important;
+            }
+            /* Back button */
+            .back-btn,
+            .chat-header .back-btn {
+                display: inline-block !important;
+            }
+            /* Mobile dropdown */
+            .mobile-top .dropdown-menu,
+            .mobile-dropdown-menu,
+            .mobile-top .dropdown-menu.mobile-dropdown-menu {
+                width: 205px !important;
+                min-width: 205px !important;
+                max-width: 205px !important;
+                padding: 8px !important;
+                margin-top: 8px !important;
+                border: 1px solid #eee !important;
+                border-radius: 14px !important;
+                overflow: hidden !important;
+                background: #fff !important;
+                box-shadow: 0 14px 35px rgba(0,0,0,.14) !important;
+            }
+                /* Mobile dropdown items */
+                .mobile-top .dropdown-menu .dropdown-item,
+                .mobile-dropdown-menu .dropdown-item {
+                    min-height: 42px !important;
+                    display: flex !important;
+                    align-items: center !important;
+                    gap: 10px !important;
+                    padding: 9px 12px !important;
+                    margin: 0 !important;
+                    border-radius: 10px !important;
+                    font-size: 16px !important;
+                    line-height: 1.35 !important;
+                    font-weight: 600 !important;
+                    white-space: nowrap !important;
+                    color: #333 !important;
+                }
+                    /* Dropdown icons */
+                    .mobile-top .dropdown-menu .dropdown-item i,
+                    .mobile-dropdown-menu .dropdown-item i {
+                        width: 20px !important;
+                        min-width: 20px !important;
+                        text-align: center !important;
+                        margin: 0 !important;
+                        color: #d97600 !important;
+                        font-size: 17px !important;
+                    }
+                    /* Dropdown hover / active */
+                    .mobile-top .dropdown-menu .dropdown-item:hover,
+                    .mobile-dropdown-menu .dropdown-item:hover,
+                    .mobile-top .dropdown-menu .dropdown-item.active,
+                    .mobile-dropdown-menu .dropdown-item.active {
+                        background: #fff3df !important;
+                        color: #d97600 !important;
+                    }
+
+                        .mobile-top .dropdown-menu .dropdown-item:hover i,
+                        .mobile-top .dropdown-menu .dropdown-item.active i,
+                        .mobile-dropdown-menu .dropdown-item:hover i,
+                        .mobile-dropdown-menu .dropdown-item.active i {
+                            color: #d97600 !important;
+                        }
+                /* Dropdown divider */
+                .mobile-top .dropdown-menu .dropdown-divider,
+                .mobile-dropdown-menu .dropdown-divider {
+                    margin: 4px 0 !important;
+                    border-top: 1px solid #dedede !important;
+                    opacity: 1 !important;
+                }
+                /* Logout / danger item */
+                .mobile-top .dropdown-menu .text-danger,
+                .mobile-dropdown-menu .text-danger,
+                .mobile-top .dropdown-menu .text-danger i,
+                .mobile-dropdown-menu .text-danger i {
+                    color: #dc3545 !important;
+                }
+
+                .mobile-top .dropdown-menu .dropdown-item.text-danger:hover,
+                .mobile-top .dropdown-menu .dropdown-item.text-danger:hover i {
+                    color: #dc3545 !important;
+                }
+            /* Bootstrap row spacing */
+            .row {
+                --bs-gutter-x: 0.75rem;
+            }
+        }
+
+
+        /*
+                 * Caret fix
+                 * Keep text caret only where user can actually type.
+                 */
+
+        body,
+        body * {
+            caret-color: transparent !important;
+        }
+
+        input,
+        textarea,
+        select,
+        [contenteditable="true"],
+        [contenteditable=""] {
+            caret-color: auto !important;
+        }
+
+            input[type="button"],
+            input[type="submit"],
+            input[type="reset"],
+            input[type="checkbox"],
+            input[type="radio"],
+            input[type="file"],
+            select {
+                caret-color: transparent !important;
+            }
+
+        /* Recording controls */
+        .cancel-voice-btn {
+            display: none;
+            font-size: 18px;
+        }
+
+        .recording-status {
+            display: none;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .sidebar .nav a {
+            position: relative;
+        }
+
+        .sidebar-unread-badge {
+            position: absolute;
+            top: 50%;
+            right: 10px;
+            transform: translateY(-50%);
+            min-width: 22px;
+            height: 22px;
+            padding: 0 6px;
+            border-radius: 999px;
+            background: #fff;
+            color: #d97600;
+            border: 1px solid rgba(217,118,0,.18);
+            box-shadow: 0 2px 8px rgba(0,0,0,.16);
+            font-size: 11px;
+            font-weight: 800;
+            line-height: 20px;
+            text-align: center;
+            z-index: 5;
+        }
+
+        .mobile-unread-badge {
+            min-width: 22px;
+            height: 22px;
+            padding: 0 6px;
+            border-radius: 999px;
+            background: #fff;
+            color: #d97600;
+            border: 1px solid rgba(217,118,0,.18);
+            box-shadow: 0 2px 8px rgba(0,0,0,.14);
+            font-size: 11px;
+            font-weight: 800;
+            line-height: 20px;
+            text-align: center;
+        }
+
+        /*
+                 * Provider mobile greeting
+                 * Same greeting as the Provider Dashboard.
+                 */
+        .mobile-provider-area {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-end !important;
+            gap: 10px !important;
+        }
+
+        .mobile-provider-greeting {
+            color: #d97600 !important;
+            font-size: 15px !important;
+            font-weight: 700 !important;
+            white-space: nowrap !important;
+            line-height: 1 !important;
+        }
+
+        @@media (max-width: 768px) {
+            .mobile-provider-area {
+                display: flex !important;
+                align-items: center !important;
+            }
+
+            .mobile-provider-greeting {
+                display: inline-flex !important;
+                align-items: center !important;
+            }
+        }
+
+        @@media (min-width: 769px) {
+            .mobile-provider-area {
+                display: none !important;
+            }
+        }</style>
+
+    <style id="sg-popup-theme">
+        /* Compact, soft popups (SweetAlert2) */
+        body .swal2-container {
+            padding: 12px;
+        }
+
+            body .swal2-container .swal2-popup {
+                width: min(340px, calc(100vw - 32px));
+                padding: 22px 20px 18px !important;
+                border-radius: 20px !important;
+                box-shadow: 0 18px 50px rgba(33, 37, 41, .20) !important;
+                font-family: inherit !important;
+            }
+
+        .swal2-icon {
+            zoom: .72;
+            margin: .2em auto .7em !important;
+        }
+
+        .swal2-title {
+            font-size: 1.12rem !important;
+            font-weight: 700 !important;
+            color: #212529 !important;
+            padding: 0 !important;
+            margin: 0 0 .3rem !important;
+        }
+
+        .swal2-html-container {
+            font-size: .9rem !important;
+            line-height: 1.5 !important;
+            color: #6c757d !important;
+            margin: .2rem 0 0 !important;
+            padding: 0 .2em !important;
+        }
+
+        .swal2-actions {
+            margin-top: 1.1rem !important;
+            gap: 8px;
+        }
+
+        .swal2-styled {
+            border-radius: 12px !important;
+            padding: .55rem 1.2rem !important;
+            min-width: 92px;
+            font-size: .9rem !important;
+            font-weight: 600 !important;
+            box-shadow: none !important;
+        }
+
+            .swal2-styled.swal2-confirm {
+                background-color: #d97600 !important;
+            }
+
+            .swal2-styled.swal2-cancel {
+                background-color: #e9ecef !important;
+                color: #495057 !important;
+            }
+
+            .swal2-styled:focus {
+                box-shadow: 0 0 0 3px rgba(217, 118, 0, .25) !important;
+            }
+
+        .swal2-popup.swal2-show {
+            animation: sgPopIn .22s ease-out !important;
+        }
+
+        .swal2-popup.swal2-hide {
+            animation: sgPopOut .15s ease-in !important;
+        }
+
+        @@keyframes sgPopIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px) scale(.96);
+            }
+
+            to {
+                opacity: 1;
+                transform: none;
+            }
+        }
+
+        @@keyframes sgPopOut {
+            from {
+                opacity: 1;
+                transform: none;
+            }
+
+            to {
+                opacity: 0;
+                transform: translateY(6px) scale(.97);
+            }
+        }
+
+        /* Bootstrap modals: smaller, rounded, smooth */
+        .modal-content {
+            border: 0 !important;
+            border-radius: 18px !important;
+            box-shadow: 0 18px 50px rgba(33, 37, 41, .20) !important;
+            overflow: hidden;
+        }
+
+        .modal-header {
+            padding: .85rem 1.1rem;
+        }
+
+        .modal-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+        }
+
+        .modal-body {
+            padding: 1rem 1.1rem;
+        }
+
+        .modal-footer {
+            padding: .7rem 1.1rem;
+            gap: 6px;
+        }
+
+        .modal-backdrop.show {
+            opacity: .35;
+        }
+
+        .modal.fade .modal-dialog {
+            transform: translateY(14px) scale(.97);
+            transition: transform .22s ease-out;
+        }
+
+        .modal.show .modal-dialog {
+            transform: none;
+        }
+
+        @@media (min-width: 576px) {
+            .modal-dialog.modal-md {
+                --bs-modal-width: 440px;
+                max-width: 440px;
+            }
+
+            .modal-dialog.modal-lg {
+                --bs-modal-width: 620px;
+            }
+        }
+
+        .sg-rec-dot {
+            display: inline-block;
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: #dc3545;
+            margin-left: 4px;
+            vertical-align: middle;
+            animation: sgBlink 1s infinite;
+        }
+
+        @@keyframes sgBlink {
+            50% {
+                opacity: .25;
+            }
+        }
+    </style>
+
+    <style id="sg-provider-mobile-header">
+        /* Mobile header: "Hi Provider" first, then the profile photo centered inside an orange round ring */
+        @@media (max-width: 768px) {
+            .mobile-provider-area,
+            .mobile-top .dropdown,
+            .mobile-top-header .dropdown {
+                display: flex !important;
+                align-items: center !important;
+                gap: 10px !important;
+            }
+
+                .mobile-provider-area > .dropdown {
+                    gap: 0 !important;
+                }
+
+            .mobile-provider-greeting {
+                order: -1 !important;
+                display: inline-block !important;
+                margin: 0 !important;
+                color: #d97600 !important;
+                font-size: 15px !important;
+                font-weight: 700 !important;
+                line-height: 1 !important;
+                white-space: nowrap !important;
+            }
+
+            .mobile-top .profile-thumb,
+            .mobile-top-header .profile-thumb,
+            .mobile-top img.profile-thumb,
+            .mobile-profile-trigger {
+                box-sizing: border-box !important;
+                width: 44px !important;
+                height: 44px !important;
+                min-width: 44px !important;
+                min-height: 44px !important;
+                max-width: 44px !important;
+                max-height: 44px !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                border: 2px solid #d97600 !important;
+                border-radius: 50% !important;
+                object-fit: cover !important;
+                object-position: center !important;
+                aspect-ratio: 1 / 1 !important;
+                display: block !important;
+                background: #fff !important;
+                cursor: pointer;
+            }
+
+                .profile-thumb.dropdown-toggle::after,
+                .mobile-profile-trigger::after {
+                    display: none !important;
+                }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Mobile top header -->
+
+    <div class="mobile-top-header">
+
+        <img src="@Url.Content("~/images/Logo.png")"
+             width="35"
+             height="35"
+             style="cursor:pointer;"
+             onclick="window.location.href='@Url.Action("Index", "Home")'"
+             alt="Logo">
+
+        <div class="mobile-provider-area">
+            <span class="mobile-provider-greeting">Hi Provider</span>
+            <div class="dropdown">
+
+                <img src="@providerProfileImageUrl"
+                     class="profile-thumb"
+                     id="mobileDropdown"
+                     data-bs-toggle="dropdown"
+                     aria-expanded="false"
+                     alt="Profile" />
+
+                <ul class="dropdown-menu dropdown-menu-end mobile-dropdown-menu">
+
+                    <li>
+                        <a class="dropdown-item"
+                           href="@Url.Action("Dashboard", "Provider")">
+                            <i class="bi bi-house-door me-2"></i>Dashboard
+                        </a><a class="dropdown-item"
+                               href="@Url.Action("Profile", "Provider")">
+                            <i class="bi bi-person me-2"></i>Profile
+                        </a><a class="dropdown-item text-danger active"
+                               href="@Url.Action("Messages", "Provider")">
+                            <i class="bi bi-chat-dots me-2"></i>Messages
+                        </a><a class="dropdown-item"
+                               href="@Url.Action("History", "Provider")">
+                            <i class="bi bi-clock-history me-2"></i>History
+                        </a><a class="dropdown-item d-flex align-items-center"
+                               href="@Url.Action("Notifications", "Provider")">
+                            <i class="bi bi-bell me-2"></i>
+                            <span>Notifications</span>
+                            <span class="mobile-unread-badge ms-auto">@providerUnreadCount</span>
+                        </a><a class="dropdown-item text-danger"
+                               href="@Url.Action("Logout", "Provider")">
+                            <i class="bi bi-box-arrow-right me-2 text-danger"></i>Logout
+                        </a>
+                    </li>
+
+                    <li><hr class="dropdown-divider"></li>
+
+                </ul>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Sidebar for desktop -->
+
+    <div class="sidebar" id="sidebar">
+
+        <img src="@Url.Content("~/images/Logo.png")"
+             class="logo"
+             onclick="location.href='@Url.Action("Dashboard", "Provider")'">
+
+        <div class="provider-greeting">Hi Provider</div>
+
+        <div class="nav">
+
+            <a href="@Url.Action("Dashboard", "Provider")">
+                <i class="bi bi-house-door"></i>
+                <span>Dashboard</span>
+            </a>
+
+            <a href="@Url.Action("Profile", "Provider")">
+                <i class="bi bi-person"></i>
+                <span>Profile</span>
+            </a>
+
+            <a href="@Url.Action("Messages", "Provider")" class="active">
+                <i class="bi bi-chat-dots"></i>
+                <span>Messages</span>
+            </a>
+
+            <a href="@Url.Action("History", "Provider")">
+                <i class="bi bi-clock-history"></i>
+                <span>History</span>
+            </a>
+
+            <a href="@Url.Action("Notifications", "Provider")">
+                <i class="bi bi-bell"></i>
+                <span>Notifications</span>
+                <span class="sidebar-unread-badge">@providerUnreadCount</span>
+            </a>
+
+            <a href="@Url.Action("Logout", "Provider")">
+                <i class="bi bi-box-arrow-right"></i>
+                <span>Logout</span>
+            </a>
+
+        </div>
+    </div>
+
+
+    <!-- Main container -->
+
+    <div class="main" id="mainArea">
+
+        <div class="chat-list" id="chatList"></div>
+
+        <div class="chat-window">
+
+            <div class="chat-header" id="chatHeader">
+
+                <button class="back-btn"
+                        type="button"
+                        onclick="closeChat()">
+                    <i class="bi bi-arrow-left"></i>
+                </button>
+
+                <img id="headerProfileImage"
+                     src="@((string.IsNullOrWhiteSpace(activeCustomerProfileImage) ? Url.Content("~/images/Profile icon.png") : (activeCustomerProfileImage.StartsWith("~") ? Url.Content(activeCustomerProfileImage) : activeCustomerProfileImage.StartsWith("/") ? activeCustomerProfileImage : Url.Content("~/" + activeCustomerProfileImage.TrimStart('/')))))"
+                     alt="Customer"
+                     style="width:42px;height:42px;border-radius:50%;object-fit:cover;margin-right:10px;display:@(string.IsNullOrWhiteSpace(activeCustomerId) ? "none" : "block");"
+                     onerror="this.onerror=null;this.style.display='none';" />
+                <span id="headerName">@activeCustomerName</span>
+
+            </div>
+
+            <div class="messages" id="messages"></div>
+
+
+            <!-- Chat input area -->
+
+            <div class="chat-input align-items-center" id="chatInputArea" style="display:none;">
+
+                <input type="text"
+                       id="chatInput"
+                       autocomplete="off"
+                       placeholder="Type a message..." />
+
+                <button type="button"
+                        id="sendBtn"
+                        aria-label="Send message">
+                    <i class="bi bi-send-fill"></i>
+                </button>
+
+                <button type="button"
+                        id="voiceBtn">
+                    <i class="bi bi-mic-fill"></i>
+                </button>
+
+                <button type="button"
+                        id="cancelVoiceBtn"
+                        class="text-danger border-0 bg-transparent cancel-voice-btn"
+                        title="Cancel Recording">
+                    <i class="bi bi-x-circle-fill"></i>
+                </button>
+
+                <span id="recordingStatus"
+                      class="text-danger ms-2 recording-status">
+                    Recording... <span class="sg-rec-dot"></span>
+                </span>
+
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Bootstrap JS -->
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" defer></script>
+
+
+    <!-- Provider messages javascript -->
+    <script id="serviceGoMessagesConfig" type="application/json">
+        @Html.Raw(JsonSerializer.Serialize(providerMessagesConfig))
+    </script>
+    <script>
+        (function () {
+            const configElement = document.getElementById("serviceGoMessagesConfig");
+            if (!configElement) {
+                window.ServiceGoMessagesConfig = {};
+                return;
+            }
+
+            try {
+                window.ServiceGoMessagesConfig =
+                    JSON.parse(configElement.textContent || "{}");
+            } catch (error) {
+                console.error("ServiceGo messages configuration could not be parsed.", error);
+                window.ServiceGoMessagesConfig = {};
+            }
+        })();
+    </script>
+    <style>
+        .swal2-popup {
+            border-radius: 16px !important;
+        }
+
+        .swal2-title {
+            font-size: 20px !important;
+        }
+
+        .swal2-html-container {
+            font-size: 14px !important;
+        }
+    </style>
+    <script src="@Url.Content("~/js/servicego-provider-messages.js")" defer></script>
+    <!-- Servicego load more -->
+
+    <script>
+        /* Provider messages */
+                const config = window.ServiceGoMessagesConfig || {};
+                const chats = Array.isArray(config.chats) ? config.chats : [];
+        const chatList = document.getElementById('chatList');
+                const messagesDiv = document.getElementById('messages');
+                const headerName = document.getElementById('headerName');
+                const headerProfileImage = document.getElementById('headerProfileImage');
+                const input = document.getElementById('chatInput');
+                const sendBtn = document.getElementById('sendBtn');
+                const mainArea = document.getElementById('mainArea');
+                const chatInputArea = document.getElementById('chatInputArea');
+                const walletLocked = config.walletLocked === true;
+        const urlParams = new URLSearchParams(window.location.search);
+
+                /* Support both parameter names so existing links don't break. */
+                const currentCustomerId =
+                    urlParams.get("customerCode") ||
+                    urlParams.get("customerId") ||
+                    config.activeId ||
+                    "";
+                const resolvedName = config.activeName || "Select a chat";
+        /* Chat list */
+
+                function renderChats() {
+
+                    chatList.innerHTML = '';
+
+                    if (!chats || chats.length === 0) {
+
+                        chatList.innerHTML =
+                            '<p class="text-muted p-3 text-center">No chats available yet.</p>';
+
+                        return;
+                    }
+
+                    chats.forEach((c, index) => {
+
+                        const div = document.createElement('div');
+
+                        div.className = 'chat-item';
+
+                        if (String(c.customerId) === String(currentCustomerId)) {
+                            div.classList.add('active');
+                        }
+
+                        const img = document.createElement('img');
+
+                        img.src = c.img || config.defaultProfileImageUrl;
+
+                        img.onerror = function () {
+                            this.onerror = null;
+                            this.src = config.defaultProfileImageUrl;
+                        };
+                        img.className = 'rounded-circle me-3';
+                        img.width = 40;
+                        img.height = 40;
+                        img.loading = 'lazy';
+                        img.decoding = 'async';
+                        img.style.objectFit = 'cover';
+
+                        const nameDiv = document.createElement('div');
+                        nameDiv.style.minWidth = '0';
+                        nameDiv.style.flex = '1';
+
+                        const nameHeading = document.createElement('h6');
+
+                        nameHeading.className = 'mb-0 text-truncate';
+                        nameHeading.textContent = c.name || 'Customer';
+
+                        nameDiv.appendChild(nameHeading);
+
+                        div.appendChild(img);
+                        div.appendChild(nameDiv);
+
+                        const menuWrap = document.createElement('div');
+                        menuWrap.className = 'dropdown chat-options';
+
+                        menuWrap.innerHTML = `
+                            <button type="button"
+                                    class="chat-options-btn"
+                                    data-bs-toggle="dropdown"
+                                    aria-expanded="false"
+                                    title="Chat options">
+                                <i class="bi bi-three-dots-vertical"></i>
+                            </button>
+
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                <li>
+                                    <button type="button"
+                                            class="dropdown-item text-danger delete-chat-btn">
+                                        <i class="bi bi-trash3 me-2"></i>Delete Chat
+                                    </button>
+                                </li>
+                            </ul>
+                        `;
+
+                        const deleteButton =
+                            menuWrap.querySelector('.delete-chat-btn');
+
+                        if (deleteButton) {
+                            deleteButton.addEventListener('click', function (event) {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                deleteChat(c.customerId, div);
+                            });
+                        }
+
+                        menuWrap.addEventListener('click', function (event) {
+                            event.stopPropagation();
+                        });
+
+                        div.appendChild(menuWrap);
+
+                        div.addEventListener('click', function () {
+                            window.location.href =
+                                config.messagesUrl +
+                                '?customerCode=' +
+                                encodeURIComponent(c.customerId) +
+                                '&customerName=' +
+                                encodeURIComponent(c.name);
+                        });
+
+                        chatList.appendChild(div);
+                    });
+                }
+
+                async function deleteChat(customerCode, chatElement) {
+                    if (!customerCode) {
+                        return;
+                    }
+
+                    const deleteChatConfirm = await Swal.fire({
+                        title: 'Delete chat?',
+                        text: 'This chat will be removed from your chat list.',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Delete',
+                        cancelButtonText: 'Cancel',
+                        confirmButtonColor: '#f0ad4e',
+                        cancelButtonColor: '#6c757d',
+                        reverseButtons: true
+                    });
+
+                    if (!deleteChatConfirm.isConfirmed) {
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch(
+                            config.deleteChatUrl,
+                            {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type':
+                                        'application/x-www-form-urlencoded; charset=UTF-8',
+                                    'X-Requested-With':
+                                        'XMLHttpRequest'
+                                },
+                                body: new URLSearchParams({
+                                    customerCode: String(customerCode)
+                                })
+                            }
+                        );
+
+                        const result = await response.json();
+
+                        if (!response.ok || !result || result.status !== 'success') {
+                            await Swal.fire({
+                                icon: 'error',
+                                title: 'Unable to delete chat',
+                                text: result?.message || 'Please try again.',
+                                confirmButtonColor: '#f0ad4e'
+                            });
+                            return;
+                        }
+
+                        if (chatElement) {
+                            chatElement.remove();
+                        }
+
+                        if (
+                            String(currentCustomerId) ===
+                            String(customerCode)
+                        ) {
+                            closeChat();
+
+                            headerName.textContent =
+                                'Select a chat';
+
+                            messagesDiv.innerHTML = '';
+
+                            if (input) {
+                                input.value = '';
+                            }
+                        }
+
+                        await Swal.fire({
+                            icon: 'success',
+                            title: 'Chat Deleted',
+                            text: 'The chat was removed successfully.',
+                            confirmButtonColor: '#f0ad4e',
+                            timer: 1300,
+                            showConfirmButton: false,
+                            width: '340px'
+                        });
+
+                    } catch (error) {
+                        console.error(
+                            'Delete chat error:',
+                            error
+                        );
+
+                        await Swal.fire({
+                            icon: 'error',
+                            title: 'Unable to delete chat',
+                            text: 'Please try again.',
+                            confirmButtonColor: '#f0ad4e'
+                        });
+                    }
+                }
+
+                function setChatInputVisible(visible) {
+                    if (!chatInputArea) return;
+                    chatInputArea.style.display = visible ? 'flex' : 'none';
+                }
+
+                /* Open chat */
+
+                function openChatByIndex(i) {
+
+                    if (!chats[i]) {
+                        setChatInputVisible(false);
+                        return;
+                    }
+
+                    setChatInputVisible(true);
+
+                    headerName.textContent =
+                        chats[i].name || resolvedName || 'Customer';
+
+                    if (headerProfileImage) {
+                        headerProfileImage.src =
+                            chats[i].img || config.defaultProfileImageUrl;
+                        headerProfileImage.onerror = function () {
+                            this.onerror = null;
+                            this.src = config.defaultProfileImageUrl;
+                        };
+                    }
+
+                    messagesDiv.innerHTML = '';
+
+                    if (Array.isArray(chats[i].messages)) {
+
+                        chats[i].messages.forEach(function (m) {
+
+                            appendMessageToDOM(
+                                m.id,
+                                m.type,
+                                m.text,
+                                m.time
+                            );
+
+                        });
+                    }
+
+                    scrollMessagesToBottom();
+
+                    mainArea.classList.add('chat-open');
+                }
+
+
+                /* Safe HTML */
+
+                function escapeHtml(value) {
+
+                    const div = document.createElement('div');
+
+                    div.textContent = value == null ? '' : String(value);
+
+                    return div.innerHTML;
+                }
+
+
+                /* Append message */
+
+                function appendMessageToDOM(id, type, text, time) {
+
+                    const d = document.createElement('div');
+
+                    d.className =
+                        `message ${type} p-2 mb-2 rounded message-bubble`;
+
+                    d.setAttribute('data-msg-id', id || '');
+
+                    const safeText =
+                        text == null ? '' : String(text);
+
+                    let contentHTML = '';
+
+                    /* Voice message detection */
+
+                    if (
+                        safeText.startsWith('/uploads/') ||
+                        safeText.startsWith('/Upload/') ||
+                        safeText.includes('<audio')
+                    ) {
+
+                        let audioSrc = safeText;
+
+                        /*
+                         * If server returns complete audio HTML,
+                         * extract src instead of printing HTML.
+                         */
+
+                        if (safeText.includes('<audio')) {
+
+                            const temp = document.createElement('div');
+
+                            temp.innerHTML = safeText;
+
+                            const audio =
+                                temp.querySelector('audio');
+
+                            if (audio) {
+                                audioSrc =
+                                    audio.getAttribute('src') || '';
+                            }
+                        }
+
+                        contentHTML = `
+                            <audio
+                                controls
+                                preload="metadata"
+                                src="${escapeHtml(audioSrc)}"
+                                style="height:35px; max-width:220px; display:block;">
+                            </audio>
+                        `;
+
+                    } else {
+
+                        contentHTML =
+                            `<span>${escapeHtml(safeText)}</span>`;
+                    }
+
+
+                    /* Delete menu */
+
+                    const deleteMenu = `
+                        <div class="dropdown message-options">
+                            <a href="#"
+                               data-bs-toggle="dropdown"
+                               class="text-dark"
+                               onclick="event.preventDefault();">
+                                <i class="bi bi-three-dots-vertical"></i>
+                            </a>
+
+                            <ul class="dropdown-menu dropdown-menu-end shadow"
+                                style="font-size:13px;">
+
+                                <li>
+                                    <a class="dropdown-item"
+                                       href="#"
+                                       onclick="event.preventDefault(); deleteMessage('${escapeHtml(id)}', 'me');">
+                                        Delete for me
+                                    </a>
+                                </li>
+
+                                ${type === 'sent'
+                                    ? `<li>
+                                        <a class="dropdown-item text-danger"
+                                           href="#"
+                                           onclick="event.preventDefault(); deleteMessage('${escapeHtml(id)}', 'everyone');">
+                                            Delete for everyone
+                                        </a>
+                                       </li>`
+                                    : ''}
+                            </ul>
+                        </div>
+                    `;
+
+
+                    d.innerHTML =
+                        `${deleteMenu}${contentHTML}<div class="msg-time">${escapeHtml(time || '')}</div>`;
+
+                    messagesDiv.appendChild(d);
+                }
+
+
+                /* Close chat */
+
+                function closeChat() {
+
+                    mainArea.classList.remove('chat-open');
+                    setChatInputVisible(false);
+                }
+
+
+                /* Scroll */
+
+                function scrollMessagesToBottom() {
+
+                    setTimeout(function () {
+
+                        messagesDiv.scrollTop =
+                            messagesDiv.scrollHeight;
+
+                    }, 50);
+                }
+
+
+                /* Initialize */
+
+                renderChats();
+
+                if (currentCustomerId) {
+
+                    const index =
+                        chats.findIndex(function (c) {
+
+                            return String(c.customerId) ===
+                                   String(currentCustomerId);
+
+                        });
+
+                    if (index !== -1) {
+
+                        openChatByIndex(index);
+
+                    } else {
+
+                        headerName.textContent =
+                            resolvedName || 'Customer';
+
+                        mainArea.classList.add('chat-open');
+                        setChatInputVisible(false);
+                    }
+                }
+
+
+                /* Enter key send */
+
+                input.addEventListener('keydown', function (event) {
+
+                    if (event.key === 'Enter' && !event.shiftKey) {
+
+                        event.preventDefault();
+
+                        sendMessage();
+                    }
+                });
+
+                // Bind Send inside the same JS scope as sendMessage().
+                if (sendBtn) {
+                    sendBtn.addEventListener('click', sendMessage);
+                }
+
+
+                /* Send text message */
+
+                let isSendingMessage = false;
+
+                async function sendMessage() {
+
+                    if (walletLocked) {
+                        await Swal.fire({
+                            icon: 'warning',
+                            title: 'Messaging Locked',
+                            text: 'Your wallet balance is too low. Please add funds first.',
+                            confirmButtonColor: '#f0ad4e'
+                        });
+                        return;
+                    }
+
+                    const text = input.value.trim();
+
+                    /* Don't send empty message. */
+
+                    if (!text) {
+                        return;
+                    }
+
+                    /* Customer must be selected. */
+
+                    if (!currentCustomerId) {
+
+                        await Swal.fire({
+                            icon: 'info',
+                            title: 'Select a customer',
+                            text: 'Please select a customer first.',
+                            confirmButtonColor: '#f0ad4e'
+                        });
+
+                        return;
+                    }
+
+                    /* Prevent double click / double Enter. */
+
+                    if (isSendingMessage) {
+                        return;
+                    }
+
+                    isSendingMessage = true;
+
+                    const originalButtonHTML =
+                        sendBtn.innerHTML;
+
+                    sendBtn.disabled = true;
+
+                    sendBtn.innerHTML =
+                        '<i class="bi bi-hourglass-split"></i>';
+
+
+                    try {
+
+                        const formData =
+                            new URLSearchParams();
+
+                        /*
+                         * Important
+                         * Keep the parameter name expected by
+                         * ProviderController.
+                         */
+
+                        formData.append(
+                            'customerCode',
+                            currentCustomerId
+                        );
+
+                        formData.append(
+                            'messageText',
+                            text
+                        );
+
+
+                        const response = await fetch(
+                            config.sendMessageUrl,
+                            {
+                                method: 'POST',
+
+                                headers: {
+                                    'Content-Type':
+                                        'application/x-www-form-urlencoded; charset=UTF-8',
+
+                                    'X-Requested-With':
+                                        'XMLHttpRequest'
+                                },
+
+                                body: formData.toString()
+                            }
+                        );
+
+
+                        /*
+                         * Read response as text first.
+                         * This prevents JSON parse errors from hiding
+                         * the real server response.
+                         */
+
+                        const responseText =
+                            await response.text();
+
+                        let data;
+
+                        try {
+
+                            data =
+                                JSON.parse(responseText);
+
+                        } catch (jsonError) {
+
+                            console.error(
+                                'SendMessage returned non-JSON:',
+                                responseText
+                            );
+
+                            throw new Error(
+                                'Server returned an invalid response. HTTP status: ' +
+                                response.status
+                            );
+                        }
+
+
+                        if (!response.ok) {
+
+                            throw new Error(
+                                data.message ||
+                                'Message could not be sent.'
+                            );
+                        }
+
+
+                        if (
+                            data.status &&
+                            String(data.status).toLowerCase() === 'success'
+                        ) {
+
+                            /* Add the newly sent message immediately. */
+
+                            appendMessageToDOM(
+                                data.id || ('temp-' + Date.now()),
+                                'sent',
+                                data.text != null
+                                    ? data.text
+                                    : text,
+                                data.time || ''
+                            );
+
+                            input.value = '';
+
+                            scrollMessagesToBottom();
+
+                        } else {
+
+                            throw new Error(
+                                data.message ||
+                                'Could not send message.'
+                            );
+                        }
+
+                    } catch (error) {
+
+                        console.error(
+                            'Send message error:',
+                            error
+                        );
+
+                        await Swal.fire({
+                            icon: 'error',
+                            title: 'Message not sent',
+                            text: error.message || 'Could not send message. Please try again.',
+                            confirmButtonColor: '#f0ad4e'
+                        });
+
+                    } finally {
+
+                        isSendingMessage = false;
+
+                        sendBtn.disabled = false;
+
+                        sendBtn.innerHTML =
+                            originalButtonHTML;
+                    }
+                }
+
+
+                /* Voice recording */
+
+                let mediaRecorder = null;
+
+                let audioChunks = [];
+
+                let isCancelled = false;
+
+                let currentAudioMimeType =
+                    'audio/webm';
+
+
+                const voiceBtn =
+                    document.getElementById('voiceBtn');
+
+                if (walletLocked) {
+
+                    if (input) {
+                        input.disabled = true;
+                        input.placeholder =
+                            "Messaging locked — please add wallet funds.";
+                    }
+
+                    if (sendBtn) {
+                        sendBtn.disabled = true;
+                        sendBtn.title =
+                            "Messaging is locked because wallet balance is too low.";
+                    }
+
+                    if (voiceBtn) {
+                        voiceBtn.disabled = true;
+                        voiceBtn.title =
+                            "Messaging is locked because wallet balance is too low.";
+                    }
+                }
+
+
+                const cancelVoiceBtn =
+                    document.getElementById('cancelVoiceBtn');
+
+                const recordingStatus =
+                    document.getElementById('recordingStatus');
+
+
+                /* Select a MIME type supported by browser. */
+
+                function getSupportedAudioMimeType() {
+
+                    const mimeTypes = [
+                        'audio/webm;codecs=opus',
+                        'audio/webm',
+                        'audio/ogg;codecs=opus',
+                        'audio/ogg'
+                    ];
+
+                    for (const type of mimeTypes) {
+
+                        if (
+                            window.MediaRecorder &&
+                            MediaRecorder.isTypeSupported(type)
+                        ) {
+
+                            return type;
+                        }
+                    }
+
+                    return '';
+                }
+
+
+                /* Start / stop recording */
+
+                if (
+                    navigator.mediaDevices &&
+                    navigator.mediaDevices.getUserMedia &&
+                    window.MediaRecorder
+                ) {
+
+                    voiceBtn.addEventListener(
+                        'click',
+                        async function (e) {
+
+                            e.preventDefault();
+
+                            /* No customer selected. */
+
+                            if (!currentCustomerId) {
+
+                                await Swal.fire({
+                                    icon: 'info',
+                                    title: 'Select a customer',
+                                    text: 'Please select a customer first.',
+                                    confirmButtonColor: '#f0ad4e'
+                                });
+
+                                return;
+                            }
+
+
+                            /* Start recording */
+
+                            if (
+                                !mediaRecorder ||
+                                mediaRecorder.state === 'inactive'
+                            ) {
+
+                                try {
+
+                                    const stream =
+                                        await navigator.mediaDevices.getUserMedia(
+                                            { audio: true }
+                                        );
+
+
+                                    audioChunks = [];
+
+                                    isCancelled = false;
+
+
+                                    currentAudioMimeType =
+                                        getSupportedAudioMimeType();
+
+
+                                    let recorderOptions = {};
+
+
+                                    if (currentAudioMimeType) {
+
+                                        recorderOptions.mimeType =
+                                            currentAudioMimeType;
+                                    }
+
+
+                                    try {
+
+                                        mediaRecorder =
+                                            new MediaRecorder(
+                                                stream,
+                                                recorderOptions
+                                            );
+
+                                    } catch (recorderError) {
+
+                                        /*
+                                         * Fallback if selected MIME type
+                                         * is rejected by browser.
+                                         */
+
+                                        mediaRecorder =
+                                            new MediaRecorder(stream);
+
+                                        currentAudioMimeType =
+                                            mediaRecorder.mimeType ||
+                                            'audio/webm';
+                                    }
+
+
+                                    mediaRecorder.ondataavailable =
+                                        function (event) {
+
+                                            if (
+                                                event.data &&
+                                                event.data.size > 0
+                                            ) {
+
+                                                audioChunks.push(
+                                                    event.data
+                                                );
+                                            }
+                                        };
+
+
+                                    mediaRecorder.onerror =
+                                        function (event) {
+
+                                            console.error(
+                                                'MediaRecorder error:',
+                                                event
+                                            );
+
+                                            stream
+                                                .getTracks()
+                                                .forEach(
+                                                    track => track.stop()
+                                                );
+
+                                            resetRecordingUI();
+
+                                            Swal.fire({
+                                                icon: 'error',
+                                                title: 'Voice recording failed',
+                                                text: 'Please try again.',
+                                                confirmButtonColor: '#f0ad4e'
+                                            });
+                                        };
+
+
+                                    mediaRecorder.onstop =
+                                        async function () {
+
+                                            try {
+
+                                                if (
+                                                    !isCancelled &&
+                                                    audioChunks.length > 0
+                                                ) {
+
+                                                    const audioBlob =
+                                                        new Blob(
+                                                            audioChunks,
+                                                            {
+                                                                type:
+                                                                    currentAudioMimeType ||
+                                                                    'audio/webm'
+                                                            }
+                                                        );
+
+                                                    await sendAudioToServer(
+                                                        audioBlob
+                                                    );
+                                                }
+
+                                            } finally {
+
+                                                stream
+                                                    .getTracks()
+                                                    .forEach(
+                                                        track => track.stop()
+                                                    );
+                                            }
+                                        };
+
+
+                                    /* Start recording. */
+
+                                    mediaRecorder.start();
+
+
+                                    voiceBtn.style.color =
+                                        '#dc3545';
+
+                                    recordingStatus.style.display =
+                                        'inline';
+
+                                    cancelVoiceBtn.style.display =
+                                        'inline-block';
+
+                                } catch (err) {
+
+                                    console.error(
+                                        'Microphone error:',
+                                        err
+                                    );
+
+                                    await Swal.fire({
+                                        icon: 'warning',
+                                        title: 'Microphone permission needed',
+                                        text: 'Please allow microphone permission and try again.',
+                                        confirmButtonColor: '#f0ad4e'
+                                    });
+                                }
+
+                            } else {
+
+                                /* Stop recording and send. */
+
+                                if (
+                                    mediaRecorder.state === 'recording'
+                                ) {
+
+                                    mediaRecorder.stop();
+                                }
+
+                                resetRecordingUI();
+                            }
+                        }
+                    );
+
+
+                    /* Cancel voice */
+
+                    cancelVoiceBtn.addEventListener(
+                        'click',
+                        function (e) {
+
+                            e.preventDefault();
+
+                            isCancelled = true;
+
+                            if (
+                                mediaRecorder &&
+                                mediaRecorder.state === 'recording'
+                            ) {
+
+                                mediaRecorder.stop();
+                            }
+
+                            resetRecordingUI();
+                        }
+                    );
+
+                } else {
+
+                    voiceBtn.style.display = 'none';
+                }
+
+
+                /* Reset recording UI */
+
+                function resetRecordingUI() {
+
+                    voiceBtn.style.color = '';
+
+                    recordingStatus.style.display =
+                        'none';
+
+                    cancelVoiceBtn.style.display =
+                        'none';
+                }
+
+
+                /* Send audio */
+
+                let isSendingAudio = false;
+
+                async function sendAudioToServer(blob) {
+
+                    if (walletLocked) {
+                        await Swal.fire({
+                            icon: 'warning',
+                            title: 'Messaging Locked',
+                            text: 'Your wallet balance is too low. Please add funds first.',
+                            confirmButtonColor: '#f0ad4e'
+                        });
+                        return;
+                    }
+
+                    if (!blob || blob.size === 0) {
+
+                        await Swal.fire({
+                            icon: 'warning',
+                            title: 'Empty voice message',
+                            text: 'Please record a voice message first.',
+                            confirmButtonColor: '#f0ad4e'
+                        });
+
+                        return;
+                    }
+
+                    if (!currentCustomerId) {
+
+                        await Swal.fire({
+                            icon: 'info',
+                            title: 'Select a customer',
+                            text: 'Please select a customer first.',
+                            confirmButtonColor: '#f0ad4e'
+                        });
+
+                        return;
+                    }
+
+                    if (isSendingAudio) {
+                        return;
+                    }
+
+                    isSendingAudio = true;
+
+                    try {
+
+                        const formData =
+                            new FormData();
+
+
+                        /*
+                         * Important
+                         * Same customerCode parameter as
+                         * ProviderController.
+                         */
+
+                        formData.append(
+                            'customerCode',
+                            currentCustomerId
+                        );
+
+
+                        /* Determine extension from MIME. */
+
+                        let extension = 'webm';
+
+                        if (
+                            blob.type.includes('ogg')
+                        ) {
+
+                            extension = 'ogg';
+                        }
+
+
+                        formData.append(
+                            'audioFile',
+                            blob,
+                            'voicenote.' + extension
+                        );
+
+
+                        const response =
+                            await fetch(
+                                config.sendAudioMessageUrl,
+                                {
+                                    method: 'POST',
+
+                                    headers: {
+                                        'X-Requested-With':
+                                            'XMLHttpRequest'
+                                    },
+
+                                    body: formData
+                                }
+                            );
+
+
+                        const responseText =
+                            await response.text();
+
+                        let data;
+
+                        try {
+
+                            data =
+                                JSON.parse(responseText);
+
+                        } catch (jsonError) {
+
+                            console.error(
+                                'SendAudioMessage returned non-JSON:',
+                                responseText
+                            );
+
+                            throw new Error(
+                                'Server returned an invalid response. HTTP status: ' +
+                                response.status
+                            );
+                        }
+
+
+                        if (!response.ok) {
+
+                            throw new Error(
+                                data.message ||
+                                'Voice message could not be sent.'
+                            );
+                        }
+
+
+                        if (
+                            data.status &&
+                            String(data.status).toLowerCase() === 'success'
+                        ) {
+
+                            const audioUrl =
+                                data.audioUrl ||
+                                data.url ||
+                                data.text;
+
+
+                            if (!audioUrl) {
+
+                                throw new Error(
+                                    'Voice message was saved but no audio URL was returned by the server.'
+                                );
+                            }
+
+
+                            appendMessageToDOM(
+                                data.id || ('audio-' + Date.now()),
+                                'sent',
+                                audioUrl,
+                                data.time || ''
+                            );
+
+                            scrollMessagesToBottom();
+
+                        } else {
+
+                            throw new Error(
+                                data.message ||
+                                'Could not send voice message.'
+                            );
+                        }
+
+                    } catch (error) {
+
+                        console.error(
+                            'Voice message error:',
+                            error
+                        );
+
+                        await Swal.fire({
+                            icon: 'error',
+                            title: 'Voice message not sent',
+                            text: error.message || 'Could not send voice message. Please try again.',
+                            confirmButtonColor: '#f0ad4e'
+                        });
+
+                    } finally {
+
+                        isSendingAudio = false;
+
+                        resetRecordingUI();
+                    }
+                }
+
+
+                /* Delete message */
+
+                async function deleteMessage(msgId, deleteType = 'me') {
+
+                    const deleteMessageConfirm = await Swal.fire({
+                        title: deleteType === 'everyone' ? 'Delete for everyone?' : 'Delete for me?',
+                        text: deleteType === 'everyone'
+                            ? 'This message will be removed for everyone.'
+                            : 'This message will be removed from your chat.',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Delete',
+                        cancelButtonText: 'Cancel',
+                        confirmButtonColor: '#f0ad4e',
+                        cancelButtonColor: '#6c757d',
+                        reverseButtons: true
+                    });
+
+                    if (!deleteMessageConfirm.isConfirmed) return;
+
+
+                    try {
+
+                        const formData =
+                            new URLSearchParams();
+
+                        formData.append(
+                            'messageId',
+                            msgId
+                        );
+
+                        formData.append(
+                            'deleteType',
+                            deleteType
+                        );
+
+
+                        const response = await fetch(
+                            config.deleteMessageUrl,
+                            {
+                                method: 'POST',
+
+                                headers: {
+                                    'Content-Type':
+                                        'application/x-www-form-urlencoded; charset=UTF-8',
+
+                                    'X-Requested-With':
+                                        'XMLHttpRequest'
+                                },
+
+                                body: formData.toString()
+                            }
+                        );
+
+
+                        const responseText =
+                            await response.text();
+
+                        let data;
+
+                        try {
+
+                            data =
+                                JSON.parse(responseText);
+
+                        } catch {
+
+                            throw new Error(
+                                'Server returned an invalid response.'
+                            );
+                        }
+
+
+                        if (
+                            response.ok &&
+                            data.status &&
+                            String(data.status).toLowerCase() === 'success'
+                        ) {
+
+                            const el =
+                                document.querySelector(
+                                    `[data-msg-id="${CSS.escape(String(msgId))}"]`
+                                );
+
+                            if (el) el.remove();
+
+                            await Swal.fire({
+                                icon: 'success',
+                                title: 'Message Deleted',
+                                text: deleteType === 'everyone'
+                                    ? 'The message was deleted for everyone.'
+                                    : 'The message was deleted for you.',
+                                confirmButtonColor: '#f0ad4e',
+                                timer: 1200,
+                                showConfirmButton: false,
+                                width: '340px'
+                            });
+
+                        } else {
+
+                            throw new Error(
+                                data.message ||
+                                'Could not delete message.'
+                            );
+                        }
+
+                    } catch (error) {
+
+                        console.error(
+                            'Delete message error:',
+                            error
+                        );
+
+                        await Swal.fire({
+                            icon: 'error',
+                            title: 'Could not delete message',
+                            text: error.message || 'Please try again.',
+                            confirmButtonColor: '#f0ad4e'
+                        });
+                    }
+                }
+    </script>
+</body>
+</html>

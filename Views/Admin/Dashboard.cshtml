@@ -1,0 +1,1607 @@
+﻿@model ServiceGo.Models.AdminDashboard
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>ServicesGo - Admin Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link rel="icon"
+          href="@Url.Content("~/images/Logo.png")"
+          type="image/x-icon" />
+    <style>
+        /* Reset & global styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            background: #f5f7fb;
+            display: flex;
+            overflow-x: hidden;
+        }
+
+        /* Mobile header */
+        .mobile-header {
+            display: none;
+            width: 100%;
+            height: 60px;
+            background: linear-gradient(135deg, #ffb45e, #ff7f36);
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 150;
+            padding: 0 20px;
+            align-items: center;
+            justify-content: space-between;
+            color: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .menu-toggle-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 22px;
+            cursor: pointer;
+        }
+
+        .mobile-brand {
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        /* Sidebar base */
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            background: linear-gradient(180deg, #ffb45e, #ff7f36);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 25px 0;
+            z-index: 200;
+            transition: transform 0.3s ease;
+        }
+
+        /* Sidebar close cross */
+        .sidebar-close-btn {
+            display: none;
+            position: absolute;
+            top: 14px;
+            right: 12px;
+            width: 34px;
+            height: 34px;
+            border: none;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.18);
+            color: white;
+            font-size: 17px;
+            cursor: pointer;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            transition: all 0.2s ease;
+        }
+
+            .sidebar-close-btn:hover {
+                background: rgba(255, 255, 255, 0.30);
+                transform: scale(1.05);
+            }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 0 25px;
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 25px;
+        }
+
+            .brand img {
+                width: 36px;
+                border-radius: 4px;
+            }
+
+        .sidebar ul {
+            list-style: none;
+        }
+
+            .sidebar ul li {
+                width: 100%;
+                display: block;
+            }
+
+                /* Strict Alignment for Main Tabs & Dropdown Items */
+                .sidebar ul li a,
+                .sidebar .dropdown-toggle {
+                    display: flex !important;
+                    align-items: center;
+                    justify-content: space-between;
+                    padding: 14px 25px;
+                    color: white;
+                    text-decoration: none;
+                    font-size: 15px;
+                    opacity: 0.9;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    width: 100%;
+                    box-sizing: border-box;
+                }
+
+        .toggle-left {
+            display: flex;
+            align-items: center;
+        }
+
+        .sidebar ul li a i,
+        .sidebar .toggle-left i {
+            width: 20px;
+            margin-right: 12px;
+            text-align: center;
+        }
+
+        .sidebar ul li a:hover,
+        .sidebar .dropdown-toggle:hover {
+            background: rgba(255, 255, 255, 0.15);
+            opacity: 1;
+        }
+
+        /* Dropdown mechanism */
+        .dropdown-item {
+            position: relative;
+        }
+
+        .arrow-icon {
+            font-size: 12px;
+            transition: transform 0.3s ease;
+        }
+
+        /* Submenu */
+        .submenu {
+            list-style: none;
+            background: rgba(0, 0, 0, 0.08);
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-in-out;
+            padding: 0;
+        }
+
+            .submenu li {
+                display: block;
+                width: 100%;
+            }
+
+                .submenu li a {
+                    display: block !important;
+                    padding: 10px 25px 10px 57px !important;
+                    font-size: 14px;
+                    opacity: 0.85;
+                }
+
+        /* Active state triggers */
+        .dropdown-item.open .submenu {
+            max-height: 160px;
+        }
+
+        .dropdown-item.open .arrow-icon {
+            transform: rotate(180deg);
+        }
+
+        /* Logout */
+        .logout a {
+            display: flex;
+            align-items: center;
+            color: white;
+            text-decoration: none;
+            font-size: 15px;
+            opacity: 0.9;
+            padding: 0 25px;
+        }
+
+            .logout a i {
+                width: 20px;
+                margin-right: 12px;
+            }
+
+        .logout {
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        /* Flexible main content area */
+        .main-content {
+            margin-left: 260px;
+            padding: 40px;
+            width: calc(100% - 260px);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s ease;
+        }
+
+        .welcome-section {
+            margin-bottom: 30px;
+        }
+
+            .welcome-section h1 {
+                font-size: 28px;
+                font-weight: 600;
+                color: #222;
+            }
+
+            .welcome-section p {
+                color: #666;
+                margin-top: 5px;
+            }
+
+        .metrics-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 25px;
+            width: 100%;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+            border: 1px solid rgba(0,0,0,0.02);
+            flex: 1;
+            min-width: 250px;
+            transition: transform 0.2s ease;
+        }
+
+            .card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 8px 20px rgba(0,0,0,0.06);
+            }
+
+        .card-link {
+            display: block;
+            color: inherit;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+            .card-link:visited,
+            .card-link:hover,
+            .card-link:active {
+                color: inherit;
+                text-decoration: none;
+            }
+
+        .card h3 {
+            font-size: 18px;
+            color: #ff7f36;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+        }
+
+        /* Main Numbers */
+        .card .value {
+            font-size: 36px;
+            font-weight: 700;
+            color: #222;
+            margin: 5px 0;
+        }
+
+        /* Subtext */
+        .card .subtext {
+            font-size: 13px;
+            color: #000;
+            font-weight: 700;
+        }
+
+        /* Overlay for mobile */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 190;
+        }
+
+        /* Responsive media queries */
+        @@media (max-width: 992px) {
+
+            body {
+                flex-direction: column;
+            }
+
+            .mobile-header {
+                display: flex;
+            }
+
+            .sidebar {
+                transform: translateX(-100%);
+                box-shadow: 5px 0 15px rgba(0,0,0,0.1);
+            }
+                /* Jab active class add ho to sidebar samne aye */
+                .sidebar.active {
+                    transform: translateX(0);
+                }
+            /* Mobile cross show */
+            .sidebar-close-btn {
+                display: flex;
+            }
+
+            .sidebar-overlay.active {
+                display: block;
+            }
+
+            .main-content {
+                margin-left: 0;
+                width: 100%;
+                padding: 80px 20px 30px 20px;
+            }
+
+            .welcome-section h1 {
+                font-size: 24px;
+            }
+
+            .metrics-grid {
+                gap: 15px;
+            }
+
+            .card {
+                min-width: 100%;
+            }
+        }
+    </style>
+
+    <style id="servicego-admin-caret-fix">
+        body, body * {
+            caret-color: transparent !important;
+        }
+
+        input, textarea, select, [contenteditable="true"], [contenteditable=""] {
+            caret-color: auto !important;
+        }
+
+            input[type="button"], input[type="submit"], input[type="reset"], input[type="checkbox"], input[type="radio"], input[type="file"], select {
+                caret-color: transparent !important;
+            }
+    </style>
+
+    <style id="servicego-admin-logo-fix">
+        .servicego-home-logo {
+            display: inline-block;
+            text-decoration: none;
+            cursor: default;
+        }
+
+            .servicego-home-logo img {
+                cursor: default;
+            }
+    </style>
+
+    <style id="servicego-admin-logout-modal">
+        .servicego-logout-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 99999;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,.45);
+            padding: 20px;
+        }
+
+            .servicego-logout-modal.show {
+                display: flex;
+            }
+
+        .servicego-logout-box {
+            width: min(360px, 92vw);
+            background: #fff;
+            border-radius: 14px;
+            padding: 24px;
+            text-align: center;
+            box-shadow: 0 12px 40px rgba(0,0,0,.25);
+        }
+
+            .servicego-logout-box h3 {
+                margin: 0 0 8px;
+                font-size: 20px;
+                color: #222;
+            }
+
+            .servicego-logout-box p {
+                margin: 0 0 20px;
+                color: #666;
+                font-size: 14px;
+            }
+
+        .servicego-logout-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+            .servicego-logout-actions button {
+                border: 0;
+                border-radius: 8px;
+                padding: 9px 18px;
+                cursor: pointer;
+                font-size: 14px;
+            }
+
+        .servicego-logout-cancel {
+            background: #e9ecef;
+            color: #333;
+        }
+
+        .servicego-logout-confirm {
+            background: #d97600;
+            color: #fff;
+        }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style id="servicego-unified-ui">
+        /*
+                 * ServicesGo - unified mobile layout + popups (shared by all admin pages)
+                 * Only look & feel is changed here. No page logic is touched.
+                 */
+        :root {
+            --sg-orange: #ff7f36;
+            --sg-orange-2: #ffb45e;
+            --sg-ink: #1d2939;
+            --sg-muted: #64748b;
+            --sg-line: #e8ecf2;
+            --sg-pad: 24px;
+        }
+
+        @@keyframes sgFade {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @@keyframes sgPop {
+            from {
+                opacity: 0;
+                transform: translateY(18px) scale(.97);
+            }
+
+            to {
+                opacity: 1;
+                transform: none;
+            }
+        }
+
+        @@keyframes sgSheet {
+            from {
+                transform: translateY(100%);
+            }
+
+            to {
+                transform: none;
+            }
+        }
+
+        /* Sidebar: highlight the page you are on */
+        .sidebar ul li a.sg-current {
+            background: rgba(255,255,255,.22) !important;
+            opacity: 1 !important;
+            font-weight: 600;
+            box-shadow: inset 4px 0 0 #fff;
+        }
+
+        /* Load more button */
+        button.servicego-load-more {
+            border: 1.5px solid var(--sg-orange-2);
+            background: #fff;
+            color: #e8690f;
+            font-weight: 600;
+            font-size: 14px;
+            border-radius: 12px;
+            padding: 11px 24px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: background .2s ease, color .2s ease;
+        }
+
+            button.servicego-load-more:hover {
+                background: var(--sg-orange);
+                border-color: var(--sg-orange);
+                color: #fff;
+            }
+
+        /* Popups (all pages) */
+        .modal {
+            background: rgba(15,23,42,.62) !important;
+            -webkit-backdrop-filter: blur(4px);
+            backdrop-filter: blur(4px);
+            animation: sgFade .2s ease;
+        }
+
+        .modal-content {
+            border-radius: 22px !important;
+            padding: 26px var(--sg-pad) var(--sg-pad) !important;
+            box-shadow: 0 30px 80px rgba(15,23,42,.35) !important;
+            animation: sgPop .25s cubic-bezier(.2,.8,.2,1);
+            overscroll-behavior: contain;
+            scrollbar-width: thin;
+        }
+
+        .modal-title {
+            font-size: 21px !important;
+            font-weight: 600 !important;
+            color: var(--sg-ink) !important;
+            margin-bottom: 18px !important;
+        }
+
+        /* close (x) button */
+        .modal-close-x,
+        .close-modal {
+            position: absolute !important;
+            top: 14px !important;
+            right: 14px !important;
+            width: 38px;
+            height: 38px;
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: #f2f4f7;
+            color: #667085 !important;
+            font-size: 17px !important;
+            line-height: 1;
+            cursor: pointer;
+            z-index: 5;
+            transition: background .2s ease, color .2s ease;
+        }
+
+        .close-modal {
+            font-size: 24px !important;
+        }
+
+            .modal-close-x:hover,
+            .close-modal:hover {
+                background: #fff1e6;
+                color: var(--sg-orange) !important;
+            }
+
+        /* section headings inside review popups */
+        .modal-content .section-title {
+            font-size: 15px !important;
+            color: var(--sg-ink) !important;
+            text-transform: none !important;
+            letter-spacing: 0 !important;
+            border-bottom: 0 !important;
+            border-left: 4px solid var(--sg-orange);
+            padding: 2px 0 2px 10px !important;
+            margin: 24px 0 12px !important;
+        }
+
+        .modal-content .info-grid {
+            background: #fafbfc !important;
+            border: 1px solid #eef0f3 !important;
+            border-radius: 14px !important;
+        }
+
+        .modal-content .info-label {
+            font-size: 12px;
+            color: var(--sg-muted);
+            font-weight: 500;
+        }
+
+        .modal-content .info-value {
+            color: var(--sg-ink);
+        }
+
+        .modal-content .media-card,
+        .modal-content .service-video-block,
+        .modal-content .google-map-container {
+            border-radius: 14px !important;
+            border-color: #eef0f3 !important;
+        }
+
+        .modal-content .zoom-box {
+            border-radius: 10px;
+        }
+
+        .modal-content .pop-row {
+            border-bottom-color: #f1f4f8;
+        }
+
+        .modal-content .pop-label {
+            color: var(--sg-muted);
+            font-weight: 500;
+        }
+
+        .modal-content img {
+            border-radius: 14px;
+        }
+
+        /* wallet popup input */
+        .actual-amount-box {
+            background: #fff8f2;
+            border: 1px solid #ffe3cc;
+            border-radius: 14px;
+            padding: 14px;
+        }
+
+        .actual-amount-input-wrap {
+            border-radius: 10px !important;
+        }
+
+            .actual-amount-input-wrap:focus-within {
+                border-color: var(--sg-orange) !important;
+                box-shadow: 0 0 0 3px rgba(255,127,54,.15);
+            }
+
+        /* popup footer buttons: stay visible while the popup scrolls */
+        .pop-footer-buttons,
+        .modal-actions {
+            position: sticky;
+            bottom: 0;
+            z-index: 4;
+            margin: 26px calc(-1 * var(--sg-pad)) calc(-1 * var(--sg-pad)) !important;
+            padding: 14px var(--sg-pad) max(16px, env(safe-area-inset-bottom));
+            background: #fff;
+            border-top: 1px solid #eef0f3;
+            gap: 12px !important;
+        }
+
+            .pop-btn-block,
+            .pop-btn-close,
+            .pop-btn-approve,
+            .pop-btn-reject,
+            .modal-actions .btn {
+                border-radius: 12px !important;
+                padding: 12px 24px !important;
+                min-height: 46px;
+                min-width: 130px;
+                font-family: inherit;
+                font-weight: 600 !important;
+                font-size: 14px !important;
+                transition: transform .15s ease, filter .15s ease;
+            }
+
+                .pop-btn-block:active,
+                .pop-btn-close:active,
+                .pop-btn-approve:active,
+                .pop-btn-reject:active,
+                .modal-actions .btn:active {
+                    transform: scale(.97);
+                }
+
+        /* SweetAlert2 popups (every confirm / success / error) */
+        .swal2-container {
+            -webkit-backdrop-filter: blur(3px);
+            backdrop-filter: blur(3px);
+        }
+
+        .swal2-popup {
+            border-radius: 22px !important;
+            padding: 26px 22px 22px !important;
+            font-family: 'Poppins', sans-serif !important;
+            box-shadow: 0 30px 80px rgba(15,23,42,.35) !important;
+        }
+
+        .swal2-title {
+            font-size: 21px !important;
+            font-weight: 600 !important;
+            color: var(--sg-ink) !important;
+            padding: .3em 0 0 !important;
+        }
+
+        .swal2-html-container {
+            font-size: 14px !important;
+            line-height: 1.55;
+            color: #667085 !important;
+        }
+
+        .swal2-actions {
+            width: 100%;
+            gap: 10px;
+            flex-wrap: nowrap !important;
+            margin-top: 1.4em !important;
+        }
+
+        .swal2-styled {
+            flex: 1 1 0;
+            margin: 0 !important;
+            border-radius: 12px !important;
+            padding: 12px 14px !important;
+            font-size: 14px !important;
+            font-weight: 600 !important;
+            box-shadow: none !important;
+        }
+
+            .swal2-styled:focus {
+                box-shadow: 0 0 0 3px rgba(255,127,54,.25) !important;
+            }
+
+        /* scroll lock while a popup is open */
+        html.sg-modal-open,
+        html.sg-modal-open body {
+            overflow: hidden !important;
+        }
+
+        @@media (prefers-reduced-motion: reduce) {
+            .modal, .modal-content {
+                animation: none !important;
+            }
+        }
+
+        /* PHONE LAYOUT (same on every page) */
+        @@media (max-width: 768px) {
+            :root {
+                --sg-pad: 16px;
+            }
+            /* top bar */
+            .mobile-header {
+                height: 58px !important;
+                padding: 0 14px !important;
+                box-shadow: 0 4px 18px rgba(255,127,54,.28) !important;
+            }
+
+            .mobile-brand {
+                font-size: 18px !important;
+                font-weight: 700 !important;
+            }
+
+            .menu-toggle-btn {
+                width: 42px;
+                height: 42px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 12px !important;
+                font-size: 21px !important;
+            }
+
+                .menu-toggle-btn:active {
+                    background: rgba(255,255,255,.2) !important;
+                }
+
+            .mobile-header > :last-child:not(.mobile-brand) {
+                width: 42px !important;
+                flex: 0 0 42px;
+            }
+            /* slide-in menu */
+            .sidebar {
+                width: 285px !important;
+                max-width: 84% !important;
+                box-shadow: 10px 0 30px rgba(15,23,42,.22) !important;
+            }
+
+            .sidebar-overlay {
+                background: rgba(15,23,42,.5) !important;
+            }
+            /* page frame */
+            .main-content {
+                padding: 76px 14px 28px !important;
+            }
+
+            .page-header-row,
+            .page-header {
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 12px !important;
+                margin-bottom: 16px !important;
+            }
+
+                .page-title,
+                .page-header h1,
+                .welcome-section h1 {
+                    font-size: 22px !important;
+                    line-height: 1.3 !important;
+                }
+
+            .search-container,
+            .search-box {
+                width: 100% !important;
+                max-width: none !important;
+            }
+
+                .search-container input,
+                .search-box input {
+                    height: 46px !important;
+                    font-size: 14px !important;
+                    border-radius: 12px !important;
+                }
+
+                .search-container > i {
+                    top: 50% !important;
+                    transform: translateY(-50%) !important;
+                }
+            /* dashboard cards */
+            .metrics-grid .card {
+                min-width: 100% !important;
+                border-radius: 16px !important;
+            }
+            /* tables become cards (rows keep their own show/hide logic) */
+            .table-container {
+                background: transparent !important;
+                padding: 0 !important;
+                border: 0 !important;
+                box-shadow: none !important;
+                overflow: visible !important;
+            }
+
+                .table-container table,
+                .table-container tbody {
+                    display: block !important;
+                    width: 100% !important;
+                    min-width: 0 !important;
+                }
+
+                .table-container thead {
+                    display: none !important;
+                }
+
+                .table-container tbody tr {
+                    width: 100% !important;
+                    background: #fff !important;
+                    border: 1px solid var(--sg-line) !important;
+                    border-radius: 16px !important;
+                    margin: 0 0 12px !important;
+                    padding: 6px 14px !important;
+                    box-shadow: 0 5px 16px rgba(16,24,40,.06) !important;
+                }
+
+                .table-container tbody td {
+                    display: flex !important;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 12px;
+                    width: 100% !important;
+                    min-height: 44px;
+                    padding: 11px 0 !important;
+                    border: 0 !important;
+                    border-bottom: 1px solid #f1f4f8 !important;
+                    font-size: 13px !important;
+                    text-align: right !important;
+                    white-space: normal !important;
+                    overflow-wrap: anywhere;
+                    word-break: break-word;
+                }
+
+                    .table-container tbody td:last-child {
+                        border-bottom: 0 !important;
+                    }
+
+                    .table-container tbody td::before {
+                        content: attr(data-label);
+                        flex: 0 0 auto;
+                        max-width: 42%;
+                        margin-right: auto;
+                        text-align: left;
+                        color: var(--sg-muted);
+                        font-size: 12px;
+                        font-weight: 600;
+                        text-transform: none !important;
+                        letter-spacing: 0 !important;
+                    }
+                    /* action cell = one full-width button */
+                    .table-container tbody td[data-label="Actions"],
+                    .table-container tbody td[data-label="Action"],
+                    .table-container tbody td:has(.btn-view) {
+                        display: block !important;
+                        padding: 12px 0 8px !important;
+                    }
+
+                        .table-container tbody td[data-label="Actions"]::before,
+                        .table-container tbody td[data-label="Action"]::before,
+                        .table-container tbody td:has(.btn-view)::before {
+                            display: none !important;
+                        }
+
+                    .table-container tbody td .btn-view {
+                        width: 100% !important;
+                        max-width: 100% !important;
+                        justify-content: center;
+                        padding: 11px 14px !important;
+                        font-size: 13px !important;
+                        border-radius: 12px !important;
+                    }
+                    /* empty row */
+                    .table-container tbody td[colspan] {
+                        display: block !important;
+                        text-align: center !important;
+                        padding: 26px 10px !important;
+                    }
+
+                        .table-container tbody td[colspan]::before {
+                            display: none !important;
+                        }
+
+                .table-container .badge,
+                .badge {
+                    font-size: 11px !important;
+                    padding: 5px 10px !important;
+                    border-radius: 999px;
+                }
+
+            button.servicego-load-more {
+                width: 100%;
+                max-width: none;
+            }
+            /* complaints page: same card feel, readable sizes */
+            #complaintsTable tbody td,
+            #warningsTable tbody td {
+                font-size: 12.5px !important;
+            }
+
+                #complaintsTable tbody td::before {
+                    font-size: 11px !important;
+                    font-weight: 600 !important;
+                    text-transform: none !important;
+                    letter-spacing: 0 !important;
+                    color: var(--sg-muted) !important;
+                    flex: 0 0 auto !important;
+                }
+
+            #warningsTable,
+            #warningsTable tbody {
+                display: block;
+                width: 100%;
+            }
+
+                #warningsTable thead {
+                    display: none;
+                }
+
+                #warningsTable tbody tr {
+                    display: block;
+                    background: #fff;
+                    border: 1px solid var(--sg-line);
+                    border-radius: 16px;
+                    margin: 0 0 12px;
+                    padding: 8px 12px;
+                    box-shadow: 0 5px 16px rgba(16,24,40,.06);
+                }
+
+                #warningsTable tbody td {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 10px;
+                    padding: 10px 4px;
+                    border: 0;
+                    border-bottom: 1px solid #f1f4f8;
+                    text-align: right;
+                }
+
+                    #warningsTable tbody td:last-child {
+                        border-bottom: 0;
+                    }
+
+                    #warningsTable tbody td::before {
+                        content: attr(data-label);
+                        color: var(--sg-muted);
+                        font-size: 11px;
+                        font-weight: 600;
+                        flex: 0 0 auto;
+                    }
+
+                    #warningsTable tbody td:first-child::before {
+                        display: none;
+                    }
+
+            .filter-btn {
+                font-size: 12px !important;
+            }
+            /* popups become bottom sheets */
+            .modal {
+                align-items: flex-end !important;
+                padding: 0 !important;
+            }
+
+            .modal-content {
+                width: 100% !important;
+                max-width: 100% !important;
+                max-height: 92vh !important;
+                border-radius: 24px 24px 0 0 !important;
+                padding: 22px var(--sg-pad) var(--sg-pad) !important;
+                animation: sgSheet .3s cubic-bezier(.2,.8,.2,1);
+            }
+
+                .modal-content::before {
+                    content: "";
+                    display: block;
+                    width: 42px;
+                    height: 4px;
+                    border-radius: 4px;
+                    background: #d0d5dd;
+                    margin: -10px auto 16px;
+                }
+
+            .modal-close-x,
+            .close-modal {
+                top: 12px !important;
+                right: 12px !important;
+            }
+
+            .pop-footer-buttons,
+            .modal-actions {
+                margin-top: 22px !important;
+            }
+
+                .pop-btn-block,
+                .pop-btn-close,
+                .pop-btn-approve,
+                .pop-btn-reject,
+                .modal-actions .btn {
+                    flex: 1 1 0 !important;
+                    max-width: none !important;
+                    min-width: 0;
+                    width: auto;
+                }
+
+            .modal-content .info-grid {
+                grid-template-columns: repeat(2, 1fr) !important;
+            }
+        }
+
+        @@media (max-width: 576px) {
+            .modal-content .info-grid {
+                grid-template-columns: 1fr !important;
+            }
+            /* SweetAlert2 also slides up from the bottom on phones */
+            .swal2-container {
+                padding: 0 !important;
+            }
+
+                .swal2-container.swal2-center > .swal2-popup {
+                    grid-column: 1 / -1 !important;
+                    place-self: end stretch !important;
+                    width: 100% !important;
+                    max-width: 100% !important;
+                    margin: 0 !important;
+                    border-radius: 24px 24px 0 0 !important;
+                    padding-bottom: calc(20px + env(safe-area-inset-bottom)) !important;
+                }
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <!-- Mobile Top Bar -->
+    <div class="mobile-header">
+
+        <button class="menu-toggle-btn"
+                id="menuToggle"
+                type="button"
+                aria-label="Open Menu">
+
+            <i class="fa-solid fa-bars"></i>
+
+        </button>
+
+        <div class="mobile-brand">
+            ServicesGo
+        </div>
+
+        <div style="width: 22px;"></div>
+
+    </div>
+
+    <!-- Background Overlay for Mobile closing -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+
+        <!-- Mobile cross -->
+        <button class="sidebar-close-btn"
+                id="sidebarCloseBtn"
+                type="button"
+                aria-label="Close Menu">
+
+            <i class="fa-solid fa-xmark"></i>
+
+        </button>
+
+        <div>
+
+            <div class="brand">
+                <span class="servicego-home-logo"><img src="/images/Logo.png" alt="Logo" /></span>
+                <span>ServicesGo</span>
+            </div>
+
+            <ul>
+
+                <li>
+                    <a href="/Admin/Dashboard">
+                        <span class="toggle-left">
+                            <i class="fa-solid fa-house"></i>
+                            <span>Dashboard</span>
+                        </span>
+
+                        <span></span>
+                    </a>
+                </li>
+
+                <li class="dropdown-item">
+
+                    <div class="dropdown-toggle">
+
+                        <div class="toggle-left">
+                            <i class="fa-solid fa-users"></i>
+                            <span>Customers</span>
+                        </div>
+
+                        <i class="fa-solid fa-chevron-down arrow-icon"></i>
+
+                    </div>
+
+                    <ul class="submenu">
+
+                        <li>
+                            <a href="/Admin/ActiveCustomers">
+                                Active
+                            </a>
+                        </li>
+
+                        <li>
+                            <a href="/Admin/BlockedCustomers">
+                                Blocked
+                            </a>
+                        </li>
+
+                    </ul>
+
+                </li>
+
+                <li class="dropdown-item">
+
+                    <div class="dropdown-toggle">
+
+                        <div class="toggle-left">
+                            <i class="fa-solid fa-user-gear"></i>
+                            <span>Service Providers</span>
+                        </div>
+
+                        <i class="fa-solid fa-chevron-down arrow-icon"></i>
+
+                    </div>
+
+                    <ul class="submenu">
+
+                        <li>
+                            <a href="/Admin/ActiveProviders">
+                                Active
+                            </a>
+                        </li>
+
+                        <li>
+                            <a href="/Admin/PendingProviders">
+                                Pending
+                            </a>
+                        </li>
+
+                        <li>
+                            <a href="/Admin/BlockedProviders">
+                                Blocked
+                            </a>
+                        </li>
+
+                    </ul>
+
+                </li>
+
+                <li>
+                    <a href="/Admin/Complaint">
+
+                        <span class="toggle-left">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                            <span>Complaints</span>
+                        </span>
+
+                        <span></span>
+
+                    </a>
+                </li>
+
+                <li>
+                    <a href="/Admin/WalletRequests">
+
+                        <span class="toggle-left">
+                            <i class="fa-solid fa-wallet"></i>
+                            <span>Wallet Requests</span>
+                        </span>
+
+                        <span></span>
+
+                    </a>
+                </li>
+            </ul>
+
+        </div>
+
+        <div class="logout">
+            <a href="/Admin/Logout">
+
+                <i class="fa-solid fa-right-from-bracket"></i>
+                <span>Logout</span>
+            </a>
+
+        </div>
+
+    </div>
+
+    <!-- Main content -->
+    <div class="main-content">
+
+        <div class="welcome-section">
+
+            <h1>
+                Welcome, Admin
+            </h1>
+
+            <p>
+                Manage customers, service providers & complaints
+            </p>
+
+        </div>
+
+        <div class="metrics-grid">
+
+            <a href="/Admin/ActiveCustomers" class="card card-link" aria-label="Open Active Customers">
+
+                <h3>
+                    Customers
+                </h3>
+
+                <div class="value">
+                    @Model.TotalCustomers
+                </div>
+
+                <div class="subtext">
+                    Total registered customers
+                </div>
+
+            </a>
+
+            <a href="/Admin/ActiveProviders" class="card card-link" aria-label="Open Active Providers">
+
+                <h3>
+                    Service Providers
+                </h3>
+
+                <div class="value">
+                    @Model.TotalProviders
+                </div>
+
+                <div class="subtext">
+                    Approved providers
+                </div>
+
+            </a>
+
+            <a href="/Admin/Complaint" class="card card-link" aria-label="Open Pending Complaints">
+
+                <h3>
+                    Complaints
+                </h3>
+
+                <div class="value">
+                    @Model.PendingComplaints
+                </div>
+
+                <div class="subtext">
+                    Pending complaints
+                </div>
+
+            </a>
+
+        </div>
+
+    </div>
+
+    <script>
+
+        document.addEventListener("DOMContentLoaded", function () {
+
+            /* Dropdown toggle logic */
+
+            const dropdownToggles =
+                document.querySelectorAll(".dropdown-toggle");
+
+            dropdownToggles.forEach(toggle => {
+
+                toggle.addEventListener("click", function (e) {
+
+                    const parentLi =
+                        this.parentElement;
+
+                    document
+                        .querySelectorAll(".dropdown-item")
+                        .forEach(item => {
+
+                            if (item !== parentLi) {
+                                item.classList.remove("open");
+                            }
+
+                        });
+
+                    parentLi.classList.toggle("open");
+
+                });
+
+            });
+
+
+            /* Mobile sidebar toggle */
+
+            const menuToggle =
+                document.getElementById("menuToggle");
+
+            const sidebar =
+                document.getElementById("sidebar");
+
+            const sidebarOverlay =
+                document.getElementById("sidebarOverlay");
+
+            const sidebarCloseBtn =
+                document.getElementById("sidebarCloseBtn");
+
+
+            function openSidebar() {
+
+                sidebar.classList.add("active");
+                sidebarOverlay.classList.add("active");
+
+            }
+
+
+            function closeSidebar() {
+
+                sidebar.classList.remove("active");
+                sidebarOverlay.classList.remove("active");
+
+            }
+
+
+            function toggleSidebar() {
+
+                if (sidebar.classList.contains("active")) {
+
+                    closeSidebar();
+
+                }
+                else {
+
+                    openSidebar();
+
+                }
+
+            }
+
+
+            /* Hamburger */
+
+            menuToggle.addEventListener("click", function () {
+
+                toggleSidebar();
+
+            });
+
+
+            /* Cross */
+
+            sidebarCloseBtn.addEventListener("click", function () {
+
+                closeSidebar();
+
+            });
+
+
+            /* Overlay */
+
+            sidebarOverlay.addEventListener("click", function () {
+
+                closeSidebar();
+
+            });
+
+
+            /* Esc key */
+
+            document.addEventListener("keydown", function (event) {
+
+                if (event.key === "Escape") {
+
+                    closeSidebar();
+
+                }
+
+            });
+
+        });
+
+    </script>
+
+
+    <script id="servicego-admin-load-more">
+        document.addEventListener("DOMContentLoaded", function () {
+            const PAGE_SIZE = 15;
+            const tables = Array.from(document.querySelectorAll("table tbody"));
+
+            tables.forEach(function (tbody) {
+                const rows = Array.from(tbody.children).filter(function (el) {
+                    return el.tagName && el.tagName.toLowerCase() === "tr";
+                });
+
+                if (rows.length <= PAGE_SIZE) return;
+
+                let visible = PAGE_SIZE;
+                rows.forEach(function (row, index) {
+                    if (index >= visible) row.style.display = "none";
+                });
+
+                const button = document.createElement("button");
+                button.type = "button";
+                button.className = "btn btn-outline-warning servicego-load-more";
+                button.textContent = "Load More";
+                button.style.cssText = "display:block;margin:18px auto 5px;min-width:130px;";
+
+                const wrapper = tbody.closest("table");
+                if (wrapper && wrapper.parentNode) {
+                    wrapper.parentNode.insertBefore(button, wrapper.nextSibling);
+                } else {
+                    tbody.parentNode.appendChild(button);
+                }
+
+                button.addEventListener("click", function () {
+                    const next = Math.min(visible + PAGE_SIZE, rows.length);
+                    for (let i = visible; i < next; i++) rows[i].style.display = "";
+                    visible = next;
+                    if (visible >= rows.length) button.remove();
+                });
+            });
+        });
+    </script>
+
+    <div id="servicegoLogoutModal" class="servicego-logout-modal" aria-hidden="true">
+        <div class="servicego-logout-box" role="dialog" aria-modal="true" aria-labelledby="servicegoLogoutTitle">
+            <h3 id="servicegoLogoutTitle">Logout</h3>
+            <p>Are you sure you want to logout?</p>
+            <div class="servicego-logout-actions">
+                <button type="button" class="servicego-logout-cancel" id="servicegoLogoutCancel">Cancel</button>
+                <button type="button" class="servicego-logout-confirm" id="servicegoLogoutConfirm">Yes, Logout</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script id="servicego-admin-logout-script">
+        document.addEventListener("DOMContentLoaded", function () {
+            document.querySelectorAll(".logout a").forEach(function (link) {
+                link.addEventListener("click", async function (event) {
+                    event.preventDefault();
+
+                    const result = await Swal.fire({
+                        title: "Logout?",
+                        text: "Are you sure you want to logout?",
+                        icon: "warning",
+                        showCancelButton: true,
+                        confirmButtonText: "Yes, Logout",
+                        cancelButtonText: "Cancel",
+                        reverseButtons: true,
+                        confirmButtonColor: "#d97600",
+                        cancelButtonColor: "#6c757d"
+                    });
+
+                    if (result.isConfirmed) {
+                        window.location.href = link.getAttribute("href");
+                    }
+                });
+            });
+        });
+    </script>
+    <script id="servicego-unified-ui-script">
+        (function () {
+            function ready(fn) {
+                if (document.readyState !== "loading") fn();
+                else document.addEventListener("DOMContentLoaded", fn);
+            }
+
+            ready(function () {
+
+                /* 1. Highlight the current page in the sidebar and open its group */
+                try {
+                    var path = location.pathname.replace(/\/+$/, "").toLowerCase();
+                    document.querySelectorAll(".sidebar ul li a[href]").forEach(function (a) {
+                        var href = (a.getAttribute("href") || "").replace(/\/+$/, "").toLowerCase();
+                        if (href && href === path) {
+                            a.classList.add("sg-current");
+                            var group = a.closest(".dropdown-item");
+                            if (group) group.classList.add("open");
+                        }
+                    });
+                } catch (e) { }
+
+                /* 2. Give every table cell a label (needed for the phone card layout) */
+                try {
+                    document.querySelectorAll("table").forEach(function (table) {
+                        var heads = table.querySelectorAll("thead th");
+                        if (!heads.length) return;
+                        table.querySelectorAll("tbody tr").forEach(function (row) {
+                            Array.prototype.forEach.call(row.children, function (cell, i) {
+                                if (cell.tagName === "TD" &&
+                                    !cell.hasAttribute("data-label") &&
+                                    !cell.hasAttribute("colspan") &&
+                                    heads[i]) {
+                                    cell.setAttribute("data-label", heads[i].textContent.trim());
+                                }
+                            });
+                        });
+                    });
+                } catch (e) { }
+
+                /* 3. Lock the page behind an open popup */
+                try {
+                    var SEL = ".modal, .complaint-details-overlay";
+                    var syncLock = function () {
+                        var open = Array.prototype.some.call(document.querySelectorAll(SEL), function (el) {
+                            var cs = getComputedStyle(el);
+                            return cs.display !== "none" && cs.visibility !== "hidden" && cs.opacity !== "0";
+                        });
+                        document.documentElement.classList.toggle("sg-modal-open", open);
+                    };
+                    new MutationObserver(function (list) {
+                        for (var i = 0; i < list.length; i++) {
+                            if (list[i].target.matches && list[i].target.matches(SEL)) { syncLock(); return; }
+                        }
+                    }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ["style", "class"] });
+                    syncLock();
+                } catch (e) { }
+
+                /* 4. Swipe left on the menu to close it (uses the page's own close button) */
+                try {
+                    var sidebar = document.querySelector(".sidebar");
+                    var closeBtn = document.getElementById("sidebarCloseBtn");
+                    var sx = null, sy = null;
+                    if (sidebar && closeBtn) {
+                        sidebar.addEventListener("touchstart", function (e) {
+                            sx = e.touches[0].clientX; sy = e.touches[0].clientY;
+                        }, { passive: true });
+                        sidebar.addEventListener("touchend", function (e) {
+                            if (sx === null) return;
+                            var t = e.changedTouches[0];
+                            var dx = t.clientX - sx, dy = Math.abs(t.clientY - sy);
+                            sx = null;
+                            if (dx < -70 && dy < 50 && getComputedStyle(closeBtn).display !== "none") closeBtn.click();
+                        }, { passive: true });
+                    }
+                } catch (e) { }
+            });
+        })();
+    </script>
+
+</body>
+</html>

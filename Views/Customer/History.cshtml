@@ -1,0 +1,3318 @@
+﻿@model ServiceGo.Models.CustomerHistoryViewModel
+
+@{
+    // Job History shows only Completed, Cancelled and Rejected bookings.
+    var jobHistoryItems = Model?.JobHistory?
+        .Where(j =>
+            string.Equals(j.Status?.Trim(), "Completed", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(j.Status?.Trim(), "Cancelled", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(j.Status?.Trim(), "Rejected", StringComparison.OrdinalIgnoreCase))
+        .ToList();
+    int jobHistoryCount = jobHistoryItems?.Count ?? 0;
+}
+
+@{
+    Layout = null;
+
+
+    // History controller ko change kiye baghair, agar profile image ViewBag
+    // mein available ho to wahi image mobile header mein show hogi.
+    var customerProfileImage = ViewBag.CustomerProfileImage as string ?? string.Empty;
+    var mobileProfileImage = string.IsNullOrWhiteSpace(customerProfileImage)
+        ? "~/images/Profile icon.png"
+        : customerProfileImage;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>ServiceGo - History</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+          rel="stylesheet" />
+
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" />
+
+    <link rel="icon"
+          href="@Url.Content("~/images/Logo.png")"
+          type="image/x-icon" />
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: #f8f9fa;
+            font-family: 'Poppins', sans-serif;
+            overflow-x: hidden;
+            color: #333;
+        }
+
+        /* =====================================================
+                                                                                                                                                                   SIDEBAR
+                                                                                                                                                                   ===================================================== */
+
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 80px;
+            height: 100vh;
+            background: #d97600;
+            transition: width .3s ease;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+            .sidebar:hover {
+                width: 240px;
+                box-shadow: 4px 0 25px rgba(240,173,78,.35);
+            }
+
+            .sidebar .logo {
+                width: 60px;
+                height: 60px;
+                margin: 20px 0;
+                border-radius: 10%;
+                background: #fff;
+                border: 2px solid #fff;
+                object-fit: contain;
+                cursor: pointer;
+            }
+
+        .sidebar-greeting {
+            color: #fff;
+            opacity: 0;
+            visibility: hidden;
+            width: 0;
+            min-height: 0;
+            height: 0;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+            font-weight: 700;
+            font-size: .88rem;
+            line-height: 1.2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            white-space: nowrap;
+        }
+
+            .sidebar-greeting img {
+                width: 30px;
+                height: 30px;
+                border-radius: 50%;
+                object-fit: cover;
+                margin-right: 8px;
+                border: 2px solid rgba(255,255,255,.9);
+            }
+
+        .sidebar:hover .sidebar-greeting,
+        .sidebar:focus-within .sidebar-greeting {
+            opacity: 1;
+            visibility: visible;
+            width: auto;
+            min-height: 28px;
+            height: auto;
+            overflow: visible;
+            margin: 0 0 8px;
+        }
+
+        .sidebar .nav {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+            .sidebar .nav a {
+                width: 90%;
+                display: flex;
+                align-items: center;
+                color: #fff;
+                text-decoration: none;
+                padding: 12px 20px;
+                margin-bottom: 5px;
+                border-radius: 10px;
+                transition: .2s ease;
+            }
+
+                .sidebar .nav a i {
+                    min-width: 25px;
+                    font-size: 1.4rem;
+                    margin-right: 15px;
+                }
+
+            .sidebar .nav span {
+                opacity: 0;
+                white-space: nowrap;
+                transition: opacity .2s ease;
+            }
+
+        .sidebar:hover .nav span {
+            opacity: 1;
+        }
+
+        .sidebar .nav a .sidebar-notification-badge {
+            display: inline-flex !important;
+            align-items: center;
+            justify-content: center;
+            min-width: 22px;
+            height: 22px;
+            padding: 0 7px;
+            margin-left: auto;
+            border-radius: 999px;
+            background: #fff !important;
+            color: #d97600 !important;
+            font-size: .70rem;
+            font-weight: 800;
+            line-height: 1;
+            opacity: 1 !important;
+            white-space: nowrap;
+        }
+
+        .sidebar .nav a:hover,
+        .sidebar .nav a.active {
+            background: #ffb74d;
+            color: #fff;
+            font-weight: 600;
+        }
+
+        /* =====================================================
+                                                                                                                                                                   MAIN
+                                                                                                                                                                   Sidebar hover par main shift NAHI hoga.
+                                                                                                                                                                   ===================================================== */
+
+        .main {
+            min-height: 100vh;
+            margin-left: 80px;
+            width: calc(100% - 80px);
+            padding: 42px 48px 55px 48px;
+        }
+
+        .page-container {
+            width: 100%;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        /* =====================================================
+                                                                                                                                                                   HEADER
+                                                                                                                                                                   ===================================================== */
+
+        .page-header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .page-icon {
+            width: 54px;
+            height: 54px;
+            margin: 0 auto 12px;
+            border-radius: 16px;
+            background: #fff3e0;
+            color: #d97600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .page-header h2 {
+            margin: 0;
+            color: #222;
+            font-size: 28px;
+            font-weight: 800;
+        }
+
+        .page-header p {
+            margin: 5px 0 0;
+            color: #777;
+            font-size: 14px;
+        }
+
+        /* =====================================================
+                                                                                                                                                                   TABS
+                                                                                                                                                                   ===================================================== */
+
+        .history-tabs {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 7px;
+            padding: 7px;
+            margin-bottom: 25px;
+            background: #fff;
+            border: 1px solid #eee;
+            border-radius: 16px;
+            box-shadow: 0 4px 18px rgba(0,0,0,.05);
+        }
+
+        .history-tab {
+            min-height: 58px;
+            padding: 9px 14px;
+            border: 0;
+            border-radius: 11px;
+            background: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 9px;
+            color: #666;
+            font-weight: 700;
+            cursor: pointer;
+            transition: .2s ease;
+        }
+
+            .history-tab i {
+                color: #d97600;
+                font-size: 17px;
+            }
+
+            .history-tab small {
+                min-width: 24px;
+                padding: 3px 7px;
+                border-radius: 20px;
+                background: #f5f5f5;
+                color: #777;
+                font-size: 11px;
+                text-align: center;
+            }
+
+            .history-tab.active {
+                background: #fff3e0;
+                color: #d97600;
+                box-shadow: inset 0 0 0 1px rgba(217,118,0,.12);
+            }
+
+                .history-tab.active small {
+                    background: #d97600;
+                    color: #fff;
+                }
+
+        /* =====================================================
+                                                                                                                                                                   SECTIONS
+                                                                                                                                                                   ===================================================== */
+
+        .history-section {
+            display: none;
+        }
+
+            .history-section.active {
+                display: block;
+            }
+
+        .section-heading {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+            margin-bottom: 16px;
+        }
+
+            .section-heading h4 {
+                margin: 0;
+                color: #222;
+                font-size: 20px;
+                font-weight: 800;
+            }
+
+            .section-heading p {
+                margin: 4px 0 0;
+                color: #888;
+                font-size: 12px;
+            }
+
+        .section-pill {
+            padding: 7px 12px;
+            border-radius: 30px;
+            background: #fff3e0;
+            color: #d97600;
+            font-size: 11px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        /* =====================================================
+                                                                                                                                                                   JOB CARD
+                                                                                                                                                                   ===================================================== */
+
+        .history-card {
+            background: #fff;
+            border: 1px solid #eee;
+            border-left: 5px solid #d97600;
+            border-radius: 14px;
+            margin-bottom: 18px;
+            box-shadow: 0 4px 15px rgba(0,0,0,.05);
+            overflow: hidden;
+            transition: .2s ease;
+        }
+
+            .history-card:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 7px 22px rgba(217,118,0,.10);
+            }
+
+        .history-card-top {
+            padding: 16px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .service-title {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            min-width: 0;
+        }
+
+        .service-icon {
+            width: 40px;
+            height: 40px;
+            flex: 0 0 40px;
+            border-radius: 10px;
+            background: #fff3e0;
+            color: #d97600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .service-title h5 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 800;
+            color: #222;
+            word-break: break-word;
+        }
+
+        .service-title p {
+            margin: 3px 0 0;
+            color: #777;
+            font-size: 11px;
+            word-break: break-word;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 6px 11px;
+            border-radius: 30px;
+            font-size: 11px;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        .status-completed {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .status-accepted {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .status-cancelled {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .status-rejected {
+            background: #eeeeee;
+            color: #555;
+        }
+
+        .status-expired {
+            background: #fff8e1;
+            color: #e08b00;
+        }
+
+        .booking-ref {
+            margin-top: 5px;
+            color: #999;
+            font-size: 10px;
+            text-align: right;
+        }
+
+        /* =====================================================
+                                                                                                                                                                   INFO GRID
+                                                                                                                                                                   ===================================================== */
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1px;
+            background: #eee;
+        }
+
+        .info-box {
+            background: #fff;
+            padding: 13px 15px;
+            min-width: 0;
+        }
+
+            .info-box label {
+                display: block;
+                margin-bottom: 4px;
+                color: #999;
+                font-size: 10px;
+            }
+
+            .info-box strong {
+                display: block;
+                color: #444;
+                font-size: 12px;
+                word-break: break-word;
+            }
+
+            .info-box.full {
+                grid-column: span 4;
+            }
+
+        /* =====================================================
+                                                                                                                                                                   EVENTS
+                                                                                                                                                                   ===================================================== */
+
+        .event-box {
+            margin: 12px 16px 15px;
+            padding: 12px 14px;
+            background: #fff8ef;
+            border: 1px solid #ffe4c5;
+            border-radius: 11px;
+        }
+
+        .event-title {
+            margin-bottom: 9px;
+            color: #d97600;
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .event-line {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px 20px;
+        }
+
+            .event-line span {
+                color: #555;
+                font-size: 11px;
+                word-break: break-word;
+            }
+
+            .event-line i {
+                color: #d97600;
+                margin-right: 4px;
+            }
+
+        /* =====================================================
+                                                                                                                                                                   RATING CARD
+                                                                                                                                                                   ===================================================== */
+
+        .rating-card {
+            background: #fff;
+            border: 1px solid #eee;
+            border-radius: 14px;
+            margin-bottom: 18px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,.05);
+        }
+
+        .rating-main {
+            padding: 18px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .provider-box {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+        }
+
+        .provider-icon {
+            width: 42px;
+            height: 42px;
+            flex: 0 0 42px;
+            border-radius: 50%;
+            background: #fff8e1;
+            color: #d29a00;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .provider-box h5 {
+            margin: 0;
+            color: #333;
+            font-size: 15px;
+            font-weight: 800;
+            word-break: break-word;
+        }
+
+        .provider-box p {
+            margin: 3px 0;
+            color: #777;
+            font-size: 11px;
+            word-break: break-word;
+        }
+
+        .provider-box small {
+            color: #999;
+            font-size: 10px;
+        }
+
+        .rating-score {
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        .stars {
+            color: #f2b01e;
+            font-size: 15px;
+            letter-spacing: 1px;
+        }
+
+        .rating-score strong {
+            display: block;
+            margin-top: 3px;
+            color: #555;
+            font-size: 12px;
+        }
+
+        .review-box {
+            margin: 0 20px 14px;
+            padding: 12px 14px;
+            background: #fffaf3;
+            border-left: 3px solid #f0ad4e;
+            border-radius: 8px;
+        }
+
+            .review-box p {
+                margin: 0;
+                color: #555;
+                font-size: 12px;
+                line-height: 1.55;
+                word-break: break-word;
+            }
+
+            .review-box i {
+                color: #d97600;
+                margin-right: 5px;
+            }
+
+        .rating-footer {
+            padding: 10px 20px;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            color: #999;
+            font-size: 10px;
+        }
+
+            .rating-footer span {
+                word-break: break-word;
+            }
+
+            .rating-footer i {
+                color: #d97600;
+                margin-right: 4px;
+            }
+
+        /* =====================================================
+                                                                                                                                                                   COMPLAINT
+                                                                                                                                                                   ===================================================== */
+
+        .complaint-card {
+            background: #fff;
+            border: 1px solid #eee;
+            border-radius: 14px;
+            margin-bottom: 18px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,.05);
+        }
+
+        .complaint-top {
+            padding: 16px 20px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .complaint-id {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            min-width: 0;
+        }
+
+        .complaint-icon {
+            width: 40px;
+            height: 40px;
+            flex: 0 0 40px;
+            border-radius: 10px;
+            background: #fff1f1;
+            color: #d32f2f;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .complaint-id h5 {
+            margin: 0;
+            color: #333;
+            font-size: 14px;
+            font-weight: 800;
+            word-break: break-word;
+        }
+
+        .complaint-id span {
+            color: #999;
+            font-size: 10px;
+        }
+
+        .complaint-status {
+            padding: 6px 11px;
+            border-radius: 30px;
+            font-size: 10px;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        .complaint-resolved {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .complaint-rejected {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .complaint-pending {
+            background: #fff8e1;
+            color: #e08b00;
+        }
+
+        .complaint-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1px;
+            background: #eee;
+        }
+
+            .complaint-grid > div {
+                background: #fffaf5;
+                padding: 13px 15px;
+                min-width: 0;
+            }
+
+            .complaint-grid label {
+                display: block;
+                margin-bottom: 4px;
+                color: #999;
+                font-size: 10px;
+            }
+
+            .complaint-grid strong {
+                display: block;
+                color: #444;
+                font-size: 12px;
+                word-break: break-word;
+            }
+
+        .complaint-details {
+            padding: 14px 20px 17px;
+        }
+
+            .complaint-details label {
+                display: block;
+                margin-bottom: 4px;
+                color: #999;
+                font-size: 10px;
+            }
+
+            .complaint-details p {
+                margin: 0;
+                color: #555;
+                font-size: 12px;
+                line-height: 1.6;
+                word-break: break-word;
+            }
+
+        /* =====================================================
+                                                                                                                                                                   EMPTY
+                                                                                                                                                                   ===================================================== */
+
+        .empty-state {
+            background: #fff;
+            border: 1px solid #eee;
+            border-radius: 14px;
+            padding: 50px 20px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,.04);
+        }
+
+            .empty-state i {
+                display: block;
+                margin-bottom: 12px;
+                color: #e3a052;
+                font-size: 40px;
+            }
+
+            .empty-state h5 {
+                margin: 0 0 5px;
+                color: #333;
+                font-weight: 800;
+            }
+
+            .empty-state p {
+                margin: 0;
+                color: #999;
+                font-size: 12px;
+            }
+
+        /* =====================================================
+                                                                                                                                                                   MOBILE HEADER
+                                                                                                                                                                   ===================================================== */
+
+        .mobile-top {
+            display: none;
+        }
+
+        /* =====================================================
+                                                                                                                                                                   MOBILE
+                                                                                                                                                                   ===================================================== */
+
+        @@media (max-width: 768px) {
+
+            .sidebar {
+                display: none !important;
+            }
+
+            .mobile-top {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 60px;
+                padding: 0 15px;
+                background: #fff;
+                display: flex !important;
+                align-items: center;
+                justify-content: space-between;
+                z-index: 1100;
+                box-shadow: 0 2px 10px rgba(0,0,0,.08);
+            }
+
+            .mobile-logo {
+                width: 40px;
+                height: 40px;
+                object-fit: contain;
+                cursor: pointer;
+            }
+
+            .profile-thumb {
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                border: 2px solid #f0ad4e;
+                cursor: pointer;
+                object-fit: cover;
+                background: #fff;
+            }
+
+            .mobile-dropdown-menu {
+                width: 175px !important;
+                min-width: 175px !important;
+                padding: 0 !important;
+                margin-top: 8px !important;
+                border: 1px solid #d9d9d9 !important;
+                border-radius: 8px !important;
+                overflow: hidden;
+                box-shadow: 0 5px 14px rgba(0,0,0,.18);
+            }
+
+                .mobile-dropdown-menu .dropdown-item {
+                    min-height: 44px;
+                    padding: 9px 16px;
+                    display: flex;
+                    align-items: center;
+                    font-size: 17px;
+                    line-height: 1.35;
+                    font-weight: 700;
+                }
+
+                    .mobile-dropdown-menu .dropdown-item i {
+                        min-width: 22px;
+                        margin-right: 8px;
+                        font-size: 17px;
+                        color: #d97600;
+                    }
+
+                    .mobile-dropdown-menu .dropdown-item:hover,
+                    .mobile-dropdown-menu .dropdown-item.active {
+                        background: #fff3df !important;
+                        color: #d97600 !important;
+                    }
+
+                .mobile-dropdown-menu .dropdown-divider {
+                    margin: 0;
+                }
+
+            .main {
+                margin-left: 0 !important;
+                width: 100% !important;
+                padding: 82px 14px 25px !important;
+            }
+
+            .page-container {
+                max-width: 100%;
+            }
+
+            .page-header {
+                margin-bottom: 20px;
+            }
+
+            .page-icon {
+                width: 48px;
+                height: 48px;
+                margin-bottom: 9px;
+                border-radius: 14px;
+                font-size: 21px;
+            }
+
+            .page-header h2 {
+                font-size: 24px;
+            }
+
+            .page-header p {
+                font-size: 12px;
+                line-height: 1.5;
+            }
+
+            .history-tabs {
+                grid-template-columns: 1fr;
+                gap: 4px;
+                padding: 6px;
+                margin-bottom: 20px;
+            }
+
+            .history-tab {
+                min-height: 48px;
+                padding: 9px 12px;
+                justify-content: flex-start;
+            }
+
+            .section-heading {
+                align-items: flex-start;
+                margin-bottom: 12px;
+            }
+
+                .section-heading h4 {
+                    font-size: 18px;
+                }
+
+                .section-heading p {
+                    font-size: 11px;
+                    line-height: 1.5;
+                }
+
+            .section-pill {
+                display: none;
+            }
+
+            .history-card-top,
+            .complaint-top {
+                align-items: flex-start;
+                flex-direction: column;
+                padding: 14px;
+            }
+
+            .history-card {
+                border-left-width: 4px;
+            }
+
+            .service-title {
+                width: 100%;
+            }
+
+            .status-badge {
+                font-size: 10px;
+            }
+
+            .booking-ref {
+                text-align: left;
+            }
+
+            .info-grid,
+            .complaint-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .info-box {
+                padding: 12px 14px;
+            }
+
+                .info-box.full {
+                    grid-column: auto;
+                }
+
+            .event-box {
+                margin: 10px 12px 13px;
+                padding: 11px 12px;
+            }
+
+            .event-line {
+                flex-direction: column;
+                gap: 7px;
+            }
+
+                .event-line span {
+                    font-size: 10.5px;
+                }
+
+            .rating-main {
+                align-items: flex-start;
+                flex-direction: column;
+                padding: 15px;
+            }
+
+            .provider-box {
+                width: 100%;
+            }
+
+            .rating-score {
+                text-align: left;
+            }
+
+            .review-box {
+                margin: 0 15px 13px;
+            }
+
+            .rating-footer {
+                padding: 10px 15px;
+                flex-direction: column;
+                gap: 5px;
+            }
+
+            .complaint-details {
+                padding: 13px 15px 15px;
+            }
+
+            .empty-state {
+                padding: 42px 15px;
+            }
+        }
+
+        @@media (max-width: 420px) {
+            .complaint-grid {
+                grid-template-columns: repeat(3,minmax(0,1fr)) !important;
+                gap: 4px !important;
+            }
+
+                .complaint-grid label, .complaint-grid strong {
+                    font-size: 10px !important;
+                }
+
+            .mobile-top {
+                padding: 0 12px;
+            }
+
+            .mobile-logo {
+                width: 38px;
+                height: 38px;
+            }
+
+            .profile-thumb {
+                width: 38px;
+                height: 38px;
+            }
+
+            .main {
+                padding-left: 10px !important;
+                padding-right: 10px !important;
+            }
+
+            .history-tab {
+                font-size: 13px;
+            }
+
+            .service-title h5 {
+                font-size: 14px;
+            }
+
+            .page-header h2 {
+                font-size: 22px;
+            }
+        }
+
+        /* =========================================================
+                                                                                                                                                           SERVICEGO CUSTOMER SHELL — SAME ON EVERY PAGE
+                                                                                                                                                           ========================================================= */
+        .sidebar,
+        .sidebar#sidebar {
+            width: 64px !important;
+            min-width: 64px !important;
+            height: 100vh !important;
+            position: fixed !important;
+            left: 0 !important;
+            top: 0 !important;
+            z-index: 1100 !important;
+            background: #f39a12 !important;
+            border-radius: 0 !important;
+            box-shadow: 4px 0 18px rgba(0,0,0,.10) !important;
+            transition: width .25s ease, box-shadow .25s ease !important;
+            overflow: hidden !important;
+        }
+
+            .sidebar:hover,
+            .sidebar:focus-within {
+                width: 230px !important;
+                box-shadow: 7px 0 24px rgba(0,0,0,.14) !important;
+            }
+
+            .sidebar .logo {
+                width: 44px !important;
+                height: 44px !important;
+                object-fit: contain !important;
+                margin: 14px auto 24px !important;
+                display: block !important;
+                cursor: pointer !important;
+                border-radius: 10px !important;
+            }
+
+            .sidebar .nav {
+                width: 100% !important;
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 6px !important;
+                padding: 0 8px !important;
+            }
+
+                .sidebar .nav a {
+                    min-height: 46px !important;
+                    width: 100% !important;
+                    display: flex !important;
+                    align-items: center !important;
+                    gap: 14px !important;
+                    padding: 0 13px !important;
+                    border-radius: 12px !important;
+                    color: #fff !important;
+                    text-decoration: none !important;
+                    white-space: nowrap !important;
+                    overflow: hidden !important;
+                    transition: background .18s ease, transform .18s ease !important;
+                }
+
+                    .sidebar .nav a i {
+                        min-width: 24px !important;
+                        width: 24px !important;
+                        text-align: center !important;
+                        font-size: 20px !important;
+                    }
+
+                    .sidebar .nav a span {
+                        opacity: 0 !important;
+                        transform: translateX(-5px) !important;
+                        transition: opacity .18s ease, transform .18s ease !important;
+                        font-weight: 600 !important;
+                    }
+
+            .sidebar:hover .nav a span,
+            .sidebar:focus-within .nav a span {
+                opacity: 1 !important;
+                transform: none !important;
+            }
+
+            .sidebar .nav a:hover,
+            .sidebar .nav a.active {
+                background: rgba(255,255,255,.22) !important;
+                transform: translateX(1px) !important;
+            }
+
+            /* When the sidebar expands, the content/cards move with it. */
+            .sidebar:hover ~ .main,
+            .sidebar:focus-within ~ .main,
+            .sidebar:hover ~ main,
+            .sidebar:focus-within ~ main {
+                margin-left: 230px !important;
+            }
+
+        .mobile-top,
+        .mobile-top-header {
+            height: 64px !important;
+            min-height: 64px !important;
+            position: fixed !important;
+            inset: 0 0 auto 0 !important;
+            z-index: 1090 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            padding: 10px 14px !important;
+            background: #fff !important;
+            border-bottom: 1px solid #eee !important;
+            box-shadow: 0 2px 12px rgba(0,0,0,.07) !important;
+        }
+
+        .mobile-logo {
+            width: 40px !important;
+            height: 40px !important;
+            object-fit: contain !important;
+            border-radius: 9px !important;
+            cursor: pointer !important;
+        }
+
+        .mobile-profile-trigger,
+        .mobile-profile-btn .profile-thumb,
+        .profile-thumb {
+            width: 42px !important;
+            height: 42px !important;
+            min-width: 42px !important;
+            min-height: 42px !important;
+            border-radius: 50% !important;
+            object-fit: cover !important;
+            display: block !important;
+            border: 2px solid #f39a12 !important;
+            background: #fff !important;
+        }
+
+        .mobile-profile-btn {
+            width: 46px !important;
+            height: 46px !important;
+            padding: 2px !important;
+            border: 0 !important;
+            background: transparent !important;
+            box-shadow: none !important;
+        }
+
+            .mobile-profile-btn::after {
+                display: none !important;
+            }
+
+        .mobile-profile-menu,
+        .mobile-dropdown-menu,
+        .customer-mobile-menu,
+        .mobile-top .dropdown-menu {
+            min-width: 205px !important;
+            margin-top: 8px !important;
+            padding: 8px !important;
+            border: 1px solid #eee !important;
+            border-radius: 14px !important;
+            box-shadow: 0 14px 35px rgba(0,0,0,.14) !important;
+        }
+
+            .mobile-profile-menu .dropdown-item,
+            .mobile-dropdown-menu .dropdown-item,
+            .customer-mobile-menu .dropdown-item,
+            .mobile-top .dropdown-menu .dropdown-item {
+                min-height: 42px !important;
+                display: flex !important;
+                align-items: center !important;
+                gap: 10px !important;
+                padding: 9px 12px !important;
+                border-radius: 10px !important;
+                color: #333 !important;
+                font-weight: 600 !important;
+            }
+
+                .mobile-profile-menu .dropdown-item i,
+                .mobile-dropdown-menu .dropdown-item i,
+                .customer-mobile-menu .dropdown-item i,
+                .mobile-top .dropdown-menu .dropdown-item i {
+                    width: 20px !important;
+                    text-align: center !important;
+                    color: #f39a12 !important;
+                }
+
+                .mobile-profile-menu .dropdown-item:hover,
+                .mobile-dropdown-menu .dropdown-item:hover,
+                .customer-mobile-menu .dropdown-item:hover,
+                .mobile-top .dropdown-menu .dropdown-item:hover,
+                .mobile-profile-menu .dropdown-item.active,
+                .mobile-dropdown-menu .dropdown-item.active,
+                .customer-mobile-menu .dropdown-item.active,
+                .mobile-top .dropdown-menu .dropdown-item.active {
+                    background: #fff3df !important;
+                    color: #c87400 !important;
+                }
+
+            .mobile-profile-menu .logout-item,
+            .mobile-dropdown-menu .text-danger,
+            .customer-mobile-menu .logout-item,
+            .mobile-top .dropdown-menu .text-danger {
+                color: #dc3545 !important;
+            }
+
+        @@media (max-width: 767.98px) {
+            .sidebar {
+                display: none !important;
+            }
+
+            .main, main {
+                margin-left: 0 !important;
+                padding-top: 78px !important;
+                width: 100% !important;
+            }
+
+            .chat-window {
+                padding-top: 0 !important;
+            }
+        }
+
+        @@media (min-width: 768px) {
+            .mobile-top, .mobile-top-header {
+                display: none !important;
+            }
+        }
+
+        /* =========================================================
+                                                                                                                                                           CUSTOMER SIDEBAR — SAME AS HISTORY
+                                                                                                                                                           ========================================================= */
+        .sidebar {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 80px !important;
+            height: 100vh !important;
+            background: #d97600 !important;
+            transition: width .3s ease !important;
+            z-index: 1000 !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+        }
+
+            .sidebar:hover {
+                width: 240px !important;
+                box-shadow: 4px 0 25px rgba(240,173,78,.35) !important;
+            }
+
+            .sidebar .logo {
+                width: 60px !important;
+                height: 60px !important;
+                margin: 20px 0 !important;
+                border-radius: 10% !important;
+                background: #fff !important;
+                border: 2px solid #fff !important;
+                object-fit: contain !important;
+                cursor: pointer !important;
+            }
+
+            .sidebar .nav {
+                width: 100% !important;
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: center !important;
+                margin-top: 10px !important;
+            }
+
+                .sidebar .nav a {
+                    width: 90% !important;
+                    display: flex !important;
+                    align-items: center !important;
+                    color: #fff !important;
+                    text-decoration: none !important;
+                    padding: 12px 20px !important;
+                    margin-bottom: 5px !important;
+                    border-radius: 10px !important;
+                    transition: .2s ease !important;
+                    gap: 0 !important;
+                }
+
+                    .sidebar .nav a i {
+                        min-width: 25px !important;
+                        font-size: 1.4rem !important;
+                        margin-right: 15px !important;
+                        text-align: center !important;
+                    }
+
+                .sidebar .nav span {
+                    opacity: 0 !important;
+                    white-space: nowrap !important;
+                    transition: opacity .2s ease !important;
+                }
+
+            .sidebar:hover .nav span {
+                opacity: 1 !important;
+            }
+
+            .sidebar .nav a:hover,
+            .sidebar .nav a.active {
+                background: #ffb74d !important;
+                color: #fff !important;
+                font-weight: 600 !important;
+            }
+
+        /* History-style sidebar overlays the main content; it does not reflow it. */
+        .main {
+            margin-left: 80px !important;
+            width: calc(100% - 80px) !important;
+        }
+
+        .sidebar:hover ~ .main {
+            margin-left: 80px !important;
+            width: calc(100% - 80px) !important;
+        }
+
+        @@media (max-width: 768px) {
+            .sidebar {
+                display: none !important;
+            }
+
+                .main,
+                .sidebar:hover ~ .main {
+                    margin-left: 0 !important;
+                    width: 100% !important;
+                }
+        }
+
+
+        /* Cute notification icon circles. */
+        .notif-card .notif-icon {
+            width: 44px !important;
+            height: 44px !important;
+            min-width: 44px !important;
+            flex: 0 0 44px !important;
+            margin-right: 14px !important;
+            border-radius: 50% !important;
+            background: #fff3df !important;
+            color: #d97600 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            font-size: 1.15rem !important;
+        }
+
+        .notif-card.unread .notif-icon {
+            background: #ffe4b8 !important;
+        }
+
+        .notif-card .notif-icon i {
+            line-height: 1 !important;
+        }
+    </style>
+
+    <style>
+
+        /* =========================================================
+                                                                                                                                           FINAL SIDEBAR CONTENT REFLOW
+                                                                                                                                           Sidebar is 80px closed / 240px open. Keep cards beside it.
+                                                                                                                                           ========================================================= */
+        @@media (min-width: 769px) {
+            .main {
+                margin-left: 80px !important;
+                width: calc(100% - 80px) !important;
+                transition: margin-left .3s ease, width .3s ease !important;
+            }
+
+            .sidebar:hover ~ .main,
+            .sidebar:focus-within ~ .main {
+                margin-left: 240px !important;
+                width: calc(100% - 240px) !important;
+            }
+        }
+
+        @@media (max-width: 768px) {
+            .main, .sidebar:hover ~ .main, .sidebar:focus-within ~ .main {
+                margin-left: 0 !important;
+                width: 100% !important;
+            }
+        }</style>
+
+    <style>
+        /* History cards: fill the unused space beside Address/Provider. */
+        .info-grid .info-box.full + .info-box {
+            grid-column: span 2 !important;
+        }
+
+            .info-grid .info-box.full + .info-box + .info-box {
+                grid-column: span 2 !important;
+            }
+    </style>
+
+
+    <!-- Mobile-only consistency fixes. Desktop/sidebar styles are intentionally untouched. -->
+    <style>
+        /* =========================================================
+                                                                                                                                   MOBILE CUSTOMER HEADER — SAME ON ALL 4 CUSTOMER PAGES
+                                                                                                                                   Reference: Messages page
+                                                                                                                                   ========================================================= */
+        @@media (max-width: 768px) {
+            .mobile-top,
+            .mobile-top-header {
+                height: 70px !important;
+                min-height: 70px !important;
+                padding: 0 15px !important;
+                background: #fff !important;
+                position: fixed !important;
+                top: 0 !important;
+                left: 0 !important;
+                right: 0 !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: space-between !important;
+                z-index: 2000 !important;
+                box-sizing: border-box !important;
+                box-shadow: 0 2px 10px rgba(0,0,0,.08) !important;
+            }
+
+                .mobile-logo,
+                .mobile-top .mobile-logo {
+                    width: 45px !important;
+                    height: 45px !important;
+                    min-width: 45px !important;
+                    min-height: 45px !important;
+                    object-fit: contain !important;
+                    border-radius: 8px !important;
+                }
+
+            .mobile-profile-btn {
+                width: 48px !important;
+                height: 48px !important;
+                min-width: 48px !important;
+                min-height: 48px !important;
+                padding: 0 !important;
+                border: 2px solid #f0a43c !important;
+                border-radius: 50% !important;
+                background: #fff !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                box-shadow: none !important;
+            }
+
+                .mobile-profile-btn::after {
+                    display: none !important;
+                }
+
+                .mobile-profile-btn .profile-thumb,
+                .profile-thumb,
+                .mobile-profile-trigger {
+                    width: 44px !important;
+                    height: 44px !important;
+                    min-width: 44px !important;
+                    min-height: 44px !important;
+                    border-radius: 50% !important;
+                    object-fit: cover !important;
+                    display: block !important;
+                    border: 0 !important;
+                    background: #fff !important;
+                }
+
+            .mobile-profile-trigger {
+                border: 2px solid #f0a43c !important;
+            }
+            /* Same dropdown width, spacing, radius and typography everywhere. */
+            .mobile-profile-menu,
+            .mobile-dropdown-menu,
+            .customer-mobile-menu,
+            .mobile-top .dropdown-menu {
+                width: 192px !important;
+                min-width: 192px !important;
+                max-width: 192px !important;
+                margin-top: 8px !important;
+                padding: 6px 0 !important;
+                border: 1px solid #ddd !important;
+                border-radius: 9px !important;
+                background: #fff !important;
+                box-shadow: 0 5px 16px rgba(0,0,0,.18) !important;
+                overflow: hidden !important;
+                box-sizing: border-box !important;
+            }
+
+                .mobile-profile-menu .dropdown-item,
+                .mobile-dropdown-menu .dropdown-item,
+                .customer-mobile-menu .dropdown-item,
+                .mobile-top .dropdown-menu .dropdown-item {
+                    width: 100% !important;
+                    min-height: 48px !important;
+                    height: 48px !important;
+                    padding: 10px 16px !important;
+                    display: flex !important;
+                    align-items: center !important;
+                    gap: 12px !important;
+                    font-size: 16px !important;
+                    line-height: 1.2 !important;
+                    font-weight: 700 !important;
+                    color: #2f2f2f !important;
+                    background: #fff !important;
+                    box-sizing: border-box !important;
+                    border-radius: 0 !important;
+                    white-space: nowrap !important;
+                }
+
+                    .mobile-profile-menu .dropdown-item i,
+                    .mobile-dropdown-menu .dropdown-item i,
+                    .customer-mobile-menu .dropdown-item i,
+                    .mobile-top .dropdown-menu .dropdown-item i {
+                        width: 20px !important;
+                        min-width: 20px !important;
+                        margin: 0 !important;
+                        font-size: 18px !important;
+                        text-align: center !important;
+                        color: #444 !important;
+                    }
+
+                    .mobile-profile-menu .dropdown-item:hover,
+                    .mobile-dropdown-menu .dropdown-item:hover,
+                    .customer-mobile-menu .dropdown-item:hover,
+                    .mobile-top .dropdown-menu .dropdown-item:hover,
+                    .mobile-profile-menu .dropdown-item.active,
+                    .mobile-dropdown-menu .dropdown-item.active,
+                    .customer-mobile-menu .dropdown-item.active,
+                    .mobile-top .dropdown-menu .dropdown-item.active {
+                        background: #fff3e0 !important;
+                        color: #d97600 !important;
+                    }
+
+                        .mobile-profile-menu .dropdown-item:hover i,
+                        .mobile-dropdown-menu .dropdown-item:hover i,
+                        .customer-mobile-menu .dropdown-item:hover i,
+                        .mobile-top .dropdown-menu .dropdown-item:hover i,
+                        .mobile-profile-menu .dropdown-item.active i,
+                        .mobile-dropdown-menu .dropdown-item.active i,
+                        .customer-mobile-menu .dropdown-item.active i,
+                        .mobile-top .dropdown-menu .dropdown-item.active i {
+                            color: #d97600 !important;
+                        }
+
+                .mobile-profile-menu .dropdown-divider,
+                .mobile-dropdown-menu .dropdown-divider,
+                .customer-mobile-menu .dropdown-divider,
+                .mobile-top .dropdown-menu .dropdown-divider {
+                    margin: 0 !important;
+                }
+            /* =====================================================
+                                                                                                                                       MOBILE CONTENT — FULL WIDTH, NO SIDE GAPS
+                                                                                                                                       ===================================================== */
+            .main {
+                margin-left: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                box-sizing: border-box !important;
+                padding-top: 82px !important;
+                padding-left: 12px !important;
+                padding-right: 12px !important;
+                overflow-x: hidden !important;
+            }
+
+            .page-container {
+                width: 100% !important;
+                max-width: 100% !important;
+                margin-left: 0 !important;
+                margin-right: 0 !important;
+                box-sizing: border-box !important;
+            }
+
+                .page-container > .history-card,
+                .page-container > .complaint-card,
+                .page-container > .rating-card,
+                .page-container > .request-card,
+                .page-container > .profile-card {
+                    width: 100% !important;
+                    max-width: 100% !important;
+                    min-width: 0 !important;
+                    box-sizing: border-box !important;
+                }
+
+            .history-card,
+            .complaint-card,
+            .rating-card,
+            .request-card,
+            .profile-card {
+                min-width: 0 !important;
+                box-sizing: border-box !important;
+            }
+
+            .info-grid,
+            .complaint-grid {
+                width: 100% !important;
+                max-width: 100% !important;
+                box-sizing: border-box !important;
+                display: grid !important;
+                grid-template-columns: repeat(3,minmax(0,1fr)) !important;
+                gap: 6px !important;
+            }
+
+                .complaint-grid > div {
+                    min-width: 0 !important;
+                }
+
+                .complaint-grid label, .complaint-grid strong {
+                    display: block !important;
+                    white-space: nowrap !important;
+                    overflow: hidden !important;
+                    text-overflow: ellipsis !important;
+                    font-size: 11px !important;
+                }
+
+            img, video, iframe {
+                max-width: 100%;
+            }
+        }
+
+        @@media (max-width: 420px) {
+            .complaint-grid {
+                grid-template-columns: repeat(3,minmax(0,1fr)) !important;
+                gap: 4px !important;
+            }
+
+                .complaint-grid label, .complaint-grid strong {
+                    font-size: 10px !important;
+                }
+
+            .mobile-top,
+            .mobile-top-header {
+                padding-left: 10px !important;
+                padding-right: 10px !important;
+            }
+
+                .mobile-logo,
+                .mobile-top .mobile-logo {
+                    width: 42px !important;
+                    height: 42px !important;
+                    min-width: 42px !important;
+                    min-height: 42px !important;
+                }
+
+            .mobile-profile-btn {
+                width: 46px !important;
+                height: 46px !important;
+                min-width: 46px !important;
+                min-height: 46px !important;
+            }
+
+                .mobile-profile-btn .profile-thumb,
+                .profile-thumb,
+                .mobile-profile-trigger {
+                    width: 42px !important;
+                    height: 42px !important;
+                    min-width: 42px !important;
+                    min-height: 42px !important;
+                }
+
+            .main {
+                padding-left: 10px !important;
+                padding-right: 10px !important;
+            }
+
+            .mobile-profile-menu,
+            .mobile-dropdown-menu,
+            .customer-mobile-menu,
+            .mobile-top .dropdown-menu {
+                width: 192px !important;
+                min-width: 192px !important;
+                max-width: 192px !important;
+            }
+        }
+        /* Customer Job History: compact summary cards only.
+                                                                                                                           Sidebar, desktop/mobile shell and complaint/rating sections remain unchanged. */
+        .history-section#jobHistory .history-card {
+            margin-bottom: 10px !important;
+            border-radius: 10px !important;
+        }
+
+        .history-section#jobHistory .history-card-top {
+            padding: 10px 14px !important;
+            border-bottom: 0 !important;
+        }
+
+        .history-section#jobHistory .service-icon {
+            width: 34px !important;
+            height: 34px !important;
+            flex: 0 0 34px !important;
+            font-size: 15px !important;
+        }
+
+        .history-section#jobHistory .history-card h5 {
+            font-size: 15px !important;
+        }
+
+        .history-section#jobHistory .status-badge {
+            padding: 5px 9px !important;
+            font-size: 10px !important;
+        }
+
+        .history-section#jobHistory .history-summary {
+            display: flex !important;
+            flex-wrap: wrap !important;
+            gap: 6px 12px !important;
+            padding: 0 14px 11px !important;
+            font-size: 12px !important;
+        }
+
+            .history-section#jobHistory .history-summary span {
+                margin: 0 !important;
+            }
+
+
+        /* Complaint history: keep the cards compact, but never hide
+                                                                           the customer's information behind CSS ellipses. */
+        #complaintHistory .complaint-card {
+            margin-bottom: 12px !important;
+            border-radius: 12px !important;
+        }
+
+        #complaintHistory .complaint-top {
+            padding: 12px 16px !important;
+        }
+
+        #complaintHistory .complaint-grid {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+            #complaintHistory .complaint-grid > div {
+                padding: 10px 13px !important;
+            }
+
+            #complaintHistory .complaint-grid label,
+            #complaintHistory .complaint-grid strong {
+                white-space: normal !important;
+                overflow: visible !important;
+                text-overflow: clip !important;
+                word-break: break-word !important;
+                overflow-wrap: anywhere !important;
+            }
+
+        #complaintHistory .complaint-details {
+            padding: 11px 16px 13px !important;
+        }
+
+        @@media (max-width: 767.98px) {
+            .history-section#jobHistory .history-card-top {
+                padding: 9px 11px !important;
+            }
+
+            .history-section#jobHistory .history-summary {
+                padding: 0 11px 10px !important;
+                gap: 5px 9px !important;
+                font-size: 11px !important;
+            }
+        }
+    </style>
+
+
+    <!-- ServiceGo: show blinking text caret only where typing is possible -->
+    <style id="servicego-caret-fix">
+        html, body, body * {
+            caret-color: transparent !important;
+        }
+
+        input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+        textarea,
+        [contenteditable="true"] {
+            caret-color: auto !important;
+        }
+    </style>
+
+
+    <style id="servicego-final-common-shell">
+        /* FINAL COMMON SHELL: same mobile header/dropdown on customer + provider pages */
+        @@media (max-width: 768px) {
+            .mobile-top,
+            .mobile-top-header {
+                height: 70px !important;
+                min-height: 70px !important;
+                padding: 0 15px !important;
+                background: #fff !important;
+                position: fixed !important;
+                top: 0 !important;
+                left: 0 !important;
+                right: 0 !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: space-between !important;
+                z-index: 3000 !important;
+                box-sizing: border-box !important;
+                box-shadow: 0 2px 10px rgba(0,0,0,.08) !important;
+            }
+
+                .mobile-top > .dropdown,
+                .mobile-top-header > .dropdown,
+                .mobile-profile-dropdown {
+                    position: relative !important;
+                    z-index: 3010 !important;
+                }
+
+                .mobile-top .logo,
+                .mobile-top .mobile-logo,
+                .mobile-top-header .mobile-logo {
+                    width: 45px !important;
+                    height: 45px !important;
+                    min-width: 45px !important;
+                    min-height: 45px !important;
+                    object-fit: contain !important;
+                    border-radius: 8px !important;
+                    cursor: pointer !important;
+                }
+
+                .mobile-top .profile-thumb,
+                .mobile-top-header .profile-thumb,
+                .mobile-profile-trigger,
+                .mobile-profile-btn .profile-thumb {
+                    width: 44px !important;
+                    height: 44px !important;
+                    min-width: 44px !important;
+                    min-height: 44px !important;
+                    border-radius: 50% !important;
+                    object-fit: cover !important;
+                    display: block !important;
+                    border: 0 !important;
+                    background: #fff !important;
+                }
+
+            .mobile-profile-trigger,
+            .mobile-profile-btn {
+                border: 2px solid #f0a43c !important;
+                border-radius: 50% !important;
+                background: #fff !important;
+            }
+
+            .mobile-profile-btn {
+                width: 48px !important;
+                height: 48px !important;
+                min-width: 48px !important;
+                min-height: 48px !important;
+                padding: 0 !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                box-shadow: none !important;
+            }
+
+                .mobile-profile-btn::after {
+                    display: none !important;
+                }
+
+            .mobile-profile-menu,
+            .mobile-dropdown-menu,
+            .customer-mobile-menu,
+            .mobile-top .dropdown-menu,
+            .mobile-top-header .dropdown-menu {
+                width: 192px !important;
+                min-width: 192px !important;
+                max-width: 192px !important;
+                padding: 6px 0 !important;
+                margin-top: 8px !important;
+                border: 1px solid #ddd !important;
+                border-radius: 9px !important;
+                background: #fff !important;
+                box-shadow: 0 5px 16px rgba(0,0,0,.18) !important;
+                overflow: hidden !important;
+                box-sizing: border-box !important;
+                z-index: 3020 !important;
+            }
+
+                .mobile-profile-menu .dropdown-item,
+                .mobile-dropdown-menu .dropdown-item,
+                .customer-mobile-menu .dropdown-item,
+                .mobile-top .dropdown-menu .dropdown-item,
+                .mobile-top-header .dropdown-menu .dropdown-item {
+                    width: 100% !important;
+                    min-height: 48px !important;
+                    height: 48px !important;
+                    padding: 10px 16px !important;
+                    margin: 0 !important;
+                    display: flex !important;
+                    align-items: center !important;
+                    gap: 12px !important;
+                    border-radius: 0 !important;
+                    font-size: 16px !important;
+                    line-height: 1.2 !important;
+                    font-weight: 700 !important;
+                    white-space: nowrap !important;
+                    color: #2f2f2f !important;
+                    background: #fff !important;
+                    box-sizing: border-box !important;
+                }
+
+                    .mobile-profile-menu .dropdown-item i,
+                    .mobile-dropdown-menu .dropdown-item i,
+                    .customer-mobile-menu .dropdown-item i,
+                    .mobile-top .dropdown-menu .dropdown-item i,
+                    .mobile-top-header .dropdown-menu .dropdown-item i {
+                        width: 20px !important;
+                        min-width: 20px !important;
+                        margin: 0 !important;
+                        text-align: center !important;
+                        font-size: 18px !important;
+                        color: #444 !important;
+                    }
+
+                    .mobile-profile-menu .dropdown-item:hover,
+                    .mobile-dropdown-menu .dropdown-item:hover,
+                    .customer-mobile-menu .dropdown-item:hover,
+                    .mobile-top .dropdown-menu .dropdown-item:hover,
+                    .mobile-top-header .dropdown-menu .dropdown-item:hover,
+                    .mobile-profile-menu .dropdown-item.active,
+                    .mobile-dropdown-menu .dropdown-item.active,
+                    .customer-mobile-menu .dropdown-item.active,
+                    .mobile-top .dropdown-menu .dropdown-item.active,
+                    .mobile-top-header .dropdown-menu .dropdown-item.active {
+                        background: #fff3e0 !important;
+                        color: #d97600 !important;
+                    }
+
+                        .mobile-profile-menu .dropdown-item:hover i,
+                        .mobile-dropdown-menu .dropdown-item:hover i,
+                        .customer-mobile-menu .dropdown-item:hover i,
+                        .mobile-top .dropdown-menu .dropdown-item:hover i,
+                        .mobile-top-header .dropdown-menu .dropdown-item:hover i,
+                        .mobile-profile-menu .dropdown-item.active i,
+                        .mobile-dropdown-menu .dropdown-item.active i,
+                        .customer-mobile-menu .dropdown-item.active i,
+                        .mobile-top .dropdown-menu .dropdown-item.active i,
+                        .mobile-top-header .dropdown-menu .dropdown-item.active i {
+                            color: #d97600 !important;
+                        }
+
+                .mobile-profile-menu .dropdown-divider,
+                .mobile-dropdown-menu .dropdown-divider,
+                .customer-mobile-menu .dropdown-divider,
+                .mobile-top .dropdown-menu .dropdown-divider,
+                .mobile-top-header .dropdown-menu .dropdown-divider {
+                    margin: 0 !important;
+                    border-top: 1px solid #ddd !important;
+                    opacity: 1 !important;
+                }
+
+                .mobile-profile-menu .logout-item,
+                .mobile-dropdown-menu .text-danger,
+                .customer-mobile-menu .logout-item,
+                .mobile-top .dropdown-menu .text-danger,
+                .mobile-top-header .dropdown-menu .text-danger,
+                .mobile-profile-menu .logout-item i,
+                .mobile-dropdown-menu .text-danger i,
+                .customer-mobile-menu .logout-item i,
+                .mobile-top .dropdown-menu .text-danger i,
+                .mobile-top-header .dropdown-menu .text-danger i {
+                    color: #dc3545 !important;
+                }
+        }
+
+        /* No blinking text caret anywhere. Typing still works; only the visual caret is hidden. */
+        html, body, body * {
+            caret-color: transparent !important;
+        }
+
+        /* Only the actual editable controls may receive text input. */
+        input, textarea, [contenteditable="true"], [contenteditable=""] {
+            caret-color: transparent !important;
+        }
+
+        /* Sidebar: active page is the only highlighted item. */
+        .sidebar .nav a {
+            background: transparent !important;
+        }
+
+            .sidebar .nav a:hover:not(.active) {
+                background: transparent !important;
+            }
+
+            .sidebar .nav a.active {
+                background: #ffb74d !important;
+                color: #fff !important;
+            }
+
+        @@media (min-width: 769px) {
+            .mobile-top, .mobile-top-header {
+                display: none !important;
+            }
+        }
+
+
+        /* =====================================================
+                                                           COMPLAINT HISTORY — CLEAN SINGLE-CARD LAYOUT
+                                                           Keeps the existing page shell and card styling intact.
+                                                           ===================================================== */
+        #complaintHistory .complaint-history-card {
+            overflow: hidden;
+        }
+
+        #complaintHistory .complaint-info-list {
+            padding: 0;
+            background: #fff;
+        }
+
+        #complaintHistory .complaint-info-row {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 24px;
+            padding: 13px 20px;
+            border-top: 1px solid #f0f0f0;
+        }
+
+            #complaintHistory .complaint-info-row > span {
+                flex: 0 0 145px;
+                color: #8a8a8a;
+                font-size: 11px;
+                font-weight: 700;
+            }
+
+            #complaintHistory .complaint-info-row > strong {
+                flex: 1;
+                min-width: 0;
+                color: #333;
+                font-size: 12px;
+                font-weight: 600;
+                line-height: 1.55;
+                text-align: left;
+                overflow-wrap: anywhere;
+                white-space: normal;
+            }
+
+        #complaintHistory .complaint-details-row > strong {
+            font-weight: 500;
+            color: #555;
+        }
+
+        @@media (max-width: 768px) {
+            #complaintHistory .complaint-info-row {
+                gap: 12px;
+                padding: 10px 12px;
+            }
+
+                #complaintHistory .complaint-info-row > span {
+                    flex: 0 0 105px;
+                    font-size: 10px;
+                }
+
+                #complaintHistory .complaint-info-row > strong {
+                    font-size: 11px;
+                    line-height: 1.45;
+                }
+        }
+    </style>
+
+    <style>
+        /* =====================================================
+                                                           COMPLAINT HISTORY — COMPACT HORIZONTAL CARD
+                                                           Keep the existing page/sidebar/cards intact.
+                                                           Information stays side-by-side instead of stacking.
+                                                           ===================================================== */
+        #complaintHistory .complaint-history-card {
+            width: 100%;
+            overflow: hidden;
+        }
+
+        #complaintHistory .complaint-info-list {
+            display: grid !important;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 0 !important;
+            padding: 0 !important;
+            background: #fff;
+        }
+
+        #complaintHistory .complaint-info-row {
+            min-width: 0;
+            min-height: 68px;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            justify-content: center !important;
+            gap: 5px !important;
+            padding: 12px 18px !important;
+            border-top: 1px solid #f0f0f0 !important;
+            border-right: 1px solid #f0f0f0 !important;
+        }
+
+            #complaintHistory .complaint-info-row:nth-child(4n) {
+                border-right: 0 !important;
+            }
+
+            #complaintHistory .complaint-info-row > span {
+                flex: none !important;
+                width: 100%;
+                color: #999 !important;
+                font-size: 10px !important;
+                font-weight: 600 !important;
+                text-transform: uppercase;
+                letter-spacing: .35px;
+                line-height: 1.2 !important;
+            }
+
+            #complaintHistory .complaint-info-row > strong {
+                flex: none !important;
+                width: 100%;
+                min-width: 0;
+                color: #333 !important;
+                font-size: 12px !important;
+                font-weight: 600 !important;
+                line-height: 1.35 !important;
+                text-align: left !important;
+                overflow-wrap: anywhere;
+                white-space: normal;
+            }
+
+        #complaintHistory .complaint-details-row > strong {
+            color: #555 !important;
+            font-weight: 500 !important;
+        }
+
+        @@media (max-width: 1100px) {
+            #complaintHistory .complaint-info-list {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+
+            #complaintHistory .complaint-info-row:nth-child(4n) {
+                border-right: 1px solid #f0f0f0 !important;
+            }
+
+            #complaintHistory .complaint-info-row:nth-child(3n) {
+                border-right: 0 !important;
+            }
+        }
+
+        @@media (max-width: 768px) {
+            #complaintHistory .complaint-info-list {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            #complaintHistory .complaint-info-row {
+                min-height: 62px;
+                padding: 10px 12px !important;
+                gap: 4px !important;
+            }
+
+                #complaintHistory .complaint-info-row:nth-child(3n),
+                #complaintHistory .complaint-info-row:nth-child(4n) {
+                    border-right: 1px solid #f0f0f0 !important;
+                }
+
+                #complaintHistory .complaint-info-row:nth-child(2n) {
+                    border-right: 0 !important;
+                }
+
+                #complaintHistory .complaint-info-row > span {
+                    font-size: 9px !important;
+                }
+
+                #complaintHistory .complaint-info-row > strong {
+                    font-size: 10.5px !important;
+                    line-height: 1.3 !important;
+                }
+        }
+
+        @@media (max-width: 420px) {
+            #complaintHistory .complaint-info-row {
+                min-height: 58px;
+                padding: 9px 10px !important;
+            }
+
+                #complaintHistory .complaint-info-row > span {
+                    font-size: 8px !important;
+                }
+
+                #complaintHistory .complaint-info-row > strong {
+                    font-size: 10px !important;
+                }
+        }
+    </style>
+
+
+    <style id="customer-greeting-fix">
+        /* Desktop: greeting appears only when the sidebar expands. */
+        .sidebar-greeting {
+            width: calc(100% - 16px);
+            margin: 0 8px 4px !important;
+            padding: 4px 10px !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 15px;
+            font-weight: 700;
+            line-height: 1.2;
+            white-space: nowrap;
+            opacity: 0;
+            transform: translateX(-4px);
+            transition: opacity .2s ease, transform .2s ease;
+        }
+
+        .sidebar:hover .sidebar-greeting,
+        .sidebar:focus-within .sidebar-greeting {
+            opacity: 1;
+            transform: none;
+        }
+
+        /* Mobile: profile picture + greeting are visible together. */
+        .mobile-profile-dropdown {
+            display: flex !important;
+            align-items: center !important;
+            gap: 9px !important;
+        }
+
+            .mobile-profile-dropdown .mobile-greeting-text {
+                display: inline-block !important;
+                color: #333 !important;
+                font-size: 15px !important;
+                font-weight: 700 !important;
+                line-height: 1 !important;
+                white-space: nowrap !important;
+            }
+
+        @@media (min-width: 769px) {
+            .mobile-profile-dropdown {
+                display: none !important;
+            }
+        }
+    </style>
+
+
+    <style id="sg-popup-theme">
+        /* ---------- Compact, soft popups (SweetAlert2) ---------- */
+        .swal2-container {
+            padding: 12px !important;
+        }
+
+        .swal2-popup {
+            width: min(340px, calc(100vw - 32px)) !important;
+            padding: 22px 20px 18px !important;
+            border-radius: 20px !important;
+            box-shadow: 0 18px 50px rgba(33, 37, 41, .20) !important;
+            font-family: inherit !important;
+        }
+
+        .swal2-icon {
+            zoom: .72;
+            margin: .2em auto .7em !important;
+        }
+
+        .swal2-title {
+            font-size: 1.12rem !important;
+            font-weight: 700 !important;
+            color: #212529 !important;
+            padding: 0 !important;
+            margin: 0 0 .3rem !important;
+        }
+
+        .swal2-html-container {
+            font-size: .9rem !important;
+            line-height: 1.5 !important;
+            color: #6c757d !important;
+            margin: .2rem 0 0 !important;
+            padding: 0 .2em !important;
+        }
+
+        .swal2-actions {
+            margin-top: 1.1rem !important;
+            gap: 8px;
+        }
+
+        .swal2-styled {
+            border-radius: 12px !important;
+            padding: .55rem 1.2rem !important;
+            min-width: 92px;
+            font-size: .9rem !important;
+            font-weight: 600 !important;
+            box-shadow: none !important;
+        }
+
+            .swal2-styled.swal2-confirm {
+                background-color: #d97600 !important;
+            }
+
+            .swal2-styled.swal2-cancel {
+                background-color: #e9ecef !important;
+                color: #495057 !important;
+            }
+
+            .swal2-styled:focus {
+                box-shadow: 0 0 0 3px rgba(217, 118, 0, .25) !important;
+            }
+
+        .swal2-popup.swal2-show {
+            animation: sgPopIn .22s ease-out !important;
+        }
+
+        .swal2-popup.swal2-hide {
+            animation: sgPopOut .15s ease-in !important;
+        }
+
+        @@keyframes sgPopIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px) scale(.96);
+            }
+
+            to {
+                opacity: 1;
+                transform: none;
+            }
+        }
+
+        @@keyframes sgPopOut {
+            from {
+                opacity: 1;
+                transform: none;
+            }
+
+            to {
+                opacity: 0;
+                transform: translateY(6px) scale(.97);
+            }
+        }
+
+        /* ---------- Bootstrap modals: smaller, rounded, smooth ---------- */
+        .modal-content {
+            border: 0 !important;
+            border-radius: 18px !important;
+            box-shadow: 0 18px 50px rgba(33, 37, 41, .20) !important;
+            overflow: hidden;
+        }
+
+        .modal-header {
+            padding: .85rem 1.1rem;
+        }
+
+        .modal-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+        }
+
+        .modal-body {
+            padding: 1rem 1.1rem;
+        }
+
+        .modal-footer {
+            padding: .7rem 1.1rem;
+            gap: 6px;
+        }
+
+        .modal-backdrop.show {
+            opacity: .35;
+        }
+
+        .modal.fade .modal-dialog {
+            transform: translateY(14px) scale(.97);
+            transition: transform .22s ease-out;
+        }
+
+        .modal.show .modal-dialog {
+            transform: none;
+        }
+
+        @@media (min-width: 576px) {
+            .modal-dialog.modal-md {
+                --bs-modal-width: 440px;
+                max-width: 440px;
+            }
+
+            .modal-dialog.modal-lg {
+                --bs-modal-width: 620px;
+            }
+        }
+
+        .sg-rec-dot {
+            display: inline-block;
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: #dc3545;
+            margin-left: 4px;
+            vertical-align: middle;
+            animation: sgBlink 1s infinite;
+        }
+
+        @@keyframes sgBlink {
+            50% {
+                opacity: .25;
+            }
+        }
+    </style>
+
+    <style id="sg-mobile-header">
+        /* Mobile header: "Hi Customer" first, then the profile photo with an orange ring (same as Dashboard) */
+        @@media (max-width: 768px) {
+            .mobile-top .dropdown,
+            .mobile-top-header .dropdown {
+                display: flex !important;
+                align-items: center !important;
+                gap: 10px !important;
+            }
+
+            .mobile-customer-label,
+            .mobile-greeting-text,
+            .mobile-customer-greeting {
+                order: -1 !important;
+                display: inline-block !important;
+                margin: 0 !important;
+                color: #212529 !important;
+                font-size: .9rem !important;
+                font-weight: 700 !important;
+                line-height: 1 !important;
+                white-space: nowrap !important;
+            }
+
+            .mobile-top .profile-thumb,
+            .mobile-top-header .profile-thumb,
+            .mobile-profile-trigger,
+            .mobile-profile-image {
+                width: 44px !important;
+                height: 44px !important;
+                min-width: 44px !important;
+                min-height: 44px !important;
+                padding: 0 !important;
+                border-radius: 50% !important;
+                object-fit: cover !important;
+                display: block !important;
+                border: 2px solid #f0a43c !important;
+                background: #fff !important;
+                box-sizing: content-box !important;
+                cursor: pointer;
+            }
+
+            .mobile-profile-btn {
+                width: auto !important;
+                height: auto !important;
+                min-width: 0 !important;
+                min-height: 0 !important;
+                padding: 0 !important;
+                border: 0 !important;
+                border-radius: 50% !important;
+                background: transparent !important;
+                box-shadow: none !important;
+                display: flex !important;
+            }
+        }
+    </style>
+
+
+    <style id="sg-history-focus">
+        /* Booking opened from a notification: highlighted briefly */
+        .history-card.sg-history-focus {
+            position: relative;
+            border-color: #f0a43c !important;
+            box-shadow: 0 0 0 3px rgba(240, 164, 60, .35), 0 14px 32px rgba(217, 118, 0, .18) !important;
+            animation: sgHistoryGlow 1.2s ease-in-out 3;
+        }
+
+        .sg-history-focus-tag {
+            position: absolute;
+            top: 8px;
+            right: 12px;
+            padding: 3px 10px;
+            border-radius: 999px;
+            background: #d97600;
+            color: #fff;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: .2px;
+            box-shadow: 0 4px 10px rgba(217, 118, 0, .3);
+            z-index: 2;
+        }
+
+        @@keyframes sgHistoryGlow {
+            0%, 100% {
+                box-shadow: 0 0 0 3px rgba(240, 164, 60, .35), 0 14px 32px rgba(217, 118, 0, .18);
+            }
+
+            50% {
+                box-shadow: 0 0 0 7px rgba(240, 164, 60, .20), 0 14px 32px rgba(217, 118, 0, .28);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- =====================================================
+         DESKTOP SIDEBAR
+         ===================================================== -->
+
+    <aside class="sidebar">
+
+        <img src="@Url.Content("~/images/Logo.png")"
+             class="logo" width="60" height="60" loading="eager" decoding="async" asp-append-version="true"
+             alt="ServiceGo"
+             onclick="window.location.href='@Url.Action("Index", "Home")'" />
+
+        <div class="sidebar-greeting" aria-label="Customer">
+            <img src="@Url.Content(mobileProfileImage)" alt="Profile">
+            <span>Hi Customer</span>
+        </div>
+
+        <div class="nav">
+
+            <a href="@Url.Action("CusDashboard", "Customer")">
+                <i class="bi bi-house-door"></i>
+                <span>Dashboard</span>
+            </a>
+
+            <a href="@Url.Action("History", "Customer")"
+               class="active">
+                <i class="bi bi-clock-history"></i>
+                <span>History</span>
+            </a>
+
+            <a href="@Url.Action("Messages", "Customer")">
+                <i class="bi bi-chat-dots"></i>
+                <span>Messages</span>
+            </a>
+
+            <a href="@Url.Action("Notifications", "Customer")">
+                <i class="bi bi-bell"></i>
+                <span>Notifications</span>
+                @if ((ViewBag.UnreadNotificationCount as int? ?? 0) > 0)
+                {
+                    <span class="sidebar-notification-badge">@(ViewBag.UnreadNotificationCount)</span>
+                }
+            </a>
+
+            <a href="@Url.Action("Logout", "Customer")">
+                <i class="bi bi-box-arrow-right"></i>
+                <span>Logout</span>
+            </a>
+
+        </div>
+    </aside>
+
+
+    <!-- =====================================================
+         MOBILE HEADER
+         ===================================================== -->
+
+    <div class="mobile-top">
+
+        <img src="@Url.Content("~/images/Logo.png")"
+             class="mobile-logo" width="45" height="45" loading="eager" decoding="async" asp-append-version="true"
+             alt="ServiceGo"
+             onclick="window.location.href='@Url.Action("Index", "Home")'" />
+
+        <div class="dropdown mobile-profile-dropdown">
+
+            <span class="mobile-greeting-text">Hi Customer</span>
+
+            <img src="@Url.Content(mobileProfileImage)"
+                 class="profile-thumb"
+                 id="historyMobileProfileImage" width="44" height="44" loading="eager" decoding="async" asp-append-version="true"
+                 alt="Profile"
+                 data-bs-toggle="dropdown"
+                 aria-expanded="false" />
+
+            <ul class="dropdown-menu dropdown-menu-end mobile-dropdown-menu">
+
+                <li>
+                    <a class="dropdown-item"
+                       href="@Url.Action("CusDashboard", "Customer")">
+                        <i class="bi bi-house-door"></i>
+                        Dashboard
+                    </a>
+                </li>
+
+                <li>
+                    <a class="dropdown-item active"
+                       href="@Url.Action("History", "Customer")">
+                        <i class="bi bi-clock-history"></i>
+                        History
+                    </a>
+                </li>
+
+                <li>
+                    <a class="dropdown-item"
+                       href="@Url.Action("Messages", "Customer")">
+                        <i class="bi bi-chat-dots"></i>
+                        Messages
+                    </a>
+                </li>
+
+                <li>
+                    <a class="dropdown-item d-flex align-items-center"
+                       href="@Url.Action("Notifications", "Customer")">
+                        <i class="bi bi-bell"></i>
+                        <span>Notifications</span>
+                        @if ((ViewBag.UnreadNotificationCount as int? ?? 0) > 0)
+                        {
+                            <span class="badge rounded-pill text-bg-warning ms-auto">@(ViewBag.UnreadNotificationCount)</span>
+                        }
+                    </a>
+                </li>
+
+                <li>
+                    <hr class="dropdown-divider" />
+                </li>
+
+                <li>
+                    <a class="dropdown-item text-danger"
+                       href="@Url.Action("Logout", "Customer")">
+                        <i class="bi bi-box-arrow-right"></i>
+                        Logout
+                    </a>
+                </li>
+
+            </ul>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         MAIN
+         ===================================================== -->
+
+    <main class="main">
+
+        <div class="page-container">
+
+            <!-- PAGE HEADER -->
+
+            <div class="page-header">
+
+                <div class="page-icon">
+                    <i class="bi bi-clock-history"></i>
+                </div>
+
+                <h2>History</h2>
+
+                <p>
+                    View your jobs, ratings and submitted complaints.
+                </p>
+
+            </div>
+
+
+            <!-- =================================================
+                 THREE CATEGORIES
+                 ================================================= -->
+
+            <div class="history-tabs">
+
+                <button type="button"
+                        class="history-tab active"
+                        data-target="jobHistory">
+
+                    <i class="bi bi-briefcase"></i>
+
+                    <span>Job History</span>
+
+                    <small>
+                        @jobHistoryCount
+                    </small>
+
+                </button>
+
+
+                <button type="button"
+                        class="history-tab"
+                        data-target="ratingHistory">
+
+                    <i class="bi bi-star-fill"></i>
+
+                    <span>Rating History</span>
+
+                    <small>
+                        @(Model?.RatingHistory?.Count ?? 0)
+                    </small>
+
+                </button>
+
+
+                <button type="button"
+                        class="history-tab"
+                        data-target="complaintHistory">
+
+                    <i class="bi bi-exclamation-triangle"></i>
+
+                    <span>Complaint History</span>
+
+                    <small>
+                        @(Model?.ComplaintHistory?.Count ?? 0)
+                    </small>
+
+                </button>
+
+            </div>
+
+
+            <!-- =================================================
+                 JOB HISTORY
+                 ================================================= -->
+
+            <section id="jobHistory"
+                     class="history-section active">
+
+                <div class="section-heading">
+
+                    <div>
+                        <h4>Job History</h4>
+
+                        <p>
+                            Your completed, cancelled and rejected bookings.
+                        </p>
+                    </div>
+
+                    <span class="section-pill">
+                        <i class="bi bi-briefcase"></i>
+                        @jobHistoryCount Jobs
+                    </span>
+
+                </div>
+
+
+                @if (jobHistoryItems != null && jobHistoryItems.Any())
+                {
+                    foreach (var item in jobHistoryItems)
+                    {
+                        var status = string.IsNullOrWhiteSpace(item.Status)
+                        ? "Unknown"
+                        : item.Status.Trim();
+
+                        var statusClass =
+                        status.Equals("Completed", StringComparison.OrdinalIgnoreCase) ? "status-completed" :
+                        status.Equals("Accepted", StringComparison.OrdinalIgnoreCase) ? "status-accepted" :
+                        status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase) ? "status-cancelled" :
+                        status.Equals("Rejected", StringComparison.OrdinalIgnoreCase) ? "status-rejected" :
+                        "status-expired";
+
+                        var statusIcon =
+                        status.Equals("Completed", StringComparison.OrdinalIgnoreCase) ? "bi-check-circle-fill" :
+                        status.Equals("Accepted", StringComparison.OrdinalIgnoreCase) ? "bi-calendar-check" :
+                        status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase) ? "bi-x-circle-fill" :
+                        status.Equals("Rejected", StringComparison.OrdinalIgnoreCase) ? "bi-slash-circle-fill" :
+                        "bi-clock-history";
+
+                        DateTime historyEventDate = item.BookingDate;
+                        if (status.Equals("Completed", StringComparison.OrdinalIgnoreCase) && item.CompletedAt.HasValue)
+                            historyEventDate = item.CompletedAt.Value;
+                        else if (status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase) && item.CancelledAt.HasValue)
+                            historyEventDate = item.CancelledAt.Value;
+                        else if (status.Equals("Rejected", StringComparison.OrdinalIgnoreCase) && item.RejectedAt.HasValue)
+                            historyEventDate = item.RejectedAt.Value;
+
+                        <article class="history-card" id="history-booking-@item.Id" data-booking-id="@item.Id">
+                            <div class="history-card-top">
+                                <div class="history-title-wrap">
+                                    <div class="service-icon">
+                                        <i class="bi @statusIcon"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="mb-1">
+                                            @(string.IsNullOrWhiteSpace(item.ServiceName) ? "Service" : item.ServiceName)
+                                        </h5>
+                                        <div class="small text-muted">
+                                            Provider: @(string.IsNullOrWhiteSpace(item.ProviderName) ? "Not Assigned" : item.ProviderName)
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <span class="status-badge @statusClass">
+                                    @status
+                                </span>
+                            </div>
+
+                            <div class="history-summary">
+                                <span><i class="bi bi-hash"></i> @item.BookingId</span>
+                                <span><i class="bi bi-calendar-event"></i> @historyEventDate.ToString("dd MMM yyyy")</span>
+                                @if (!string.IsNullOrWhiteSpace(item.BookingTime))
+                                {
+                                    <span><i class="bi bi-clock"></i> @item.BookingTime</span>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(item.ServiceType))
+                                {
+                                    <span><i class="bi bi-house-gear"></i> @item.ServiceType</span>
+                                }
+                                @if (status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase) &&
+                                                        !string.IsNullOrWhiteSpace(item.CancelledBy))
+                                {
+                                    <span><i class="bi bi-person-x"></i> Cancelled by @item.CancelledBy</span>
+                                }
+                                @if (item.HasRescheduleHistory &&
+                                                        status.Equals("Accepted", StringComparison.OrdinalIgnoreCase) &&
+                                                        string.Equals(item.RescheduledStatus, "Accepted", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    <span><i class="bi bi-calendar2-week"></i> Rescheduled</span>
+                                }
+                            </div>
+                        </article>
+                    }
+                }
+                else
+                {
+                    <div class="empty-state">
+
+                        <i class="bi bi-briefcase"></i>
+
+                        <h5>No Job History Found</h5>
+
+                        <p>
+                            Your completed, cancelled and rejected
+                            bookings will appear here.
+                        </p>
+
+                    </div>
+                }
+
+            </section>
+
+
+            <!-- =================================================
+                 RATING HISTORY
+                 ================================================= -->
+
+            <section id="ratingHistory"
+                     class="history-section">
+
+                <div class="section-heading">
+
+                    <div>
+                        <h4>Rating History</h4>
+
+                        <p>
+                            Ratings and reviews you submitted to service providers.
+                        </p>
+                    </div>
+
+                    <span class="section-pill">
+                        <i class="bi bi-star-fill"></i>
+                        @(Model?.RatingHistory?.Count ?? 0) Ratings
+                    </span>
+
+                </div>
+
+
+                @if (Model?.RatingHistory != null &&
+                                Model.RatingHistory.Any())
+                {
+                    foreach (var item in Model.RatingHistory)
+                    {
+                        <article class="rating-card">
+
+                            <div class="rating-main">
+
+                                <div class="provider-box">
+
+                                    <div class="provider-icon">
+                                        <i class="bi bi-person-fill"></i>
+                                    </div>
+
+                                    <div>
+
+                                        <h5>
+                                            @(string.IsNullOrWhiteSpace(item.ProviderName)
+                                                                                ? "Provider"
+                                                                                : item.ProviderName)
+                                </h5>
+
+                                        <p>
+                                            @item.ServiceName
+
+                                    @if (!string.IsNullOrWhiteSpace(item.ServiceType))
+                                            {
+                                                <span>
+                                                    • @item.ServiceType
+                                                </span>
+                                            }
+                                        </p>
+
+                                        <small>
+                                            <i class="bi bi-calendar3"></i>
+                                            @item.BookingDate.ToString("dd MMM yyyy")
+                                        </small>
+
+                                    </div>
+
+                                </div>
+
+
+                                <div class="rating-score">
+
+                                    <div class="stars">
+
+                                        @for (int star = 1; star <= 5; star++)
+                                        {
+                                            <i class="bi @(star <= item.Rating
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           ? "bi-star-fill"
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           : "bi-star")"></i>
+                                                                }
+
+                                    </div>
+
+                                    <strong>
+                                        @item.Rating / 5
+                                    </strong>
+
+                                </div>
+
+                            </div>
+
+
+                            @if (!string.IsNullOrWhiteSpace(item.ReviewComment))
+                            {
+                                <div class="review-box">
+
+                                    <p>
+                                        <i class="bi bi-quote"></i>
+                                        @item.ReviewComment
+                                    </p>
+
+                                </div>
+                            }
+
+
+                            <div class="rating-footer">
+
+                                <span>
+                                    <i class="bi bi-receipt"></i>
+                                    Booking:
+                                    @item.BookingId
+                                </span>
+
+                                <span>
+                                    <i class="bi bi-check-circle-fill"></i>
+                                    Rating submitted
+                                </span>
+
+                            </div>
+
+                        </article>
+                    }
+                }
+                else
+                {
+                    <div class="empty-state">
+
+                        <i class="bi bi-star"></i>
+
+                        <h5>No Rating History Found</h5>
+
+                        <p>
+                            Ratings and reviews you give to providers
+                            will appear here.
+                        </p>
+
+                    </div>
+                }
+
+            </section>
+
+
+            <!-- =================================================
+                 COMPLAINT HISTORY
+                 ================================================= -->
+
+            <section id="complaintHistory" class="history-section">
+
+                <div class="section-heading">
+                    <div>
+                        <h4>Complaint History</h4>
+                        <p>Track complaints submitted by you and their current status.</p>
+                    </div>
+
+                    <span class="section-pill">
+                        <i class="bi bi-shield-exclamation"></i>
+                        @(Model?.ComplaintHistory?.Count ?? 0) Complaints
+                    </span>
+                </div>
+
+                @if (Model?.ComplaintHistory != null && Model.ComplaintHistory.Any())
+                {
+                    foreach (var complaint in Model.ComplaintHistory)
+                    {
+                        var complaintStatus = string.IsNullOrWhiteSpace(complaint.Status)
+                        ? "Pending"
+                        : complaint.Status.Trim();
+
+                        var complaintStatusClass = complaintStatus.Equals("Resolved", StringComparison.OrdinalIgnoreCase)
+                        ? "complaint-resolved"
+                        : complaintStatus.Equals("Rejected", StringComparison.OrdinalIgnoreCase)
+                        ? "complaint-rejected"
+                        : "complaint-pending";
+
+                        string historyIssue = string.Empty;
+
+                        if (!string.IsNullOrWhiteSpace(complaint.OtherIssue) &&
+                        !complaint.OtherIssue.Equals("Other", StringComparison.OrdinalIgnoreCase))
+                        {
+                            historyIssue = complaint.OtherIssue.Trim();
+                        }
+                        else if (!string.IsNullOrWhiteSpace(complaint.IssueCategory) &&
+                        !complaint.IssueCategory.Equals("General", StringComparison.OrdinalIgnoreCase) &&
+                        !complaint.IssueCategory.Equals("Other", StringComparison.OrdinalIgnoreCase))
+                        {
+                            historyIssue = complaint.IssueCategory.Trim();
+                        }
+                        else if (complaint.OtherIssue?.Equals("Other", StringComparison.OrdinalIgnoreCase) == true)
+                        {
+                            historyIssue = "Other";
+                        }
+
+                        <article class="complaint-card complaint-history-card">
+
+                            <div class="complaint-top">
+                                <div class="complaint-id">
+                                    <div class="complaint-icon">
+                                        <i class="bi bi-exclamation-triangle-fill"></i>
+                                    </div>
+                                    <div>
+                                        <h5>Complaint #@complaint.ComplaintId</h5>
+                                        <span>@complaint.CreatedAt.ToString("dd MMM yyyy, hh:mm tt")</span>
+                                    </div>
+                                </div>
+
+                                <span class="complaint-status @complaintStatusClass">
+                                    @complaintStatus
+                                </span>
+                            </div>
+
+                            <div class="complaint-info-list">
+
+                                <div class="complaint-info-row">
+                                    <span>Provider ID</span>
+                                    <strong>
+                                        @(string.IsNullOrWhiteSpace(complaint.ProviderId) ? "N/A" : complaint.ProviderId)
+                                    </strong>
+                                </div>
+
+                                <div class="complaint-info-row">
+                                    <span>Provider Name</span>
+                                    <strong>
+                                        @(string.IsNullOrWhiteSpace(complaint.ProviderName) ? "N/A" : complaint.ProviderName)
+                                    </strong>
+                                </div>
+
+                                @if (!string.IsNullOrWhiteSpace(historyIssue))
+                                {
+                                    <div class="complaint-info-row">
+                                        <span>Issue Category</span>
+                                        <strong>@historyIssue</strong>
+                                    </div>
+                                }
+
+                                @if (!string.IsNullOrWhiteSpace(complaint.ComplaintDetails))
+                                {
+                                    <div class="complaint-info-row complaint-details-row">
+                                        <span>Complaint Details</span>
+                                        <strong>@complaint.ComplaintDetails</strong>
+                                    </div>
+                                }
+
+                            </div>
+
+                        </article>
+                    }
+                }
+                else
+                {
+                    <div class="empty-state">
+                        <i class="bi bi-shield-check"></i>
+                        <h5>No Complaint History Found</h5>
+                        <p>Complaints submitted by you will appear here with their current status.</p>
+                    </div>
+                }
+
+            </section>
+
+        </div>
+
+    </main>
+
+
+    <script defer src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+
+        document.addEventListener("DOMContentLoaded", function () {
+
+            const tabs =
+                document.querySelectorAll(".history-tab");
+
+            const sections =
+                document.querySelectorAll(".history-section");
+
+            tabs.forEach(function (tab) {
+
+                tab.addEventListener("click", function () {
+
+                    const target =
+                        this.getAttribute("data-target");
+
+                    tabs.forEach(function (t) {
+                        t.classList.remove("active");
+                    });
+
+                    sections.forEach(function (section) {
+                        section.classList.remove("active");
+                    });
+
+                    this.classList.add("active");
+
+                    const targetSection =
+                        document.getElementById(target);
+
+                    if (targetSection) {
+                        targetSection.classList.add("active");
+                    }
+
+                });
+
+            });
+
+            const requestedTab = new URLSearchParams(window.location.search).get("tab");
+            if (requestedTab) {
+                const requestedButton = document.querySelector('.history-tab[data-target="' + requestedTab + '"]');
+                if (requestedButton) requestedButton.click();
+            }
+
+        });
+
+    </script>
+
+
+    <script id="servicego-history-load-more">
+        document.addEventListener("DOMContentLoaded", function () {
+            const sections = [
+                {
+                    id: "jobHistory",
+                    card: ".history-card",
+                    button: "jobHistoryLoadMore"
+                },
+                {
+                    id: "ratingHistory",
+                    card: ".rating-card",
+                    button: "ratingHistoryLoadMore"
+                },
+                {
+                    id: "complaintHistory",
+                    card: ".complaint-card",
+                    button: "complaintHistoryLoadMore"
+                }
+            ];
+
+            sections.forEach(function (cfg) {
+                const section = document.getElementById(cfg.id);
+                if (!section) return;
+
+                const cards = Array.from(
+                    section.querySelectorAll(cfg.card)
+                );
+
+                const totalCards = cards.length;
+                const maxVisible = Math.min(totalCards, 30);
+
+                // 1-15 cards: everything is visible and there is no button.
+                if (totalCards <= 15) {
+                    cards.forEach(function (card) {
+                        card.hidden = false;
+                    });
+                    return;
+                }
+
+                let visibleCount = 15;
+
+                const button = document.createElement("button");
+                button.type = "button";
+                button.className =
+                    "btn btn-outline-warning d-block mx-auto mt-4 mb-4 px-4 py-2 fw-semibold";
+                button.id = cfg.button;
+                button.textContent = "Load More";
+                button.setAttribute("aria-controls", cfg.id);
+                button.setAttribute("aria-expanded", "false");
+
+                section.appendChild(button);
+
+                function update() {
+                    cards.forEach(function (card, index) {
+                        card.hidden = index >= visibleCount;
+                    });
+
+                    if (visibleCount >= maxVisible) {
+                        button.textContent = "Show Less";
+                        button.setAttribute("aria-expanded", "true");
+                    } else {
+                        button.textContent = "Load More";
+                        button.setAttribute("aria-expanded", "false");
+                    }
+                }
+
+                button.addEventListener("click", function () {
+                    if (visibleCount >= maxVisible) {
+                        // Collapse back to the first 15.
+                        visibleCount = 15;
+                    } else {
+                        // Reveal the next 15.
+                        visibleCount = Math.min(
+                            visibleCount + 15,
+                            maxVisible
+                        );
+                    }
+
+                    update();
+                });
+
+                update();
+            });
+        });
+    </script>
+
+
+    <script id="servicego-history-focus">
+        // Scroll to and highlight the booking that was opened from a notification.
+        window.addEventListener("load", function () {
+            var params = new URLSearchParams(window.location.search);
+            var bookingId = params.get("bookingId");
+            if (!bookingId || !/^\d+$/.test(bookingId)) return;
+
+            // Wait briefly so the "Load More" script has finished hiding cards.
+            setTimeout(function () {
+                var card = document.getElementById("history-booking-" + bookingId);
+                if (!card) return;
+
+                // Make sure the Job History tab is open and the card is visible.
+                var section = card.closest(".history-section");
+                if (section && !section.classList.contains("active")) {
+                    var tab = document.querySelector('.history-tab[data-target="' + section.id + '"]');
+                    if (tab) tab.click();
+                }
+                card.hidden = false;
+
+                card.classList.add("sg-history-focus");
+
+                var tag = document.createElement("span");
+                tag.className = "sg-history-focus-tag";
+                tag.textContent = "From your notification";
+                card.appendChild(tag);
+
+                card.scrollIntoView({ behavior: "smooth", block: "center" });
+
+                // Remove the highlight after a few seconds.
+                setTimeout(function () {
+                    card.classList.remove("sg-history-focus");
+                    if (tag.parentNode) tag.parentNode.removeChild(tag);
+                }, 4500);
+
+                // A refresh should not highlight the card again.
+                if (window.history && window.history.replaceState) {
+                    params.delete("bookingId");
+                    var query = params.toString();
+                    window.history.replaceState(
+                        null, "",
+                        window.location.pathname + (query ? "?" + query : ""));
+                }
+            }, 250);
+        });
+    </script>
+</body>
+</html>

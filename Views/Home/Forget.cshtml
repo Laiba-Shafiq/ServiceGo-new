@@ -1,0 +1,288 @@
+﻿@model ServiceGo.Models.Forget
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ServiceGo - Forgot Password</title>
+    <link rel="icon" href="@Url.Content("~/images/Logo.png")" type="image/x-icon">
+
+    <style>
+        :root {
+            color-scheme: light;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html {
+            min-height: 100%;
+        }
+
+        body {
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #f2f2f2;
+            font-family: "Poppins", Arial, Helvetica, sans-serif;
+            caret-color: transparent;
+        }
+
+        .forgot-card {
+            width: min(90%, 380px);
+            padding: 35px 40px;
+            background: #fff;
+            border: 1px solid #f3e6d2;
+            border-radius: 20px;
+            box-shadow: 0 18px 45px rgba(86,64,40,.12);
+            text-align: center;
+        }
+
+        .logo-link {
+            display: block;
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 15px;
+            line-height: 0;
+        }
+
+        .logo {
+            display: block;
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+        }
+
+        .forgot-card h3 {
+            margin: 0 0 15px;
+            color: #f0ad4e;
+            font-weight: 700;
+        }
+
+        .forgot-card p {
+            margin: 0 0 25px;
+            color: #555;
+            font-size: .95rem;
+            line-height: 1.6;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            color: #333;
+            font-size: .9rem;
+            font-weight: 600;
+        }
+
+        input.form-control {
+            width: 100%;
+            padding: 12px;
+            color: #555;
+            font: inherit;
+            font-size: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 12px;
+            background: #fff;
+        }
+
+            input.form-control:focus {
+                border-color: #f0ad4e;
+                box-shadow: 0 0 0 .2rem rgba(240,173,78,.14);
+                outline: none;
+                caret-color: #f0ad4e;
+            }
+
+        .btn-reset {
+            width: 100%;
+            margin-top: 10px;
+            padding: 12px;
+            border: 0;
+            border-radius: 12px;
+            background: linear-gradient(180deg,#f0ad4e,#e39e3e);
+            color: #fff;
+            font: inherit;
+            font-weight: 600;
+            font-size: 1rem;
+            box-shadow: 0 7px 18px rgba(240,173,78,.22);
+            cursor: pointer;
+        }
+
+            .btn-reset:hover {
+                opacity: .9;
+                transform: translateY(-2px);
+            }
+
+            .btn-reset:disabled {
+                cursor: wait;
+                opacity: .7;
+                transform: none;
+            }
+
+        a.back-login {
+            display: block;
+            margin-top: 18px;
+            color: #f38b1c;
+            font-size: .9rem;
+            font-weight: 600;
+            text-align: center;
+            text-decoration: none;
+        }
+
+            a.back-login:hover {
+                color: #e39e3e;
+                text-decoration: underline;
+            }
+
+        .text-danger {
+            display: block;
+            margin-top: 5px;
+            color: #d56a9f !important;
+            font-size: .8rem;
+            font-weight: 500;
+        }
+
+        #forgotError:empty,
+        #emailError:empty {
+            display: none;
+        }
+
+        input,
+        textarea,
+        select,
+        [contenteditable="true"] {
+            caret-color: auto;
+        }
+
+        @@media (max-width: 420px) {
+            .forgot-card {
+                padding: 30px 24px;
+            }
+        }</style>
+</head>
+<body>
+    <main class="forgot-card">
+        <a href="@Url.Action("Index", "Home")"
+           class="logo-link"
+           aria-label="Go to ServiceGo Home">
+            <img src="@Url.Content("~/images/Logo.png")"
+                 alt="ServiceGo Logo"
+                 class="logo"
+                 width="80"
+                 height="80"
+                 fetchpriority="high">
+        </a>
+
+        <h3>Forgot Password</h3>
+        <p>Enter your registered email address and we’ll send you a 6-digit OTP code.</p>
+
+        <form asp-action="Forget" asp-controller="Home" method="post" id="forgotForm" novalidate>
+            @Html.AntiForgeryToken()
+
+            <div id="forgotError" class="text-danger mb-2"></div>
+
+            <div class="form-group">
+                <label for="forgotEmail">Email Address</label>
+                <input id="forgotEmail"
+                       name="Email"
+                       class="form-control"
+                       type="text"
+                       inputmode="email"
+                       autocomplete="email"
+                       value="@(Model.Email ?? string.Empty)"
+                       placeholder="Enter your email address">
+                <span id="emailError" class="text-danger"></span>
+            </div>
+
+            <button type="submit" id="sendOtpBtn" class="btn-reset">Send OTP Code</button>
+        </form>
+
+        <a href="@Url.Action("Login", "Home")" class="back-login">Back to Login</a>
+    </main>
+
+    <script>
+        (() => {
+            const form = document.getElementById('forgotForm');
+            const btn = document.getElementById('sendOtpBtn');
+            const email = document.getElementById('forgotEmail');
+            const error = document.getElementById('forgotError');
+            const emailError = document.getElementById('emailError');
+
+            if (!form || !btn || !email || !error || !emailError) return;
+
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                error.textContent = '';
+                emailError.textContent = '';
+
+                const normalizedEmail = email.value.trim();
+                email.value = normalizedEmail;
+
+                if (!normalizedEmail) {
+                    emailError.textContent = 'Email address is required.';
+                    email.focus();
+                    return;
+                }
+
+                const emailPattern = /^[^\s@@]+@@[^\s@@]+\.[^\s@@]+$/;
+                if (!emailPattern.test(normalizedEmail)) {
+                    emailError.textContent = 'Please enter a valid email address.';
+                    email.focus();
+                    return;
+                }
+
+                btn.disabled = true;
+                btn.textContent = 'Sending OTP...';
+
+                try {
+                    const formData = new FormData(form);
+                    formData.set('Email', normalizedEmail);
+
+                    const response = await fetch(form.action, {
+                        method: 'POST',
+                        body: formData,
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success && data.redirectUrl) {
+                        window.location.assign(data.redirectUrl);
+                        return;
+                    }
+
+                    error.textContent = data.message || 'Unable to send OTP. Please try again.';
+
+                    if (Array.isArray(data.errors)) {
+                        const item = data.errors.find(x =>
+                            (x.Field || '').toLowerCase() === 'email'
+                        );
+
+                        if (item) {
+                            emailError.textContent = item.Errors?.[0] || '';
+                        }
+                    }
+                } catch (err) {
+                    console.error(err);
+                    error.textContent = 'Server error. Please try again.';
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = 'Send OTP Code';
+                }
+            });
+        })();
+    </script>
+</body>
+</html>

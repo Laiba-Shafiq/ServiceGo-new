@@ -1,0 +1,7040 @@
+﻿@model ServiceGo.Models.CustomerDashboardViewModel
+@using Microsoft.EntityFrameworkCore
+@inject IConfiguration Configuration
+@inject ServiceGo.Data.AppDbContext DbContext
+@{
+	Layout = null;
+
+	var customerPhone = ViewBag.CustomerPhonePermanent as string ?? string.Empty;
+	var customerCity = ViewBag.CustomerCity as string ?? string.Empty;
+	var customerAddress = ViewBag.CustomerAddress as string ?? string.Empty;
+	var customerProfileImage = ViewBag.CustomerProfileImage as string ?? string.Empty;
+
+	// Always display exactly one Customer ID prefix.
+	var customerIdDisplay = Model?.CustomerId ?? string.Empty;
+	while (customerIdDisplay.StartsWith("CUS-", StringComparison.OrdinalIgnoreCase))
+		customerIdDisplay = customerIdDisplay.Substring(4);
+	while (customerIdDisplay.StartsWith("CUS", StringComparison.OrdinalIgnoreCase))
+		customerIdDisplay = customerIdDisplay.Substring(3);
+	customerIdDisplay = string.IsNullOrWhiteSpace(customerIdDisplay)
+	? string.Empty
+	: "CUS-" + customerIdDisplay;
+
+	var cancellationAllowedIds =
+	ViewBag.CancellationAllowedIds as HashSet<int>
+	?? new HashSet<int>();
+
+	var rescheduleAllowedIds =
+	ViewBag.RescheduleAllowedIds as HashSet<int>
+	?? new HashSet<int>();
+
+	var customerComplaintBookingIds =
+	ViewBag.CustomerComplaintBookingIds as HashSet<int>
+	?? new HashSet<int>();
+
+	var providerImageIds =
+	(Model?.Bookings ?? Enumerable.Empty<ServiceGo.Models.BookingDetailViewModel>())
+	.Select(b => int.TryParse(b.ProviderId, out var providerId) ? providerId : 0)
+	.Where(id => id > 0)
+	.Distinct()
+	.ToList();
+
+	var providerImageRows = providerImageIds.Count > 0
+	? await DbContext.Register
+	.AsNoTracking()
+	.Where(r => providerImageIds.Contains(r.Id))
+	.Select(r => new
+	{
+		r.Id,
+		r.Name,
+		r.ProfilePicPath
+	})
+	.ToListAsync()
+	: new[]
+	{
+new
+{
+Id = 0,
+Name = (string?)null,
+ProfilePicPath = (string?)null
+}
+	}.Where(_ => false).ToList();
+
+	var providerProfileImages =
+	providerImageRows.ToDictionary(
+	r => r.Id,
+	r => r.ProfilePicPath ?? string.Empty);
+
+	var providerProfileImagesByName =
+	providerImageRows
+	.Where(r => !string.IsNullOrWhiteSpace(r.Name))
+	.ToDictionary(
+	r => r.Name!.Trim(),
+	r => r.ProfilePicPath ?? string.Empty,
+	StringComparer.OrdinalIgnoreCase);
+
+	// The first-time profile prompt is shown until Phone, City and Address
+	// have been completed. Name and Email are account fields and are readonly.
+	var customerProfileIncomplete =
+	string.IsNullOrWhiteSpace(customerPhone) ||
+	string.IsNullOrWhiteSpace(customerCity) ||
+	string.IsNullOrWhiteSpace(customerAddress);
+}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8" />
+
+	<meta name="viewport"
+		  content="width=device-width, initial-scale=1.0" />
+
+	<title>ServiceGo - Customer Dashboard</title>
+
+	<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+		  rel="stylesheet" />
+
+	<link rel="stylesheet"
+		  href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" />
+
+	<link rel="icon"
+		  href="@Url.Content("~/images/Logo.png")"
+		  type="image/x-icon" />
+
+	<style>
+
+		html, body {
+			width: 100%;
+			min-height: 100%;
+			margin: 0;
+		}
+
+		body {
+			font-family: 'Poppins', sans-serif;
+			background-color: #f8f9fa;
+			overflow-x: hidden;
+		}
+
+		/* Sidebar */
+
+		.sidebar {
+			position: fixed;
+			top: 0;
+			left: 0;
+			width: 80px;
+			height: 100vh;
+			background-color: #d97600;
+			transition: width 0.3s ease, box-shadow 0.3s ease;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			z-index: 1040;
+		}
+
+			.sidebar:hover,
+			.sidebar:focus-within {
+				width: 240px;
+				box-shadow: 4px 0 25px rgba(240, 173, 78, 0.3);
+			}
+
+			.sidebar img.logo,
+			.sidebar .nav a {
+				pointer-events: auto;
+			}
+
+			.sidebar img.logo {
+				width: 55px;
+				height: 55px;
+				margin: 20px 0;
+				border-radius: 12px;
+				background: #fff;
+				cursor: pointer;
+				object-fit: contain;
+				border: 2px solid #fff;
+			}
+
+		.sidebar-customer-label {
+			color: #fff;
+			opacity: 0;
+			visibility: hidden;
+			width: 0;
+			min-height: 0;
+			height: 0;
+			overflow: hidden;
+			margin: 0;
+			font-weight: 700;
+			font-size: .88rem;
+			line-height: 1.2;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			white-space: nowrap;
+		}
+
+			.sidebar-customer-label img {
+				width: 30px;
+				height: 30px;
+				border-radius: 50%;
+				object-fit: cover;
+				border: 2px solid rgba(255,255,255,.95);
+				margin-right: 8px;
+				flex: 0 0 30px;
+			}
+
+			.sidebar-customer-label i {
+				font-size: 1.05rem;
+			}
+
+		.sidebar:hover .sidebar-customer-label,
+		.sidebar:focus-within .sidebar-customer-label {
+			opacity: 1;
+			visibility: visible;
+			width: auto;
+			min-height: 28px;
+			height: auto;
+			overflow: visible;
+			margin: 0 0 8px;
+		}
+
+		.sidebar .nav {
+			width: 100%;
+			margin-top: 10px;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+		}
+
+			.sidebar .nav a {
+				display: flex;
+				align-items: center;
+				color: #fff;
+				padding: 12px 20px;
+				text-decoration: none;
+				border-radius: 10px;
+				width: 90%;
+				margin-bottom: 6px;
+				white-space: nowrap;
+				overflow: hidden;
+			}
+
+				.sidebar .nav a i {
+					font-size: 1.4rem;
+					margin-right: 15px;
+					min-width: 25px;
+					text-align: center;
+				}
+
+				.sidebar .nav a.active {
+					background-color: #ffb74d;
+					font-weight: 600;
+					color: #fff;
+				}
+
+				.sidebar .nav a:hover:not(.active) {
+					background-color: rgba(255, 255, 255, 0.15);
+				}
+
+			.sidebar .nav span {
+				opacity: 0;
+				transition: opacity 0.2s ease;
+			}
+
+		.sidebar:hover .nav span {
+			opacity: 1;
+		}
+
+		/* Main */
+
+		.main {
+			position: relative;
+			margin-left: 80px;
+			padding: 30px 30px 40px;
+			min-height: 100vh;
+			width: calc(100% - 80px);
+			max-width: none;
+			box-sizing: border-box;
+			overflow-x: visible;
+			/* Keep the dashboard in sync with the expanding sidebar. */
+			transition: margin-left 0.3s ease, width 0.3s ease;
+		}
+
+		/*
+				 * Provider-style sidebar behavior
+				 * when the sidebar opens, the dashboard itself moves/reflows instead
+				 * of being covered by the sidebar. Cards therefore resize smoothly too.
+				 */
+		.sidebar:hover ~ .main,
+		.sidebar:focus-within ~ .main {
+			margin-left: 240px;
+			width: calc(100% - 240px);
+		}
+
+		.sidebar,
+		.profile-card,
+		.request-card {
+			transform: none;
+		}
+
+		h3 {
+			color: #d97600;
+			font-weight: 700;
+		}
+
+		/* Profile */
+
+		.profile-card {
+			width: 100%;
+			background: #fff;
+			border-radius: 16px;
+			box-shadow: 0 4px 15px rgba(0,0,0,0.06);
+			padding: 22px 26px;
+			margin: 0 0 28px;
+			display: flex;
+			align-items: center;
+			gap: 20px;
+			box-sizing: border-box;
+		}
+
+			.profile-card .profile-summary {
+				min-width: 0;
+				flex: 1;
+			}
+
+			.profile-card img {
+				width: 82px;
+				height: 82px;
+				flex: 0 0 82px;
+				border-radius: 50%;
+				border: 3px solid #f0ad4e;
+				object-fit: cover;
+			}
+
+			.profile-card .profile-details {
+				display: grid;
+				grid-template-columns: repeat(2, minmax(220px, 1fr));
+				gap: 4px 28px;
+			}
+
+				.profile-card .profile-details p {
+					margin: 0;
+					color: #6c757d;
+					font-size: .93rem;
+					line-height: 1.55;
+					overflow-wrap: anywhere;
+				}
+
+				.profile-card .profile-details strong {
+					color: #212529;
+				}
+
+			.profile-card .profile-customer-id {
+				margin: -4px 0 8px;
+				color: #6c757d;
+				font-size: .93rem;
+				line-height: 1.4;
+			}
+
+				.profile-card .profile-customer-id strong {
+					color: #212529;
+				}
+
+		.profile-edit-btn {
+			flex: 0 0 auto;
+			white-space: nowrap;
+		}
+
+		/* Customer profile modal */
+
+		#customerProfileModal .modal-dialog {
+			width: min(720px, calc(100% - 24px));
+			max-width: 720px;
+			margin: 20px auto;
+		}
+
+		#customerProfileModal .modal-content {
+			height: calc(100vh - 40px);
+			max-height: calc(100vh - 40px);
+			display: flex;
+			flex-direction: column;
+		}
+
+		#customerProfileModal .modal-body {
+			flex: 1 1 auto;
+			min-height: 0;
+			overflow-y: auto;
+			overflow-x: hidden;
+			-webkit-overflow-scrolling: touch;
+		}
+
+		#customerProfileModal .modal-header,
+		#customerProfileModal .modal-footer {
+			flex: 0 0 auto;
+		}
+
+		/*
+				 * The form sits between the fixed header and footer, so the
+				 * scrolling area must be the modal-body inside this form.
+				 */
+		#customerProfileModal form#customerProfileForm {
+			flex: 1 1 auto;
+			min-height: 0;
+			display: flex;
+			flex-direction: column;
+		}
+
+			#customerProfileModal form#customerProfileForm .modal-body {
+				flex: 1 1 auto;
+				min-height: 0;
+				overflow-y: auto;
+				overflow-x: hidden;
+				max-height: none;
+			}
+
+			#customerProfileModal form#customerProfileForm .modal-footer {
+				flex: 0 0 auto;
+				background: #fff;
+			}
+
+		#customerProfileModal .readonly-field {
+			background: #f5f6f8;
+			color: #6c757d;
+			cursor: not-allowed;
+		}
+
+		#customerProfileModal .form-control {
+			border-radius: 10px;
+			min-height: 44px;
+		}
+
+		#customerProfileModal textarea.form-control {
+			min-height: 95px;
+		}
+
+		#customerProfileModal .form-control:focus {
+			border-color: #f0ad4e;
+			box-shadow: 0 0 0 0.2rem rgba(240,173,78,.18);
+		}
+
+		#customerProfileModal .btn {
+			border-radius: 10px;
+		}
+
+		/* Request cards */
+
+		.request-container {
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 20px;
+			align-items: start;
+		}
+
+		.request-card {
+			background: #fff;
+			content-visibility: auto;
+			contain-intrinsic-size: 260px;
+			border-radius: 16px;
+			box-shadow: 0 4px 15px rgba(0,0,0,0.04);
+			padding: 24px;
+			width: 100%;
+			min-width: 0;
+			box-sizing: border-box;
+			border-left: 6px solid transparent;
+			transition: transform 0.2s ease, box-shadow 0.2s ease;
+		}
+
+			.request-card:hover {
+				transform: translateY(-3px);
+				box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+			}
+
+		/* Buttons */
+
+		.buttons-group {
+			display: flex;
+			gap: 10px;
+			margin-top: 15px;
+			flex-wrap: wrap;
+		}
+
+		/* Booking category tabs */
+		/*
+				 * Dashboard booking tabs intentionally mirror the History tabs.
+				 * Keep the same shell/spacing so the dashboard feels like one
+				 * professional product instead of a separate component.
+				 */
+		.booking-category-tabs {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			background: #fff;
+			border: 1px solid #eee;
+			border-radius: 14px;
+			padding: 8px;
+			margin: 10px auto 22px;
+			box-shadow: 0 4px 12px rgba(0,0,0,.04);
+			width: min(100%, 900px);
+		}
+
+		.booking-category-tab {
+			flex: 1;
+			border: 0;
+			background: transparent;
+			color: #555;
+			border-radius: 10px;
+			padding: 11px 16px;
+			font-weight: 700;
+			cursor: pointer;
+			transition: .2s ease;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			gap: 8px;
+		}
+
+			.booking-category-tab:hover:not(.active) {
+				background: #fff8ed;
+				color: #d97600;
+			}
+
+			.booking-category-tab.active {
+				background: #ffb74d;
+				color: #fff;
+			}
+
+		.booking-category-count {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			min-width: 24px;
+			height: 24px;
+			padding: 3px 7px;
+			border-radius: 12px;
+			background: #f5f5f5;
+			color: #666;
+			font-size: 11px;
+			font-weight: 700;
+		}
+
+		.booking-category-tab.active .booking-category-count {
+			background: #fff;
+			color: #d97600;
+		}
+
+		.booking-empty-state {
+			display: none;
+			/*
+					 * The container is a 2-column grid: span BOTH columns so the
+					 * message sits exactly in the center under the tabs.
+					 */
+			grid-column: 1 / -1;
+			width: 100%;
+			max-width: 460px;
+			justify-self: center;
+			text-align: center;
+			margin: 10px auto 0;
+			padding: 34px 24px 30px;
+			box-sizing: border-box;
+			background: linear-gradient(180deg, #fffaf2 0%, #fff4e3 100%);
+			border: 2px dashed #f3c27a;
+			border-radius: 22px;
+			box-shadow: 0 8px 24px rgba(217, 118, 0, 0.08);
+		}
+
+			.booking-empty-state .empty-icon {
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				width: 68px;
+				height: 68px;
+				margin-bottom: 14px;
+				border-radius: 50%;
+				background: #fff;
+				color: #d97600;
+				font-size: 1.9rem;
+				box-shadow: 0 4px 14px rgba(217, 118, 0, 0.18);
+			}
+
+			.booking-empty-state .empty-title {
+				display: block;
+				margin: 0 0 6px;
+				color: #8a4b00;
+				font-weight: 800;
+				font-size: 1.1rem;
+			}
+
+			.booking-empty-state .empty-hint {
+				display: block;
+				color: #a3875f;
+				font-weight: 500;
+				font-size: .88rem;
+			}
+
+		.buttons-group .booking-action-btn {
+			border: 0 !important;
+			border-radius: 9px !important;
+			min-height: 38px;
+			padding: 8px 14px !important;
+			font-size: .86rem !important;
+			font-weight: 600;
+			line-height: 1.2;
+			box-shadow: 0 3px 9px rgba(0,0,0,.08) !important;
+			transition: transform .16s ease, box-shadow .16s ease, filter .16s ease;
+		}
+
+			.buttons-group .booking-action-btn:hover {
+				transform: translateY(-1px);
+				filter: brightness(.97);
+				box-shadow: 0 5px 12px rgba(0,0,0,.12) !important;
+			}
+
+		.sidebar-notification-badge {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			min-width: 20px;
+			height: 20px;
+			padding: 0 6px;
+			margin-left: auto;
+			border-radius: 10px;
+			background: #fff;
+			color: #d97600;
+			font-size: .68rem;
+			font-weight: 800;
+			line-height: 1;
+		}
+
+		/* Mobile */
+
+		.mobile-top {
+			display: none !important;
+		}
+
+		.mobile-profile-menu {
+			min-width: 220px;
+			margin-top: 10px !important;
+			padding: 8px;
+			border: 1px solid rgba(217, 118, 0, 0.10) !important;
+			border-radius: 16px;
+			background: rgba(255, 255, 255, 0.98);
+			box-shadow: 0 14px 35px rgba(33, 37, 41, 0.14) !important;
+			overflow: hidden;
+			transform-origin: top right;
+		}
+
+			.mobile-profile-menu.show {
+				animation: customerDropdownIn 0.2s ease-out both;
+			}
+
+			.mobile-profile-menu .dropdown-item {
+				color: #495057;
+				border-radius: 10px;
+				margin: 2px 0;
+				padding: 10px 12px !important;
+				transition: background-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+			}
+
+				.mobile-profile-menu .dropdown-item:hover,
+				.mobile-profile-menu .dropdown-item:focus {
+					background-color: #fff4df;
+					color: #d97600;
+					transform: translateX(-2px);
+				}
+
+				.mobile-profile-menu .dropdown-item.active {
+					background-color: #ffb74d;
+					color: #fff;
+				}
+
+		.mobile-customer-label {
+			color: #212529;
+			font-weight: 700;
+			font-size: .9rem;
+			white-space: nowrap;
+		}
+
+		.mobile-profile-trigger {
+			width: 42px;
+			height: 42px;
+			border: 2px solid #f0ad4e;
+			border-radius: 50%;
+			object-fit: cover;
+			cursor: pointer;
+			display: block;
+		}
+
+		/* Reschedule modal */
+
+		.reschedule-section {
+			border-radius: 12px;
+			padding: 15px;
+		}
+
+		.current-appointment-box {
+			background: #f8f9fa;
+			border: 1px solid #e9ecef;
+		}
+
+		.new-appointment-box {
+			background: #fffaf0;
+			border: 1px solid #ffe8cc;
+		}
+
+		.modal-content {
+			overflow: hidden;
+		}
+
+		/* Complaint modal */
+
+		.complaint-modal {
+			z-index: 1060;
+		}
+
+			.complaint-modal .modal-dialog {
+				max-width: 650px;
+			}
+
+			.complaint-modal .modal-content {
+				border-radius: 18px;
+				border: 0;
+				box-shadow: 0 10px 40px rgba(0,0,0,0.18);
+			}
+
+			.complaint-modal .modal-header {
+				padding: 20px 24px 10px;
+			}
+
+			.complaint-modal .modal-body {
+				padding: 15px 24px 24px;
+			}
+
+			.complaint-modal .form-label {
+				font-weight: 600;
+				color: #343a40;
+			}
+
+			.complaint-modal .form-control,
+			.complaint-modal .form-select {
+				border-radius: 8px;
+				padding: 10px 12px;
+			}
+
+				.complaint-modal .form-control:focus,
+				.complaint-modal .form-select:focus {
+					border-color: #f0ad4e;
+					box-shadow: 0 0 0 0.2rem rgba(240,173,78,0.18);
+				}
+
+		.complaint-submit-btn {
+			background-color: #e74c3c;
+			border: none;
+			color: #fff;
+			border-radius: 7px;
+			padding: 10px 22px;
+			font-weight: 600;
+		}
+
+			.complaint-submit-btn:hover {
+				background-color: #d63c2e;
+				color: #fff;
+			}
+
+		/* Responsive */
+
+		@@media (max-width: 992px) {
+
+			.request-card {
+				width: 100% !important;
+			}
+		}
+
+		@@media (max-width: 768px) {
+
+			.booking-category-tabs {
+				gap: 7px;
+				margin-bottom: 18px;
+			}
+
+			.booking-category-tab {
+				min-width: 0;
+				min-height: 52px;
+				padding: 8px 6px;
+				font-size: .78rem;
+			}
+
+			.booking-category-count {
+				min-width: 20px;
+				height: 20px;
+				margin-left: 4px;
+				padding: 0 5px;
+				font-size: .7rem;
+			}
+
+			.sidebar {
+				display: none !important;
+			}
+
+				.sidebar:hover ~ .main,
+				.sidebar:focus-within ~ .main {
+					margin-left: 0 !important;
+					width: 100% !important;
+				}
+
+			.mobile-top {
+				display: flex !important;
+				justify-content: space-between;
+				align-items: center;
+				background: #fff;
+				position: fixed;
+				top: 0;
+				left: 0;
+				right: 0;
+				z-index: 2000;
+				box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+				padding: 10px 15px;
+			}
+
+				.mobile-top .dropdown {
+					position: relative;
+					z-index: 2005;
+				}
+
+			.mobile-profile-menu {
+				position: absolute;
+				right: 0;
+				left: auto;
+				z-index: 2100;
+			}
+
+			.main {
+				margin-left: 0 !important;
+				padding: 85px 12px 30px !important;
+				width: 100% !important;
+				box-sizing: border-box;
+			}
+
+			.profile-card {
+				flex-direction: column;
+				text-align: center;
+				padding: 20px 16px;
+				gap: 12px;
+			}
+
+				.profile-card .profile-summary {
+					width: 100%;
+					text-align: left;
+				}
+
+					.profile-card .profile-summary h3 {
+						text-align: left !important;
+						width: 100%;
+						margin-bottom: 10px !important;
+					}
+
+				.profile-card .profile-details {
+					grid-template-columns: 1fr;
+					gap: 6px;
+					width: 100%;
+					text-align: left;
+				}
+
+					.profile-card .profile-details p {
+						width: 100%;
+						text-align: left;
+						display: block;
+						margin: 0;
+						overflow-wrap: anywhere;
+						word-break: normal;
+					}
+
+					.profile-card .profile-details strong {
+						display: inline;
+						white-space: nowrap;
+					}
+
+				.profile-card img {
+					margin: 0;
+				}
+
+			.profile-edit-btn {
+				width: 100%;
+			}
+
+			#customerProfileModal .modal-dialog {
+				width: calc(100% - 16px);
+				max-width: none;
+				margin: 8px auto;
+			}
+
+			#customerProfileModal .modal-content {
+				height: calc(100vh - 16px);
+				max-height: calc(100vh - 16px);
+			}
+
+			.request-container {
+				grid-template-columns: 1fr;
+			}
+
+			.request-card {
+				width: 100% !important;
+			}
+
+			.buttons-group {
+				flex-direction: column;
+			}
+
+				.buttons-group .btn {
+					width: 100%;
+					justify-content: center;
+				}
+
+			.complaint-modal .modal-dialog {
+				margin: 10px;
+			}
+
+			.complaint-modal .modal-body {
+				padding: 12px 18px 20px;
+			}
+		}
+
+		/* Servicego customer shell — same on every page */
+		.sidebar,
+		.sidebar#sidebar {
+			width: 80px !important;
+			min-width: 80px !important;
+			height: 100vh !important;
+			position: fixed !important;
+			left: 0 !important;
+			top: 0 !important;
+			z-index: 1100 !important;
+			background: #d97600 !important;
+			border-radius: 0 !important;
+			box-shadow: 4px 0 18px rgba(0,0,0,.10) !important;
+			transition: width .25s ease, box-shadow .25s ease !important;
+			overflow: hidden !important;
+		}
+
+			.sidebar:hover,
+			.sidebar:focus-within {
+				width: 240px !important;
+				box-shadow: 7px 0 24px rgba(0,0,0,.14) !important;
+			}
+
+			.sidebar .logo {
+				width: 60px !important;
+				height: 60px !important;
+				object-fit: contain !important;
+				margin: 20px 0 !important;
+				display: block !important;
+				cursor: pointer !important;
+				border-radius: 10px !important;
+			}
+
+			.sidebar .nav {
+				width: 100% !important;
+				display: flex !important;
+				flex-direction: column !important;
+				gap: 0 !important;
+				padding: 0 !important;
+			}
+
+				.sidebar .nav a {
+					min-height: 0 !important;
+					margin-left: 0 !important;
+					width: 90% !important;
+					display: flex !important;
+					align-items: center !important;
+					gap: 0 !important;
+					padding: 12px 20px !important;
+					margin-bottom: 5px !important;
+					border-radius: 10px !important;
+					color: #fff !important;
+					text-decoration: none !important;
+					white-space: nowrap !important;
+					overflow: hidden !important;
+					transition: background .18s ease, transform .18s ease !important;
+				}
+
+					.sidebar .nav a i {
+						min-width: 24px !important;
+						width: 24px !important;
+						text-align: center !important;
+						font-size: 20px !important;
+					}
+
+					.sidebar .nav a span {
+						opacity: 0 !important;
+						transform: translateX(-5px) !important;
+						transition: opacity .18s ease, transform .18s ease !important;
+						font-weight: 600 !important;
+					}
+
+			.sidebar:hover .nav a span,
+			.sidebar:focus-within .nav a span {
+				opacity: 1 !important;
+				transform: none !important;
+			}
+
+			.sidebar .nav a:hover,
+			.sidebar .nav a.active {
+				background: #ffb74d !important;
+				transform: translateX(1px) !important;
+			}
+
+			/* When the sidebar expands, the content/cards move with it. */
+			.sidebar:hover ~ .main,
+			.sidebar:focus-within ~ .main,
+			.sidebar:hover ~ main,
+			.sidebar:focus-within ~ main {
+				margin-left: 230px !important;
+			}
+
+		.mobile-top,
+		.mobile-top-header {
+			height: 64px !important;
+			min-height: 64px !important;
+			position: fixed !important;
+			inset: 0 0 auto 0 !important;
+			z-index: 1090 !important;
+			display: flex !important;
+			align-items: center !important;
+			justify-content: space-between !important;
+			padding: 10px 14px !important;
+			background: #fff !important;
+			border-bottom: 1px solid #eee !important;
+			box-shadow: 0 2px 12px rgba(0,0,0,.07) !important;
+		}
+
+		.mobile-logo {
+			width: 40px !important;
+			height: 40px !important;
+			object-fit: contain !important;
+			border-radius: 9px !important;
+			cursor: pointer !important;
+		}
+
+		.mobile-profile-trigger,
+		.mobile-profile-btn .profile-thumb,
+		.profile-thumb {
+			width: 42px !important;
+			height: 42px !important;
+			min-width: 42px !important;
+			min-height: 42px !important;
+			border-radius: 50% !important;
+			object-fit: cover !important;
+			display: block !important;
+			border: 2px solid #f39a12 !important;
+			background: #fff !important;
+		}
+
+		.mobile-profile-btn {
+			width: 46px !important;
+			height: 46px !important;
+			padding: 2px !important;
+			border: 0 !important;
+			background: transparent !important;
+			box-shadow: none !important;
+		}
+
+			.mobile-profile-btn::after {
+				display: none !important;
+			}
+
+		.mobile-profile-menu,
+		.mobile-dropdown-menu,
+		.customer-mobile-menu,
+		.mobile-top .dropdown-menu {
+			min-width: 205px !important;
+			margin-top: 8px !important;
+			padding: 8px !important;
+			border: 1px solid #eee !important;
+			border-radius: 14px !important;
+			box-shadow: 0 14px 35px rgba(0,0,0,.14) !important;
+		}
+
+			.mobile-profile-menu .dropdown-item,
+			.mobile-dropdown-menu .dropdown-item,
+			.customer-mobile-menu .dropdown-item,
+			.mobile-top .dropdown-menu .dropdown-item {
+				min-height: 42px !important;
+				display: flex !important;
+				align-items: center !important;
+				gap: 10px !important;
+				padding: 9px 12px !important;
+				border-radius: 10px !important;
+				color: #333 !important;
+				font-weight: 600 !important;
+			}
+
+				.mobile-profile-menu .dropdown-item i,
+				.mobile-dropdown-menu .dropdown-item i,
+				.customer-mobile-menu .dropdown-item i,
+				.mobile-top .dropdown-menu .dropdown-item i {
+					width: 20px !important;
+					text-align: center !important;
+					color: #f39a12 !important;
+				}
+
+				.mobile-profile-menu .dropdown-item:hover,
+				.mobile-dropdown-menu .dropdown-item:hover,
+				.customer-mobile-menu .dropdown-item:hover,
+				.mobile-top .dropdown-menu .dropdown-item:hover,
+				.mobile-profile-menu .dropdown-item.active,
+				.mobile-dropdown-menu .dropdown-item.active,
+				.customer-mobile-menu .dropdown-item.active,
+				.mobile-top .dropdown-menu .dropdown-item.active {
+					background: #fff3df !important;
+					color: #c87400 !important;
+				}
+
+			.mobile-profile-menu .logout-item,
+			.mobile-dropdown-menu .text-danger,
+			.customer-mobile-menu .logout-item,
+			.mobile-top .dropdown-menu .text-danger {
+				color: #dc3545 !important;
+			}
+
+		@@media (max-width: 767.98px) {
+			.sidebar {
+				display: none !important;
+			}
+
+			.main, main {
+				margin-left: 0 !important;
+				padding-top: 78px !important;
+				width: 100% !important;
+			}
+
+			.chat-window {
+				padding-top: 0 !important;
+			}
+		}
+
+		@@media (min-width: 768px) {
+			.mobile-top,
+			.mobile-top-header {
+				display: none !important;
+			}
+		}
+	</style>
+
+	<style id="servicego-booking-caret-fix">
+		body, body * {
+			caret-color: transparent !important;
+		}
+
+		input, textarea, select, [contenteditable="true"], [contenteditable=""] {
+			caret-color: auto !important;
+		}
+
+			input[type="button"], input[type="submit"], input[type="reset"], input[type="checkbox"], input[type="radio"], input[type="file"], select {
+				caret-color: transparent !important;
+			}
+	</style>
+
+	<style id="servicego-final-common-shell">
+		/* FINAL COMMON SHELL: same mobile header/dropdown on customer + provider pages */
+		@@media (max-width: 768px) {
+			.mobile-top,
+			.mobile-top-header {
+				height: 70px !important;
+				min-height: 70px !important;
+				padding: 0 15px !important;
+				background: #fff !important;
+				position: fixed !important;
+				top: 0 !important;
+				left: 0 !important;
+				right: 0 !important;
+				display: flex !important;
+				align-items: center !important;
+				justify-content: space-between !important;
+				z-index: 3000 !important;
+				box-sizing: border-box !important;
+				box-shadow: 0 2px 10px rgba(0,0,0,.08) !important;
+			}
+
+				.mobile-top > .dropdown,
+				.mobile-top-header > .dropdown,
+				.mobile-profile-dropdown {
+					position: relative !important;
+					z-index: 3010 !important;
+				}
+
+				.mobile-top .logo,
+				.mobile-top .mobile-logo,
+				.mobile-top-header .mobile-logo {
+					width: 45px !important;
+					height: 45px !important;
+					min-width: 45px !important;
+					min-height: 45px !important;
+					object-fit: contain !important;
+					border-radius: 8px !important;
+					cursor: pointer !important;
+				}
+
+				.mobile-top .profile-thumb,
+				.mobile-top-header .profile-thumb,
+				.mobile-profile-trigger,
+				.mobile-profile-btn .profile-thumb {
+					width: 44px !important;
+					height: 44px !important;
+					min-width: 44px !important;
+					min-height: 44px !important;
+					border-radius: 50% !important;
+					object-fit: cover !important;
+					display: block !important;
+					border: 0 !important;
+					background: #fff !important;
+				}
+
+			.mobile-profile-trigger,
+			.mobile-profile-btn {
+				border: 2px solid #f0a43c !important;
+				border-radius: 50% !important;
+				background: #fff !important;
+			}
+
+			.mobile-profile-btn {
+				width: 48px !important;
+				height: 48px !important;
+				min-width: 48px !important;
+				min-height: 48px !important;
+				padding: 0 !important;
+				display: flex !important;
+				align-items: center !important;
+				justify-content: center !important;
+				box-shadow: none !important;
+			}
+
+				.mobile-profile-btn::after {
+					display: none !important;
+				}
+
+			.mobile-profile-menu,
+			.mobile-dropdown-menu,
+			.customer-mobile-menu,
+			.mobile-top .dropdown-menu,
+			.mobile-top-header .dropdown-menu {
+				width: 192px !important;
+				min-width: 192px !important;
+				max-width: 192px !important;
+				padding: 6px 0 !important;
+				margin-top: 8px !important;
+				border: 1px solid #ddd !important;
+				border-radius: 9px !important;
+				background: #fff !important;
+				box-shadow: 0 5px 16px rgba(0,0,0,.18) !important;
+				overflow: hidden !important;
+				box-sizing: border-box !important;
+				z-index: 3020 !important;
+			}
+
+				.mobile-profile-menu .dropdown-item,
+				.mobile-dropdown-menu .dropdown-item,
+				.customer-mobile-menu .dropdown-item,
+				.mobile-top .dropdown-menu .dropdown-item,
+				.mobile-top-header .dropdown-menu .dropdown-item {
+					width: 100% !important;
+					min-height: 48px !important;
+					height: 48px !important;
+					padding: 10px 16px !important;
+					margin: 0 !important;
+					display: flex !important;
+					align-items: center !important;
+					gap: 12px !important;
+					border-radius: 0 !important;
+					font-size: 16px !important;
+					line-height: 1.2 !important;
+					font-weight: 700 !important;
+					white-space: nowrap !important;
+					color: #2f2f2f !important;
+					background: #fff !important;
+					box-sizing: border-box !important;
+				}
+
+					.mobile-profile-menu .dropdown-item i,
+					.mobile-dropdown-menu .dropdown-item i,
+					.customer-mobile-menu .dropdown-item i,
+					.mobile-top .dropdown-menu .dropdown-item i,
+					.mobile-top-header .dropdown-menu .dropdown-item i {
+						width: 20px !important;
+						min-width: 20px !important;
+						margin: 0 !important;
+						text-align: center !important;
+						font-size: 18px !important;
+						color: #444 !important;
+					}
+
+					.mobile-profile-menu .dropdown-item:hover,
+					.mobile-dropdown-menu .dropdown-item:hover,
+					.customer-mobile-menu .dropdown-item:hover,
+					.mobile-top .dropdown-menu .dropdown-item:hover,
+					.mobile-top-header .dropdown-menu .dropdown-item:hover,
+					.mobile-profile-menu .dropdown-item.active,
+					.mobile-dropdown-menu .dropdown-item.active,
+					.customer-mobile-menu .dropdown-item.active,
+					.mobile-top .dropdown-menu .dropdown-item.active,
+					.mobile-top-header .dropdown-menu .dropdown-item.active {
+						background: #fff3e0 !important;
+						color: #d97600 !important;
+					}
+
+						.mobile-profile-menu .dropdown-item:hover i,
+						.mobile-dropdown-menu .dropdown-item:hover i,
+						.customer-mobile-menu .dropdown-item:hover i,
+						.mobile-top .dropdown-menu .dropdown-item:hover i,
+						.mobile-top-header .dropdown-menu .dropdown-item:hover i,
+						.mobile-profile-menu .dropdown-item.active i,
+						.mobile-dropdown-menu .dropdown-item.active i,
+						.customer-mobile-menu .dropdown-item.active i,
+						.mobile-top .dropdown-menu .dropdown-item.active i,
+						.mobile-top-header .dropdown-menu .dropdown-item.active i {
+							color: #d97600 !important;
+						}
+
+				.mobile-profile-menu .dropdown-divider,
+				.mobile-dropdown-menu .dropdown-divider,
+				.customer-mobile-menu .dropdown-divider,
+				.mobile-top .dropdown-menu .dropdown-divider,
+				.mobile-top-header .dropdown-menu .dropdown-divider {
+					margin: 0 !important;
+					border-top: 1px solid #ddd !important;
+					opacity: 1 !important;
+				}
+
+				.mobile-profile-menu .logout-item,
+				.mobile-dropdown-menu .text-danger,
+				.customer-mobile-menu .logout-item,
+				.mobile-top .dropdown-menu .text-danger,
+				.mobile-top-header .dropdown-menu .text-danger,
+				.mobile-profile-menu .logout-item i,
+				.mobile-dropdown-menu .text-danger i,
+				.customer-mobile-menu .logout-item i,
+				.mobile-top .dropdown-menu .text-danger i,
+				.mobile-top-header .dropdown-menu .text-danger i {
+					color: #dc3545 !important;
+				}
+		}
+
+		/* No blinking text caret anywhere. Typing still works; only the visual caret is hidden. */
+		html, body, body * {
+			caret-color: transparent !important;
+		}
+
+		/* Only the actual editable controls may receive text input. */
+		input, textarea, [contenteditable="true"], [contenteditable=""] {
+			caret-color: transparent !important;
+		}
+
+		/* Sidebar: active page is the only highlighted item. */
+		.sidebar .nav a {
+			background: transparent !important;
+		}
+
+			.sidebar .nav a:hover:not(.active) {
+				background: transparent !important;
+			}
+
+			.sidebar .nav a.active {
+				background: #ffb74d !important;
+				color: #fff !important;
+			}
+
+		@@media (min-width: 769px) {
+			.mobile-top, .mobile-top-header {
+				display: none !important;
+			}
+		}
+	</style>
+
+
+	<style id="sg-popup-theme">
+		/* Compact, soft popups (SweetAlert2) */
+		.swal2-container {
+			padding: 12px !important;
+		}
+
+		.swal2-popup {
+			width: min(340px, calc(100vw - 32px)) !important;
+			padding: 22px 20px 18px !important;
+			border-radius: 20px !important;
+			box-shadow: 0 18px 50px rgba(33, 37, 41, .20) !important;
+			font-family: inherit !important;
+		}
+
+		.swal2-icon {
+			zoom: .72;
+			margin: .2em auto .7em !important;
+		}
+
+		.swal2-title {
+			font-size: 1.12rem !important;
+			font-weight: 700 !important;
+			color: #212529 !important;
+			padding: 0 !important;
+			margin: 0 0 .3rem !important;
+		}
+
+		.swal2-html-container {
+			font-size: .9rem !important;
+			line-height: 1.5 !important;
+			color: #6c757d !important;
+			margin: .2rem 0 0 !important;
+			padding: 0 .2em !important;
+		}
+
+		.swal2-actions {
+			margin-top: 1.1rem !important;
+			gap: 8px;
+		}
+
+		.swal2-styled {
+			border-radius: 12px !important;
+			padding: .55rem 1.2rem !important;
+			min-width: 92px;
+			font-size: .9rem !important;
+			font-weight: 600 !important;
+			box-shadow: none !important;
+		}
+
+			.swal2-styled.swal2-confirm {
+				background-color: #d97600 !important;
+			}
+
+			.swal2-styled.swal2-cancel {
+				background-color: #e9ecef !important;
+				color: #495057 !important;
+			}
+
+			.swal2-styled:focus {
+				box-shadow: 0 0 0 3px rgba(217, 118, 0, .25) !important;
+			}
+
+		.swal2-popup.swal2-show {
+			animation: sgPopIn .22s ease-out !important;
+		}
+
+		.swal2-popup.swal2-hide {
+			animation: sgPopOut .15s ease-in !important;
+		}
+
+		@@keyframes sgPopIn {
+			from {
+				opacity: 0;
+				transform: translateY(10px) scale(.96);
+			}
+
+			to {
+				opacity: 1;
+				transform: none;
+			}
+		}
+
+		@@keyframes sgPopOut {
+			from {
+				opacity: 1;
+				transform: none;
+			}
+
+			to {
+				opacity: 0;
+				transform: translateY(6px) scale(.97);
+			}
+		}
+
+		/* Bootstrap modals: smaller, rounded, smooth */
+		.modal-content {
+			border: 0 !important;
+			border-radius: 18px !important;
+			box-shadow: 0 18px 50px rgba(33, 37, 41, .20) !important;
+			overflow: hidden;
+		}
+
+		.modal-header {
+			padding: .85rem 1.1rem;
+		}
+
+		.modal-title {
+			font-size: 1.05rem;
+			font-weight: 700;
+		}
+
+		.modal-body {
+			padding: 1rem 1.1rem;
+		}
+
+		.modal-footer {
+			padding: .7rem 1.1rem;
+			gap: 6px;
+		}
+
+		.modal-backdrop.show {
+			opacity: .35;
+		}
+
+		.modal.fade .modal-dialog {
+			transform: translateY(14px) scale(.97);
+			transition: transform .22s ease-out;
+		}
+
+		.modal.show .modal-dialog {
+			transform: none;
+		}
+
+		@@media (min-width: 576px) {
+			.modal-dialog.modal-md {
+				--bs-modal-width: 440px;
+				max-width: 440px;
+			}
+
+			.modal-dialog.modal-lg {
+				--bs-modal-width: 620px;
+			}
+		}
+
+		.sg-rec-dot {
+			display: inline-block;
+			width: 9px;
+			height: 9px;
+			border-radius: 50%;
+			background: #dc3545;
+			margin-left: 4px;
+			vertical-align: middle;
+			animation: sgBlink 1s infinite;
+		}
+
+		@@keyframes sgBlink {
+			50% {
+				opacity: .25;
+			}
+		}
+	</style>
+
+</head>
+
+<body data-profile-incomplete="@(customerProfileIncomplete ? "true" : "false")">
+
+	@Html.AntiForgeryToken()
+
+	<!-- Desktop sidebar -->
+
+	<div class="sidebar">
+
+		<img src="@Url.Content("~/images/Logo.png")"
+			 class="logo" width="60" height="60" loading="eager" decoding="async" asp-append-version="true"
+			 alt="Logo"
+			 onclick="window.location.href='@Url.Action("Index", "Home")'">
+
+		<div class="sidebar-customer-label" aria-label="Customer">
+			<img src="@Url.Content(string.IsNullOrWhiteSpace(customerProfileImage) ? "~/images/Profile icon.png" : customerProfileImage)"
+				 alt="Profile">
+			<span>Hi Customer</span>
+		</div>
+
+		<div class="nav">
+
+			<a href="@Url.Action("CusDashboard", "Customer")"
+			   class="active">
+
+				<i class="bi bi-house-door"></i>
+				<span>Dashboard</span>
+
+			</a>
+
+			<a href="@Url.Action("History", "Customer")">
+				<i class="bi bi-clock-history"></i>
+				<span>History</span>
+			</a>
+
+			<a href="@Url.Action("Messages", "Customer")">
+				<i class="bi bi-chat-dots"></i>
+				<span>Messages</span>
+			</a>
+
+			<a href="@Url.Action("Notifications", "Customer")">
+				<i class="bi bi-bell"></i>
+				<span>Notifications</span>
+				@if ((ViewBag.UnreadNotificationCount as int? ?? 0) > 0)
+				{
+					<span class="sidebar-notification-badge">@(ViewBag.UnreadNotificationCount)</span>
+				}
+			</a>
+
+			<a href="@Url.Action("Logout", "Customer")">
+				<i class="bi bi-box-arrow-right"></i>
+				<span>Logout</span>
+			</a>
+
+		</div>
+
+	</div>
+
+	<!-- Mobile top -->
+
+	<div class="mobile-top d-md-none">
+
+		<img src="@Url.Content("~/images/Logo.png")"
+			 width="40"
+			 height="40" loading="eager" decoding="async" asp-append-version="true"
+			 alt="Logo"
+			 style="cursor:pointer; border-radius:8px;"
+			 onclick="window.location.href='@Url.Action("Index", "Home")'">
+
+		<div class="dropdown d-flex align-items-center gap-2">
+
+			<span class="mobile-customer-label">Hi Customer</span>
+
+			<img src="@Url.Content(string.IsNullOrWhiteSpace(customerProfileImage) ? "~/images/Profile icon.png" : customerProfileImage)"
+				 class="mobile-profile-trigger"
+				 id="mobileCustomerProfileImage" width="44" height="44" loading="eager" decoding="async" asp-append-version="true"
+				 alt="Profile"
+				 data-bs-toggle="dropdown"
+				 aria-expanded="false">
+
+			<ul class="dropdown-menu dropdown-menu-end shadow border-0 py-2 mobile-profile-menu">
+
+				<li>
+					<a class="dropdown-item active py-2 fw-bold"
+					   href="@Url.Action("CusDashboard", "Customer")">
+						<i class="bi bi-house-door me-2"></i>
+						Dashboard
+					</a>
+				</li>
+
+				<li>
+					<a class="dropdown-item py-2 fw-bold"
+					   href="@Url.Action("History", "Customer")">
+						<i class="bi bi-clock-history me-2"></i>
+						History
+					</a>
+				</li>
+
+				<li>
+					<a class="dropdown-item py-2 fw-bold"
+					   href="@Url.Action("Messages", "Customer")">
+						<i class="bi bi-chat-dots me-2"></i>
+						Messages
+					</a>
+				</li>
+
+				<li>
+					<a class="dropdown-item py-2 fw-bold d-flex align-items-center"
+					   href="@Url.Action("Notifications", "Customer")">
+						<i class="bi bi-bell me-2"></i>
+						<span>Notifications</span>
+						@if ((ViewBag.UnreadNotificationCount as int? ?? 0) > 0)
+						{
+							<span class="badge rounded-pill text-bg-warning ms-auto">@(ViewBag.UnreadNotificationCount)</span>
+						}
+					</a>
+				</li>
+
+				<li>
+					<hr class="dropdown-divider my-1">
+				</li>
+
+				<li>
+					<a class="dropdown-item text-danger py-2 fw-bold"
+					   href="@Url.Action("Logout", "Customer")">
+						<i class="bi bi-box-arrow-right me-2"></i>
+						Logout
+					</a>
+				</li>
+
+			</ul>
+
+		</div>
+
+	</div>
+	<!-- Main content -->
+
+	<div class="main">
+
+		<div class="profile-card bg-white">
+
+			<img src="@Url.Content(string.IsNullOrWhiteSpace(customerProfileImage) ? "~/images/Profile icon.png" : customerProfileImage)"
+				 alt="Profile Icon"
+				 id="dashboardProfileImage" width="82" height="82" loading="eager" decoding="async" asp-append-version="true">
+
+			<div class="profile-summary">
+
+				<h3 class="text-start mb-2 fw-bold"
+					style="color:#212529; font-size:24px;">
+					@Model.CustomerName
+				</h3>
+
+				<p class="profile-customer-id">
+					<strong>Customer ID:</strong>
+					<span id="dashboardCustomerId">@customerIdDisplay</span>
+				</p>
+
+				<div class="profile-details">
+
+					<p>
+						<strong>Email:</strong>
+						<span id="dashboardCustomerEmail">@Model.CustomerEmail</span>
+					</p>
+
+					<p>
+						<strong>Phone:</strong>
+						<span id="dashboardCustomerPhone" data-customer-phone>
+							@(string.IsNullOrWhiteSpace(customerPhone) || customerPhone == "N/A"
+														? "N/A"
+														: customerPhone)
+																	</span>
+																</p>
+
+					<p>
+						<strong>City:</strong>
+						<span id="dashboardCustomerCity">
+							@(string.IsNullOrWhiteSpace(customerCity)
+														? "N/A"
+														: customerCity)
+										   						</span>
+										   					</p>
+
+					<p>
+						<strong>Address:</strong>
+						<span id="dashboardCustomerAddress">
+							@(string.IsNullOrWhiteSpace(customerAddress)
+														? "N/A"
+														: customerAddress)
+						</span>
+					</p>
+
+
+				</div>
+			</div>
+
+			<button type="button"
+					class="btn text-white profile-edit-btn"
+					style="background:#d97600; border-radius:10px;"
+					onclick="openCustomerProfile();">
+				<i class="bi bi-pencil-square me-1"></i>
+				Edit Profile
+			</button>
+
+		</div>
+
+		<!--
+		   Complete customer profile modal
+		   Profile data is saved permanently in CustomerSignup.
+		   It is NOT read from Booking.
+		-->
+		<div class="modal fade"
+			 id="customerProfileModal"
+			 tabindex="-1"
+			 aria-labelledby="customerProfileModalLabel"
+			 aria-hidden="true">
+
+			<div class="modal-dialog modal-dialog-centered modal-lg">
+				<div class="modal-content border-0 shadow-lg"
+					 style="border-radius:18px; overflow:hidden;">
+
+					<div class="modal-header"
+						 style="background:#d97600; color:#fff;">
+
+						<div>
+							<h5 class="modal-title fw-bold mb-1"
+								id="customerProfileModalLabel">
+								<span id="customerProfileModalTitle">Edit Your Profile</span>
+							</h5>
+
+							<small id="customerProfileModalSubtitle" style="opacity:.9;">
+								Update your permanent customer information.
+							</small>
+						</div>
+
+						<button type="button"
+								class="btn-close btn-close-white"
+								data-bs-dismiss="modal"
+								aria-label="Close">
+						</button>
+					</div>
+
+					<form id="customerProfileForm"
+						  method="post"
+						  enctype="multipart/form-data"
+						  action="@Url.Action("Profile", "Customer")">
+
+						@Html.AntiForgeryToken()
+
+						<div class="modal-body p-4">
+
+							<div id="customerProfileError"
+								 class="alert alert-danger d-none">
+							</div>
+
+							<div id="customerProfileSuccess"
+								 class="alert alert-success d-none">
+							</div>
+
+							<div class="row g-3">
+
+								<div class="col-12 text-center mb-2">
+									<img id="customerModalProfileImage"
+										 src="@Url.Content(string.IsNullOrWhiteSpace(customerProfileImage) ? "~/images/Profile icon.png" : customerProfileImage)"
+										 alt="Profile" width="90" height="90" loading="lazy" decoding="async" asp-append-version="true"
+										 style="width:90px;height:90px;border-radius:50%;object-fit:cover;border:3px solid #f0ad4e;">
+
+									<div class="mt-2">
+										<label for="customerProfileImageFile"
+											   class="btn btn-sm btn-outline-warning">
+											<i class="bi bi-camera me-1"></i>
+											Choose Profile Photo
+										</label>
+
+										<input type="file"
+											   id="customerProfileImageFile"
+											   name="profileImageFile"
+											   accept=".jpg,.jpeg,.png,.webp"
+											   class="d-none">
+									</div>
+								</div> <div class="col-md-6">
+									<label class="form-label fw-semibold">
+										Customer ID
+									</label>
+									<input type="text"
+										   class="form-control readonly-field"
+										   value="@customerIdDisplay"
+										   readonly
+										   aria-readonly="true">
+								</div>
+
+								<div class="col-md-6">
+									<label class="form-label fw-semibold">
+										Full Name
+									</label>
+
+									<input type="text"
+										   class="form-control readonly-field"
+										   value="@Model.CustomerName"
+										   readonly
+										   aria-readonly="true">
+								</div>
+
+								<div class="col-md-6">
+									<label class="form-label fw-semibold">
+										Email
+									</label>
+
+									<input type="email"
+										   class="form-control readonly-field"
+										   value="@Model.CustomerEmail"
+										   readonly
+										   aria-readonly="true">
+								</div>
+
+								<div class="col-md-6">
+									<label class="form-label fw-semibold">
+										Phone Number <span class="text-danger">*</span>
+									</label>
+
+									<input type="text"
+										   id="customerProfilePhone"
+										   name="Phone"
+										   class="form-control"
+										   maxlength="20"
+										   value="@((ViewBag.CustomerPhonePermanent as string) ?? "")"
+										   placeholder="Enter your phone number"
+										   required>
+								</div>
+
+								<div class="col-md-6">
+									<label class="form-label fw-semibold">
+										City <span class="text-danger">*</span>
+									</label>
+
+									<input type="text"
+										   id="customerProfileCity"
+										   name="City"
+										   class="form-control"
+										   maxlength="100"
+										   value="@((ViewBag.CustomerCity as string) ?? "")"
+										   placeholder="Enter your city"
+										   required>
+								</div>
+
+								@*
+   Only ONE location option is shown: "Permanent Location" below.
+   The address text is kept in this hidden field and is filled by
+   Search / Use My Location, then saved as the customer's Address.
+*@
+								<input type="hidden"
+									   id="customerProfileAddress"
+									   name="Address"
+									   value="@((ViewBag.CustomerAddress as string) ?? "")" />
+
+								<div class="col-12">
+									<div class="border rounded-3 p-3 bg-light">
+										<div class="fw-semibold mb-2">
+											<i class="bi bi-geo-alt-fill me-1" style="color:#d97600;"></i>
+											Permanent Location <span class="text-danger">*</span>
+										</div>
+										<small class="text-muted d-block mb-3">Search your permanent address, or use your current location. The selected location will be saved with your profile.</small>
+
+										<div class="input-group mb-2">
+											<input type="text" id="customerProfileAddressSearch" class="form-control" placeholder="Enter your permanent address and search..." value="@customerAddress">
+											<button type="button" class="btn btn-warning" id="customerAddressSearchBtn" onclick="searchCustomerProfileAddress()">
+												<i class="bi bi-search me-1"></i> Search
+											</button>
+										</div>
+
+										<button type="button" class="btn btn-sm btn-outline-warning mb-3" id="customerLocationBtn" onclick="getCustomerProfileLocation()">
+											<i class="bi bi-crosshair me-1"></i> Use My Location
+										</button>
+
+										<div id="customerProfileMap" style="width:100%;height:300px;border-radius:12px;border:1px solid #dee2e6;background:#e9ecef;"></div>
+
+										<div id="customerProfileLocationText" class="small text-muted mt-2">
+											@if (ViewBag.CustomerLatitude != null && ViewBag.CustomerLongitude != null)
+											{
+												<span class="text-success fw-semibold">Saved location: @ViewBag.CustomerLatitude, @ViewBag.CustomerLongitude</span>
+											}
+											else
+											{
+												<span>No location selected yet.</span>
+											}
+										</div>
+
+										<input type="hidden" id="customerProfileLatitude" name="Latitude" value="@((ViewBag.CustomerLatitude?.ToString(System.Globalization.CultureInfo.InvariantCulture)) ?? "")">
+										<input type="hidden" id="customerProfileLongitude" name="Longitude" value="@((ViewBag.CustomerLongitude?.ToString(System.Globalization.CultureInfo.InvariantCulture)) ?? "")">
+									</div>
+								</div>
+
+							</div>
+						</div>
+
+						<div class="modal-footer px-4 pb-4 border-0">
+							<button type="button"
+									class="btn btn-light border"
+									data-bs-dismiss="modal">
+								Cancel
+							</button>
+
+							<button type="submit"
+									class="btn text-white"
+									id="saveCustomerProfileBtn"
+									style="background:#d97600;">
+								<i class="bi bi-check2-circle me-1"></i>
+								Save Changes
+							</button>
+						</div>
+
+					</form>
+				</div>
+			</div>
+		</div>
+
+		<h3 class="mt-4 mb-3 text-center fw-bold"
+			style="font-size:1.5rem; color:#000 !important; text-align:center !important; font-weight:800;">
+
+			Current Bookings
+
+		</h3>
+
+		<div class="booking-category-tabs" role="tablist" aria-label="Booking categories">
+			<button type="button" class="booking-category-tab active" data-booking-category="pending" role="tab" aria-selected="true">
+				<i class="bi bi-hourglass-split"></i>
+				<span>Pending</span>
+				<span class="booking-category-count" id="pendingBookingCount">0</span>
+			</button>
+			<button type="button" class="booking-category-tab" data-booking-category="accepted" role="tab" aria-selected="false">
+				<i class="bi bi-calendar-check"></i>
+				<span>Accepted</span>
+				<span class="booking-category-count" id="acceptedBookingCount">0</span>
+			</button>
+			<button type="button" class="booking-category-tab" data-booking-category="completed" role="tab" aria-selected="false">
+				<i class="bi bi-check-circle"></i>
+				<span>Completed</span>
+				<span class="booking-category-count" id="completedBookingCount">0</span>
+			</button>
+		</div>
+
+		<div id="requestContainer"
+			 class="request-container">
+
+			@if (Model != null &&
+						Model.Bookings != null &&
+						Model.Bookings.Any())
+			{
+				var bookingActivityTimes = ViewBag.BookingActivityTimes as IDictionary<string, DateTime>
+				?? new Dictionary<string, DateTime>();
+
+				var orderedBookings = ((IEnumerable<ServiceGo.Models.BookingDetailViewModel>)Model.Bookings)
+				.OrderBy((ServiceGo.Models.BookingDetailViewModel b) =>
+				string.Equals(b.Status, "Pending", StringComparison.OrdinalIgnoreCase) ? 1 :
+				string.Equals(b.Status, "Accepted", StringComparison.OrdinalIgnoreCase) ? 2 :
+				string.Equals(b.Status, "Completed", StringComparison.OrdinalIgnoreCase) ? 3 : 4)
+				.ThenByDescending((ServiceGo.Models.BookingDetailViewModel b) =>
+				bookingActivityTimes.TryGetValue(b.Id, out var activityAt)
+				? activityAt
+				: DateTime.MinValue)
+				.ThenByDescending((ServiceGo.Models.BookingDetailViewModel b) => b.Id)
+				.ToList();
+
+				var ratingPendingIds = ViewBag.RatingPendingIds as HashSet<int>
+				?? new HashSet<int>();
+
+				var customerRatedBookingIds = ViewBag.CustomerRatedBookingIds as HashSet<int>
+				?? new HashSet<int>();
+
+				foreach (var req in orderedBookings)
+				{
+					// Rejected bookings are kept in the database/history,
+					// but must not appear as active dashboard cards.
+					if (string.Equals(req.Status, "Rejected", StringComparison.OrdinalIgnoreCase))
+					{
+						continue;
+					}
+
+					// Customer-facing provider location security
+					// Home Service -> provider home address/map are PRIVATE and must never be shown.
+					// Shop Service -> only the provider's PUBLIC shop address/map may be shown.
+					string mapLat = "";
+					string mapLng = "";
+					string displayAddress = "";
+					string mapQuery = "";
+
+					bool isShop =
+					!string.IsNullOrEmpty(req.ServiceType) &&
+					(req.ServiceType.Equals(
+					"Shop",
+					StringComparison.OrdinalIgnoreCase) ||
+					req.ServiceType.Equals(
+					"Shop Service",
+					StringComparison.OrdinalIgnoreCase));
+
+					bool isHome =
+					!string.IsNullOrEmpty(req.ServiceType) &&
+					(req.ServiceType.Equals(
+					"Home",
+					StringComparison.OrdinalIgnoreCase) ||
+					req.ServiceType.Equals(
+					"Home Service",
+					StringComparison.OrdinalIgnoreCase));
+
+					if (isShop)
+					{
+
+						mapLat =
+						!string.IsNullOrEmpty(req.ShopLat) &&
+						req.ShopLat != "0" &&
+						req.ShopLat != "null"
+						? req.ShopLat
+						: "";
+
+						mapLng =
+						!string.IsNullOrEmpty(req.ShopLng) &&
+						req.ShopLng != "0" &&
+						req.ShopLng != "null"
+						? req.ShopLng
+						: "";
+
+						displayAddress =
+						!string.IsNullOrEmpty(req.ShopAddressInput)
+						? req.ShopAddressInput
+						: req.ProviderAddress;
+
+						mapQuery =
+						!string.IsNullOrWhiteSpace(mapLat) &&
+						!string.IsNullOrWhiteSpace(mapLng)
+						? $"{mapLat},{mapLng}"
+						: displayAddress;
+
+					}
+					else if (isHome)
+					{
+						// Home Service: deliberately leave provider location blank.
+						// The provider's home/base address and coordinates are private.
+						mapLat = "";
+						mapLng = "";
+						displayAddress = "";
+						mapQuery = "";
+					}
+					else
+					{
+						// Unknown/legacy service type: do not expose a provider location.
+						// This prevents a private home location from leaking through a fallback.
+						mapLat = "";
+						mapLng = "";
+						displayAddress = "";
+						mapQuery = "";
+					}
+
+					bool isPendingBooking =
+					string.Equals(
+					req.Status,
+					"Pending",
+					StringComparison.OrdinalIgnoreCase);
+
+					bool isAcceptedBooking =
+					string.Equals(
+					req.Status,
+					"Accepted",
+					StringComparison.OrdinalIgnoreCase);
+
+					bool providerReschedulePending =
+					req.IsRescheduledByProvider &&
+					string.Equals(req.RescheduleRequestedBy, "Provider", StringComparison.OrdinalIgnoreCase) &&
+					string.Equals(req.RescheduledStatus, "Pending", StringComparison.OrdinalIgnoreCase);
+
+					bool customerReschedulePending =
+					string.Equals(req.RescheduledStatus, "Pending", StringComparison.OrdinalIgnoreCase) &&
+					(req.IsRescheduledByCustomer ||
+					string.Equals(req.RescheduleRequestedBy, "Customer", StringComparison.OrdinalIgnoreCase));
+
+					// Rejected customer reschedule must remain visible so the
+					// customer can see that the provider rejected the request.
+					// The reschedule button stays hidden because a rejected
+					// request already consumes the one-reschedule opportunity.
+					bool customerRescheduleRejected =
+					string.Equals(req.RescheduledStatus, "Rejected", StringComparison.OrdinalIgnoreCase) &&
+					string.Equals(req.RescheduleRequestedBy, "Customer", StringComparison.OrdinalIgnoreCase);
+
+					// Customer must not be able to request another reschedule
+					// after the customer has already used the reschedule option.
+					// A provider's pending request does NOT hide the button;
+					// the button must remain visible on the "View Reschedule Request" card.
+					bool rescheduleAlreadyUsed =
+					req.RescheduledDate.HasValue ||
+					string.Equals(req.RescheduledStatus, "Rejected", StringComparison.OrdinalIgnoreCase) ||
+					req.IsRescheduledByCustomer ||
+					req.IsRescheduledByProvider;
+
+					bool hasCustomerRescheduleRequest =
+					req.IsRescheduledByCustomer ||
+					string.Equals(
+					req.RescheduleRequestedBy,
+					"Customer",
+					StringComparison.OrdinalIgnoreCase) ||
+					(req.RequestedDate.HasValue &&
+					string.Equals(
+					req.RescheduleRequestedBy,
+					"Customer",
+					StringComparison.OrdinalIgnoreCase));
+
+					string displayStatus =
+					string.IsNullOrWhiteSpace(req.Status)
+					? "Pending"
+					: req.Status;
+
+					string displayStatusColor =
+					GetStatusColor(displayStatus);
+
+					// Backend provides the exact cancellation permission.
+					// Pending = anytime; Accepted = before the 2-hour cutoff.
+					bool canCustomerCancel =
+					int.TryParse(req.Id, out var requestBookingId) &&
+					cancellationAllowedIds.Contains(requestBookingId);
+
+					// Reschedule is available for Pending bookings and for
+					// Accepted bookings that are still before the two-hour cutoff.
+					// If either side already has a pending/used request, hide the button.
+					bool hasAnyPendingReschedule =
+					providerReschedulePending ||
+					customerReschedulePending;
+
+					bool canCustomerReschedule =
+					isPendingBooking
+					&&
+					rescheduleAllowedIds.Contains(requestBookingId)
+					&&
+					!hasAnyPendingReschedule
+					&&
+					!hasCustomerRescheduleRequest
+					&&
+					!rescheduleAlreadyUsed;
+
+					<!-- Request card -->
+
+					<div class="request-card booking-item"
+						 data-booking-id="@req.Id"
+						 data-booking-category="@(isPendingBooking ? "pending" : isAcceptedBooking ? "accepted" : string.Equals(req.Status, "Completed", StringComparison.OrdinalIgnoreCase) ? "completed" : "other")"
+						 style="border-left-color:@displayStatusColor;">
+
+						<div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+
+							<h4 class="fw-bold mb-0 text-dark"
+								style="font-size:1.2rem;
+										color:#d97600 !important;">
+
+								@req.ServiceName
+
+							</h4>
+
+							<span class="badge px-3 py-2"
+								  style="background-color:@displayStatusColor;
+										color:white;
+										font-size:0.8rem;
+										border-radius:6px;">
+
+								@displayStatus
+
+							</span>
+
+						</div>
+
+						<!-- Provider information -->
+
+						<div class="p-3 mb-3 rounded-3"
+							 style="background-color:#fffaf0;
+										border:1px solid #ffe8cc;">
+
+							<div class="fw-bold mb-1"
+								 style="color:#d97600;
+										font-size:0.95rem;">
+
+								<i class="bi bi-person-badge-fill me-1"></i>
+								Provider Information
+
+							</div>
+
+							<div class="mb-1"
+								 style="font-size:0.9rem;">
+
+								<span class="text-secondary fw-semibold">
+									Name:
+								</span>
+
+								<span class="text-dark fw-bold">
+
+									@(string.IsNullOrEmpty(req.ProviderName)
+																? "Not Assigned"
+																: req.ProviderName)
+
+						</span>
+
+							</div>
+
+							<div style="font-size:0.9rem;">
+
+								<span class="text-secondary fw-semibold">
+									Rating:
+								</span>
+
+								<span class="ms-1" aria-label="@req.Rating out of 5 stars">
+							@{
+										int providerRatingDisplay = (int)Math.Round(req.Rating, MidpointRounding.AwayFromZero);
+										providerRatingDisplay = Math.Max(0, Math.Min(5, providerRatingDisplay));
+										for (int star = 1; star <= 5; star++)
+										{
+											if (star <= providerRatingDisplay)
+											{
+												<span class="text-warning" style="font-size:1.05rem;">★</span>
+											}
+											else
+											{
+												<span class="text-secondary" style="font-size:1.05rem;opacity:.35;">★</span>
+											}
+										}
+									}
+								</span>
+
+							</div>
+
+						</div>
+
+						<!-- Provider reschedule request -->
+						@if (providerReschedulePending)
+						{
+
+							<div class="mb-3 d-flex align-items-center gap-3 flex-wrap">
+
+								<a href="javascript:void(0);"
+								   class="fw-bold text-primary text-decoration-none"
+								   style="font-size:0.9rem;"
+								   onclick="openProviderReschedule('@req.Id')">
+
+									<i class="bi bi-arrow-repeat me-1"></i>
+
+									View Reschedule Request
+
+								</a>
+
+							</div>
+
+						}
+
+						<!-- Customer reschedule pending -->
+						@if (customerReschedulePending)
+						{
+							<p class="mb-2 text-secondary" style="font-size:0.9rem;">
+								<strong>
+									<i class="bi bi-arrow-repeat me-1"></i>
+									Reschedule Request:
+								</strong>
+								<span class="text-warning fw-bold">Pending</span>
+							</p>
+						}
+						else if (customerRescheduleRejected)
+						{
+							<p class="mb-2 text-secondary" style="font-size:0.9rem;">
+								<strong>
+									<i class="bi bi-arrow-repeat me-1"></i>
+									Reschedule Request:
+								</strong>
+								<span class="text-danger fw-bold">Rejected</span>
+							</p>
+						}
+
+						<!-- Booking buttons -->
+
+						<div class="buttons-group pt-2 border-top">
+
+							<!-- View details -->
+
+							<button type="button"
+									class="btn btn-sm text-white px-3 py-2 shadow-sm booking-action-btn"
+									style="background-color:#d97600;
+										font-size:0.88rem;
+										border-radius:6px;"
+									onclick="openDetails('@req.Id')">
+
+								<i class="bi bi-eye-fill me-1"></i>
+
+								View Details
+
+							</button>
+
+							<!-- Reschedule -->
+							@if (canCustomerReschedule)
+							{
+
+								<button type="button"
+										class="btn btn-sm text-white px-3 py-2 shadow-sm booking-action-btn customer-reschedule-btn"
+										style="background-color:#f0ad4e;
+															font-size:0.88rem;
+															border-radius:6px;"
+										onclick="openReschedule(
+															'@req.Id',
+															'@req.BookingDate.ToString("yyyy-MM-dd")',
+															'@Html.Raw(
+																							   System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(
+																			   	   req.BookingTime ?? ""
+																			   	   )
+																			   	   )'
+)">
+
+									<i class="bi bi-clock me-1"></i>
+									Reschedule
+
+								</button>
+
+										}
+
+							<!-- Cancel -->
+							@if (canCustomerCancel)
+							{
+								<button type="button"
+										class="btn btn-sm text-white px-3 py-2 shadow-sm booking-action-btn cancel-booking-btn"
+										style="background-color:#e74c3c;
+															font-size:0.88rem;
+															border-radius:6px;"
+										data-booking-status="@displayStatus"
+										data-booking-date="@req.BookingDate.ToString("yyyy-MM-dd")"
+										data-booking-time="@req.BookingTime"
+										onclick="cancelRequest('@req.Id')">
+
+									<i class="bi bi-x-circle me-1"></i>
+									Cancel
+
+								</button>
+							}
+
+							<!-- Message - accepted only -->
+							@if (string.Equals(req.Status, "Accepted", StringComparison.OrdinalIgnoreCase))
+							{
+								<button type="button"
+										class="btn btn-sm text-white px-3 py-2 shadow-sm booking-action-btn"
+										style="background-color:#f0ad4e; font-size:0.88rem; border-radius:6px;"
+										onclick="openChat(
+															'@Html.Raw(System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(req.ProviderId ?? ""))',
+															'@Html.Raw(System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(req.ProviderName ?? ""))'
+															)">
+									<i class="bi bi-chat-dots me-1"></i>
+									Message
+								</button>
+							}
+
+							<!-- Rating -->
+							@if (string.Equals(
+												req.Status,
+												"Completed",
+												StringComparison.OrdinalIgnoreCase) &&
+												int.TryParse(req.Id, out var ratingBookingId) &&
+												ratingPendingIds.Contains(ratingBookingId) &&
+												!customerRatedBookingIds.Contains(ratingBookingId))
+							{
+
+								<button type="button"
+										class="btn btn-sm text-white px-3 py-2 shadow-sm booking-action-btn customer-rate-btn"
+										data-rate-booking-id="@req.Id"
+										style="background-color:#d97600;
+															font-size:0.88rem;
+															border-radius:6px;"
+										onclick="openRating(
+															'@req.Id',
+															'@Html.Raw(
+																							   System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(
+																			   	   req.ProviderId ?? ""
+																			   	   )
+																			   	   )'
+)">
+
+									<i class="bi bi-star-fill me-1"></i>
+
+									Rate Now
+
+								</button>
+
+										}
+
+							@if (string.Equals(req.Status, "Completed", StringComparison.OrdinalIgnoreCase) &&
+												int.TryParse(req.Id, out var complaintBookingId) &&
+												!customerComplaintBookingIds.Contains(complaintBookingId))
+							{
+								<button type="button"
+										class="btn btn-sm text-white px-3 py-2 customer-complaint-btn booking-action-btn"
+										data-complaint-booking-id="@req.Id"
+										style="background-color:#e74c3c; font-size:0.88rem; border-radius:6px;"
+										onclick="openComplaint(
+															'@req.Id',
+															'@Html.Raw(System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(req.ProviderId ?? ""))',
+															'@Html.Raw(System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(req.ProviderName ?? ""))',
+															'detailModal_@req.Id'
+															)">
+									<i class="bi bi-exclamation-triangle me-1"></i>
+									File Complaint
+								</button>
+							}
+
+						</div>
+
+					</div>
+
+					<!-- Detail modal -->
+
+					<template id="detailModalTemplate_@req.Id">
+						<div class="modal fade"
+							 id="detailModal_@req.Id"
+							 tabindex="-1"
+							 aria-hidden="true">
+
+							<div class="modal-dialog modal-lg modal-dialog-centered">
+
+								<div class="modal-content p-3 rounded-4 shadow border-0">
+
+									<div class="modal-header border-0 pb-0">
+
+										<h5 class="modal-title fw-bold"
+											style="color:#d97600;">
+
+											<i class="bi bi-info-circle me-1"></i>
+
+											Service & Provider Details
+
+										</h5>
+
+										<button type="button"
+												class="btn-close"
+												data-bs-dismiss="modal">
+										</button>
+
+									</div>
+
+									<div class="modal-body">
+
+										<!-- Schedule -->
+
+										<div class="p-3 mb-4 rounded-3"
+											 style="background-color:#f8f9fa;
+										border:1px solid #e9ecef;">
+
+											<div class="fw-bold mb-2"
+												 style="color:#d97600;">
+
+												<i class="bi bi-calendar-check me-1"></i>
+
+												Schedule & Availability
+
+											</div>
+
+											<div class="row text-secondary"
+												 style="font-size:0.9rem;">
+
+												<div class="col-md-6 mb-1">
+
+													<strong>
+														Current Appointment:
+													</strong>
+
+													<span class="badge bg-secondary">
+
+														@req.BookingDate.ToString("yyyy-MM-dd")
+														(@req.BookingTime)
+
+													</span>
+
+												</div>
+
+												<div class="col-md-6 mb-1">
+
+													<strong>
+														Available Days:
+													</strong>
+
+													@req.AvailableDays
+
+												</div>
+
+												<div class="col-md-12">
+
+													<strong>
+														Available Time:
+													</strong>
+
+													@req.AvailableTime
+
+												</div>
+
+											</div>
+
+										</div>
+
+										<div class="row mb-3">
+
+											<!-- Booking information -->
+
+											<div class="col-md-6">
+
+												<h6 class="fw-bold border-bottom pb-2 mb-3"
+													style="color:#d97600;">
+
+													Booking Information
+
+												</h6>
+
+												<p class="mb-2 text-secondary"
+												   style="font-size:0.9rem;">
+
+													<strong>
+														Booking ID:
+													</strong>
+
+													@req.Id
+
+												</p>
+
+												<p class="mb-2 text-secondary"
+												   style="font-size:0.9rem;">
+
+													<strong>
+														Service:
+													</strong>
+
+													@req.ServiceName
+
+												</p>
+
+												<p class="mb-2 text-secondary"
+												   style="font-size:0.9rem;">
+
+													<strong>
+														Service Type:
+													</strong>
+
+													@(isHome ? "Home Service" : isShop ? "Shop Service" : req.ServiceType)
+
+												</p>
+
+												<p class="mb-2 text-secondary"
+												   style="font-size:0.9rem;">
+
+													<strong>
+														Status:
+													</strong>
+
+													<span class="badge"
+														  style="background-color:@displayStatusColor;
+										color:white;">
+
+														@displayStatus
+
+													</span>
+
+												</p>
+
+												@if (customerReschedulePending || customerRescheduleRejected)
+												{
+													var customerRescheduleDisplayStatus =
+													customerRescheduleRejected ? "Rejected" : "Pending";
+
+													var customerRescheduleDisplayColor =
+													customerRescheduleRejected ? "#e74c3c" : "#f39c12";
+
+													<p class="mb-2 text-secondary"
+													   style="font-size:0.9rem;">
+
+														<strong>
+															Reschedule Status:
+														</strong>
+
+														<span class="badge"
+															  style="background-color:@customerRescheduleDisplayColor;
+															color:white;
+															border-radius:6px;">
+
+															@customerRescheduleDisplayStatus
+
+														</span>
+
+													</p>
+
+												}
+
+												@if (isHome)
+												{
+													<p class="mb-2 text-secondary"
+													   style="font-size:0.9rem;">
+
+														<strong>
+															Visit Charges:
+														</strong>
+
+														<span class="text-success fw-bold">
+															Rs. @req.VisitCharges
+														</span>
+
+													</p>
+												}
+
+											</div>
+
+											<!-- Provider information -->
+
+											<div class="col-md-6 border-start">
+
+												<h6 class="fw-bold border-bottom pb-2 mb-3"
+													style="color:#d97600;">
+
+													Provider Information
+
+												</h6>
+
+												@{
+													int providerDbIdForImage = 0;
+													int.TryParse(req.ProviderId, out providerDbIdForImage);
+													string providerImageForDetails = string.Empty;
+
+													if (providerDbIdForImage > 0)
+													{
+														providerProfileImages.TryGetValue(
+														providerDbIdForImage,
+														out providerImageForDetails);
+													}
+
+													if (string.IsNullOrWhiteSpace(providerImageForDetails) &&
+													!string.IsNullOrWhiteSpace(req.ProviderName))
+													{
+														providerProfileImagesByName.TryGetValue(
+														req.ProviderName.Trim(),
+														out providerImageForDetails);
+													}
+												}
+
+												<div class="d-flex align-items-center gap-3 mb-3 p-2 rounded-3"
+													 style="background:#fff8ed;border:1px solid #f3dfc2;">
+													<img src="@Url.Content(string.IsNullOrWhiteSpace(providerImageForDetails) ? "~/images/Profile icon.png" : providerImageForDetails)"
+														 alt="Provider Profile"
+														 width="76"
+														 height="76"
+														 loading="lazy"
+														 decoding="async"
+														 style="width:76px;height:76px;object-fit:cover;border-radius:50%;border:3px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,.12);"
+														 onerror="this.onerror=null;this.src='@Url.Content("~/images/Profile icon.png")';" />
+													<div>
+														<div class="fw-bold text-dark">@req.ProviderName</div>
+														<div class="small text-muted">Service Provider</div>
+													</div>
+												</div>
+
+												<p class="mb-2 text-secondary"
+												   style="font-size:0.9rem;">
+
+													<strong>
+														Provider ID:
+													</strong>
+
+													@req.ProviderId
+
+												</p>
+
+												<p class="mb-2 text-secondary"
+												   style="font-size:0.9rem;">
+
+													<strong>
+														Name:
+													</strong>
+
+													@req.ProviderName
+
+												</p>
+
+												@if (isShop)
+												{
+													<p class="mb-2 text-secondary"
+													   style="font-size:0.9rem;">
+
+														<strong>
+															Location:
+														</strong>
+
+														Shop
+
+													</p>
+
+													<p class="mb-2 text-secondary"
+													   style="font-size:0.9rem;">
+
+														<strong>
+															Shop Address:
+														</strong>
+
+														@displayAddress
+
+													</p>
+												}
+
+												<p class="mb-2 text-secondary"
+												   style="font-size:0.9rem;">
+
+													<strong>
+														Rating:
+													</strong>
+
+													<span class="ms-1"
+														  aria-label="@req.Rating out of 5 stars">
+														@{
+															int providerRatingRounded =
+															(int)Math.Round(
+															req.Rating,
+															MidpointRounding.AwayFromZero);
+															providerRatingRounded =
+															Math.Max(0, Math.Min(5, providerRatingRounded));
+
+															for (int star = 1; star <= 5; star++)
+															{
+																if (star <= providerRatingRounded)
+																{
+																	<span class="text-warning"
+																		  style="font-size:1.05rem;">★</span>
+																}
+																else
+																{
+																	<span class="text-secondary"
+																		  style="font-size:1.05rem; opacity:.35;">★</span>
+																}
+															}
+														}
+													</span>
+
+												</p>
+
+												@if (isShop)
+												{
+													<!-- Shop map only -->
+													<div class="mb-2">
+
+														<label class="fw-bold text-secondary mb-1"
+															   style="font-size:0.9rem;">
+
+															<i class="bi bi-shop"></i>
+
+															Shop Location Map
+
+														</label>
+
+														<div style="position:relative;
+															width:100%;
+															height:160px;
+															border-radius:8px;
+															border:1px solid #dee2e6;
+															overflow:hidden;">
+
+															<a href="https://www.google.com/maps/search/?api=1&query=@System.Uri.EscapeDataString(mapQuery)"
+															   target="_blank"
+															   rel="noopener noreferrer"
+															   class="btn btn-sm btn-light shadow-sm position-absolute top-0 start-0 m-2 fw-semibold text-primary"
+															   style="z-index:10;
+															font-size:0.75rem;
+															background:white;
+															border:1px solid #ccc;">
+
+																Open in Maps
+
+																<i class="bi bi-box-arrow-up-right"></i>
+
+															</a>
+
+															<iframe style="width:100%; height:500px; border:0;"
+																	frameborder="0"
+																	scrolling="no"
+																	marginheight="0"
+																	marginwidth="0"
+																	data-google-map-src="https://maps.google.com/maps?q=@System.Uri.EscapeDataString(mapQuery)&z=15&output=embed"
+																	title="Provider Google Map"
+																	loading="lazy">
+															</iframe>
+
+														</div>
+
+													</div>
+												}
+
+											</div>
+
+										</div>
+
+									</div>
+
+									<!-- Detail modal footer -->
+									<!--
+									   Booking View Details is information-only.
+									   No booking action buttons appear inside this popup.
+									-->
+
+								</div>
+
+							</div>
+
+						</div>
+					</template>
+
+				}
+
+			}
+			else
+			{
+
+				<p id="legacyBookingEmptyState" class="text-center text-muted w-100 py-4">
+
+					No booking requests found.
+
+				</p>
+
+			}
+
+		</div>
+
+	</div>
+
+	<!-- Helper -->
+	@functions {
+
+		string GetStatusColor(string status)
+		{
+			return status switch
+			{
+				"Pending" => "#f39c12",
+				"Accepted" => "#3498db",
+				"Reschedule Requested" => "#9b59b6",
+				"Completed" => "#2ecc71",
+				"Cancelled" => "#e74c3c",
+				"Rejected" => "#c0392b",
+				"Expired" => "#7f8c8d",
+				_ => "#7f8c8d"
+			};
+		}
+
+	}
+
+	<!-- Provider reschedule modal -->
+
+	<div class="modal fade"
+		 id="providerRescheduleModal"
+		 tabindex="-1"
+		 aria-hidden="true">
+
+		<div class="modal-dialog modal-dialog-centered modal-md">
+
+			<div class="modal-content rounded-4 border-0 shadow">
+
+				<div class="modal-header border-0 pb-2">
+
+					<h5 class="modal-title fw-bold"
+						style="color:#d97600;">
+
+						<i class="bi bi-arrow-repeat me-1"></i>
+
+						Reschedule Request
+
+					</h5>
+
+					<button type="button"
+							class="btn-close"
+							data-bs-dismiss="modal"
+							aria-label="Close">
+					</button>
+
+				</div>
+
+				<div class="modal-body pt-2">
+
+					<div class="p-3 rounded-3"
+						 style="background:#f0f7ff;
+border:1px solid #cfe2ff;">
+
+						<div class="fw-bold text-primary mb-3"
+							 style="font-size:0.9rem;">
+
+							<i class="bi bi-clock-history me-1"></i>
+
+							Provider requested to reschedule this booking.
+
+						</div>
+
+						<div class="p-3 mb-3 rounded-3"
+							 style="background:#ffffff;
+border:1px solid #e9ecef;">
+
+							<div class="fw-bold text-secondary mb-2"
+								 style="font-size:0.9rem;">
+
+								<i class="bi bi-calendar-event me-1"></i>
+
+								Current / Old Appointment
+
+							</div>
+
+							<div class="mb-1"
+								 style="font-size:0.88rem;">
+
+								<strong>
+									Date:
+								</strong>
+
+								<span id="providerOldDate">
+									N/A
+								</span>
+
+							</div>
+
+							<div style="font-size:0.88rem;">
+
+								<strong>
+									Time:
+								</strong>
+
+								<span id="providerOldTime">
+									N/A
+								</span>
+
+							</div>
+
+						</div>
+
+						<div class="p-3 mb-3 rounded-3"
+							 style="background:#fff8e8;
+border:1px solid #ffe0a3;">
+
+							<div class="fw-bold mb-2"
+								 style="color:#d97600;
+font-size:0.9rem;">
+
+								<i class="bi bi-calendar-plus me-1"></i>
+
+								New Appointment Requested
+
+							</div>
+
+							<div class="mb-1"
+								 style="font-size:0.88rem;">
+
+								<strong>
+									Date:
+								</strong>
+
+								<span id="providerNewDate">
+									N/A
+								</span>
+
+							</div>
+
+							<div style="font-size:0.88rem;">
+
+								<strong>
+									Time:
+								</strong>
+
+								<span id="providerNewTime">
+									N/A
+								</span>
+
+							</div>
+
+						</div>
+
+						<div class="d-flex justify-content-end gap-2">
+
+							<button type="button"
+									class="btn btn-success btn-sm px-4"
+									onclick="respondReschedule(
+currentProviderRescheduleBookingId,
+'Accept'
+)">
+
+								<i class="bi bi-check-circle me-1"></i>
+
+								Accept
+
+							</button>
+
+							<button type="button"
+									class="btn btn-danger btn-sm px-4"
+									onclick="respondReschedule(
+currentProviderRescheduleBookingId,
+'Reject'
+)">
+
+								<i class="bi bi-x-circle me-1"></i>
+
+								Reject
+
+							</button>
+
+						</div>
+
+					</div>
+
+				</div>
+
+				<div class="modal-footer border-0 pt-0">
+
+					<button type="button"
+							class="btn btn-secondary btn-sm px-4"
+							data-bs-dismiss="modal">
+
+						Close
+
+					</button>
+
+				</div>
+
+			</div>
+
+		</div>
+
+	</div>
+
+	<!-- Customer reschedule modal -->
+
+	<div class="modal fade"
+		 id="rescheduleModal"
+		 tabindex="-1"
+		 aria-hidden="true">
+
+		<div class="modal-dialog modal-dialog-centered modal-md">
+
+			<div class="modal-content rounded-4 border-0 shadow">
+
+				<div class="modal-header border-0">
+
+					<h5 class="modal-title fw-bold"
+						style="color:#d97600;">
+
+						<i class="bi bi-arrow-repeat me-1"></i>
+
+						Reschedule Service
+
+					</h5>
+
+					<button type="button"
+							class="btn-close"
+							data-bs-dismiss="modal"
+							aria-label="Close">
+					</button>
+
+				</div>
+
+				<div class="modal-body">
+
+					<form id="rescheduleForm">
+
+						@Html.AntiForgeryToken()
+
+						<input type="hidden"
+							   id="rescheduleBookingId"
+							   name="id" />
+
+						<!-- Current appointment -->
+
+						<div class="reschedule-section current-appointment-box mb-3">
+
+							<div class="fw-bold text-secondary mb-2"
+								 style="font-size:0.9rem;">
+
+								<i class="bi bi-calendar-event me-1"></i>
+
+								Current / Old Appointment
+
+							</div>
+
+							<div class="row">
+
+								<div class="col-md-6 mb-2 mb-md-0">
+
+									<label class="text-muted small d-block">
+										Date
+									</label>
+
+									<div id="rescheduleCurrentDate"
+										 class="fw-semibold text-dark">
+									</div>
+
+								</div>
+
+								<div class="col-md-6">
+
+									<label class="text-muted small d-block">
+										Time
+									</label>
+
+									<div id="rescheduleCurrentTime"
+										 class="fw-semibold text-dark">
+									</div>
+
+								</div>
+
+							</div>
+
+						</div>
+
+						<!-- New appointment -->
+
+						<div class="reschedule-section new-appointment-box mb-3">
+
+							<div class="fw-bold mb-3"
+								 style="color:#d97600;
+font-size:0.9rem;">
+
+								<i class="bi bi-calendar-plus me-1"></i>
+
+								New Appointment
+
+							</div>
+
+							<div class="mb-3">
+
+								<label for="newDateInput"
+									   class="form-label fw-semibold">
+
+									New Date
+
+								</label>
+
+								<input type="date"
+									   id="newDateInput"
+									   name="newDate"
+									   class="form-control"
+									   required />
+
+								<div id="newDateError"
+									 class="text-danger small fw-semibold mt-1"
+									 style="display:none;"></div>
+
+							</div>
+
+							<div class="mb-0">
+
+								<label for="newTimeInput"
+									   class="form-label fw-semibold">
+
+									New Time
+
+								</label>
+
+								<div class="input-group">
+									<input type="time"
+										   id="newTimeInput"
+										   name="newTime"
+										   class="form-control"
+										   step="60"
+										   required />
+								</div>
+
+								<div id="newTimeError"
+									 class="text-danger small fw-semibold mt-1"
+									 style="display:none;"></div>
+
+							</div>
+
+						</div>
+
+						<div class="d-flex justify-content-end gap-2 mt-4">
+
+							<button type="button"
+									class="btn btn-secondary px-4"
+									data-bs-dismiss="modal">
+
+								Cancel
+
+							</button>
+
+							<button type="submit"
+									id="submitRescheduleBtn"
+									class="btn px-4 text-white"
+									style="background:#d97600;">
+
+								<i class="bi bi-send me-1"></i>
+
+								Send Reschedule Request
+
+							</button>
+
+						</div>
+
+					</form>
+
+				</div>
+
+			</div>
+
+		</div>
+
+	</div>
+
+	<!-- Rate modal -->
+
+	<div class="modal fade"
+		 id="rateModal"
+		 tabindex="-1"
+		 aria-hidden="true">
+
+		<div class="modal-dialog modal-dialog-centered modal-md">
+
+			<div class="modal-content p-4 rounded-4 text-center border-0 shadow">
+
+				<h5 class="fw-bold mb-3"
+					style="color:#d97600;">
+
+					Rate Provider
+
+				</h5>
+
+				<form id="rateForm"
+					  method="post"
+					  action="@Url.Action("RateProvider", "Customer")">
+
+					@Html.AntiForgeryToken()
+
+					<input type="hidden"
+						   id="rateBookingId"
+						   name="bookingId" />
+
+					<input type="hidden"
+						   id="rateProviderId"
+						   name="providerId" />
+
+					<input type="hidden"
+						   id="ratingValueInput"
+						   name="rating"
+						   value="0" />
+
+					<div class="d-flex justify-content-center gap-2 mb-3"
+						 id="starContainer">
+
+						<i class="bi bi-star-fill star fs-2 text-secondary"
+						   style="cursor:pointer;"
+						   data-value="1"></i>
+
+						<i class="bi bi-star-fill star fs-2 text-secondary"
+						   style="cursor:pointer;"
+						   data-value="2"></i>
+
+						<i class="bi bi-star-fill star fs-2 text-secondary"
+						   style="cursor:pointer;"
+						   data-value="3"></i>
+
+						<i class="bi bi-star-fill star fs-2 text-secondary"
+						   style="cursor:pointer;"
+						   data-value="4"></i>
+
+						<i class="bi bi-star-fill star fs-2 text-secondary"
+						   style="cursor:pointer;"
+						   data-value="5"></i>
+
+					</div>
+
+<textarea id="feedbackComment"
+		  name="comment"
+		  class="form-control mb-3"
+		  rows="4"
+		  placeholder="Write your review here..."></textarea>
+
+					<div class="d-flex justify-content-center gap-2">
+
+						<button type="button"
+								class="btn btn-secondary btn-sm px-4"
+								data-bs-dismiss="modal">
+
+							Cancel
+
+						</button>
+
+						<button type="submit"
+								id="submitRatingBtn"
+								class="btn btn-sm px-4 text-white"
+								style="background:#d97600;">
+
+							Submit
+
+						</button>
+
+					</div>
+
+				</form>
+
+			</div>
+
+		</div>
+
+	</div>
+
+	<!-- Complaint modal -->
+
+	<div class="modal fade complaint-modal"
+		 id="complaintModal"
+		 tabindex="-1"
+		 aria-hidden="true">
+
+		<div class="modal-dialog modal-dialog-centered">
+
+			<div class="modal-content">
+
+				<div class="modal-header border-0">
+
+					<h5 class="modal-title fw-bold"
+						style="color:#e74c3c;">
+
+						<i class="bi bi-exclamation-triangle-fill me-1"></i>
+
+						Submit a Complaint
+
+					</h5>
+
+					<button type="button"
+							class="btn-close"
+							data-bs-dismiss="modal"
+							aria-label="Close">
+					</button>
+
+				</div>
+
+				<div class="modal-body">
+
+					<!-- Complaint form -->
+
+					<form id="complaintForm"
+						  method="post"
+						  action="@Url.Action("Complaint", "Customer")">
+
+						@Html.AntiForgeryToken()
+
+						<!-- Complaint ID -->
+
+						<div class="mb-3">
+
+							<label for="complaintIdDisplay"
+								   class="form-label">
+
+								Complaint ID
+
+							</label>
+
+							<input type="text"
+								   id="complaintIdDisplay"
+								   class="form-control"
+								   value="@(ViewBag.NextComplaintId ?? "COMP-1")"
+								   readonly
+								   style="background-color:#e9ecef;
+font-weight:600;" />
+
+							<input type="hidden"
+								   id="complaintId"
+								   name="ComplaintId"
+								   value="@(ViewBag.NextComplaintId ?? "COMP-1")" />
+
+						</div>
+
+						<!-- Complaint type -->
+
+						<input type="hidden"
+							   id="complaintType"
+							   name="ComplaintType"
+							   value="Customer vs Provider" />
+
+						<!-- Booking ID -->
+
+						<input type="hidden"
+							   id="complaintBookingId"
+							   name="BookingId"
+							   value="" />
+
+						<!-- Provider ID -->
+
+						<div class="mb-3">
+
+							<label for="complaintProviderId"
+								   class="form-label">
+
+								Provider ID
+
+							</label>
+
+							<input type="text"
+								   id="complaintProviderId"
+								   name="ProviderId"
+								   class="form-control"
+								   value=""
+								   readonly
+								   style="background-color:#e9ecef;" />
+
+						</div>
+
+						<!-- Provider name -->
+
+						<div class="mb-3">
+
+							<label for="complaintProviderName"
+								   class="form-label">
+
+								Provider Name
+
+							</label>
+
+							<input type="text"
+								   id="complaintProviderName"
+								   name="ProviderName"
+								   class="form-control"
+								   value=""
+								   readonly
+								   style="background-color:#e9ecef;" />
+
+						</div>
+
+						<!-- Issue title -->
+
+						<div class="mb-3">
+
+							<label for="issueTitle"
+								   class="form-label">
+
+								Issue Title
+
+							</label>
+
+							<select class="form-select"
+									id="issueTitle"
+									name="OtherIssue"
+									required>
+
+								<option value="">
+									Select issue
+								</option>
+
+								<option value="Late Arrival">
+									Late Arrival
+								</option>
+
+								<option value="Overcharging">
+									Overcharging
+								</option>
+
+								<option value="Unprofessional Behavior">
+									Unprofessional Behavior
+								</option>
+
+								<option value="Service Not Completed">
+									Service Not Completed
+								</option>
+
+								<option value="Other">
+									Other
+								</option>
+
+							</select>
+
+						</div>
+
+						<!-- Other issue -->
+
+						<div class="mb-3"
+							 id="otherBox"
+							 style="display:none;">
+
+							<label for="OtherIssueText"
+								   class="form-label">
+
+								Specify Other Issue
+
+							</label>
+
+							<input type="text"
+								   name="OtherIssueText"
+								   id="OtherIssueText"
+								   class="form-control" />
+
+						</div>
+
+						<!-- Complaint details -->
+
+						<div class="mb-3"
+							 id="complaintDetailsBox"
+							 style="display:none;">
+
+							<label for="complaintDetails"
+								   class="form-label">
+
+								Complaint Details <span class="text-muted">(Optional)</span>
+
+							</label>
+
+<textarea class="form-control"
+		  id="complaintDetails"
+		  name="ComplaintDetails"
+		  rows="4"
+		  maxlength="2000"
+		  placeholder="Describe your issue in detail (optional)..."></textarea>
+
+						</div>
+
+						<!-- Buttons -->
+
+						<div class="d-flex justify-content-end gap-2 mt-4">
+
+							<button type="button"
+									class="btn btn-secondary px-4"
+									data-bs-dismiss="modal">
+
+								Cancel
+
+							</button>
+
+							<button type="submit"
+									id="submitComplaintBtn"
+									class="complaint-submit-btn">
+
+								<i class="bi bi-send me-1"></i>
+
+								Submit Complaint
+
+							</button>
+
+						</div>
+
+					</form>
+
+					<div class="text-muted mt-3"
+						 style="font-size:0.85rem;">
+
+						Our support team will review your complaint within 24 hours.
+
+					</div>
+
+				</div>
+
+			</div>
+
+		</div>
+
+	</div>
+
+	<!-- Bootstrap -->
+
+	<script defer src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+	<!-- Sweetalert2 -->
+
+	<script defer src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+	<script>
+
+		/* Servicego - customer dashboard */
+
+		let currentProviderRescheduleBookingId = null;
+
+		/* Anti forgery token */
+
+		function getAntiForgeryToken() {
+
+		const tokenElement =
+		document.querySelector(
+		'#rescheduleForm input[name="__RequestVerificationToken"]'
+		) ||
+		document.querySelector(
+		'#complaintForm input[name="__RequestVerificationToken"]'
+		) ||
+		document.querySelector(
+		'input[name="__RequestVerificationToken"]'
+		);
+
+		return tokenElement
+		? tokenElement.value
+		: '';
+
+		}
+
+		/* Error */
+
+		function showError(message) {
+
+		if (typeof Swal !== 'undefined') {
+
+		Swal.fire({
+
+		title: 'Error!',
+
+		text: message,
+
+		icon: 'error',
+
+		confirmButtonColor: '#d97600'
+
+		});
+
+		}
+		else {
+
+		console.error(message);
+
+		}
+
+		}
+
+		/* Open chat */
+
+		function openChat(providerId, providerName) {
+
+		if (!providerId) {
+
+		showError(
+		'Provider information is missing.'
+		);
+
+		return;
+
+		}
+
+		const url =
+		'@Url.Action("Messages", "Customer")' +
+		'?providerId=' +
+		encodeURIComponent(providerId) +
+		'&providerName=' +
+		encodeURIComponent(providerName || '');
+
+		window.location.href = url;
+
+		}
+
+		/* Open complaint modal */
+
+		function openComplaint(
+		bookingId,
+		providerId,
+		providerName,
+		detailModalId
+		) {
+
+		const complaintForm =
+		document.getElementById(
+		'complaintForm'
+		);
+
+		if (!complaintForm) {
+
+		showError(
+		'Complaint form was not found.'
+		);
+
+		return;
+
+		}
+
+		const providerIdInput =
+		document.getElementById(
+		'complaintProviderId'
+		);
+
+		const providerNameInput =
+		document.getElementById(
+		'complaintProviderName'
+		);
+
+		const bookingInput =
+		document.getElementById(
+		'complaintBookingId'
+		);
+
+		if (providerIdInput) {
+
+		providerIdInput.value =
+		providerId || '';
+
+		}
+
+		if (providerNameInput) {
+
+		providerNameInput.value =
+		providerName || 'Not Assigned';
+
+		}
+
+		if (bookingInput) {
+
+		bookingInput.value =
+		bookingId || '';
+
+		}
+
+		/* Complaint ID */
+
+		const complaintIdDisplay =
+		document.getElementById(
+		'complaintIdDisplay'
+		);
+
+		const complaintIdInput =
+		document.getElementById(
+		'complaintId'
+		);
+
+		if (
+		complaintIdDisplay &&
+		complaintIdInput
+		) {
+
+		let nextComplaintId =
+		complaintIdInput.value;
+
+		if (
+		!nextComplaintId ||
+		nextComplaintId.trim() === ''
+		) {
+
+		nextComplaintId =
+		'COMP-1';
+
+		}
+
+		complaintIdDisplay.value =
+		nextComplaintId;
+
+		complaintIdInput.value =
+		nextComplaintId;
+
+		}
+
+		/* Reset form fields */
+
+		const issueTitle =
+		document.getElementById(
+		'issueTitle'
+		);
+
+		const otherBox =
+		document.getElementById(
+		'otherBox'
+		);
+
+		const otherInput =
+		document.getElementById(
+		'OtherIssueText'
+		);
+
+		const details =
+		document.getElementById(
+		'complaintDetails'
+		);
+
+		if (issueTitle) {
+
+		issueTitle.value = '';
+
+		}
+
+		if (otherBox) {
+
+		otherBox.style.display =
+		'none';
+
+		}
+
+		if (otherInput) {
+
+		otherInput.value = '';
+
+		otherInput.removeAttribute(
+		'required'
+		);
+
+		}
+
+		if (details) {
+
+		details.value = '';
+
+		}
+
+		/* Show optional complaint details after issue selection */
+
+		const complaintDetailsBox =
+		document.getElementById(
+		'complaintDetailsBox'
+		);
+
+		function updateComplaintDetailsVisibility() {
+		if (!complaintDetailsBox || !issueTitle) return;
+
+		const hasIssueSelected =
+		issueTitle.value.trim() !== '';
+
+		complaintDetailsBox.style.display =
+		hasIssueSelected ? 'block' : 'none';
+		}
+
+		if (issueTitle) {
+		issueTitle.addEventListener(
+		'change',
+		updateComplaintDetailsVisibility
+		);
+
+		updateComplaintDetailsVisibility();
+		}
+
+		/* Reset submit button */
+
+		const submitButton =
+		document.getElementById(
+		'submitComplaintBtn'
+		);
+
+		if (submitButton) {
+
+		submitButton.disabled =
+		false;
+
+		submitButton.innerHTML =
+		'<i class="bi bi-send me-1"></i> Submit Complaint';
+
+		}
+
+		/* Complaint modal */
+
+		const complaintModalElement =
+		document.getElementById(
+		'complaintModal'
+		);
+
+		if (!complaintModalElement) {
+
+		showError(
+		'Complaint modal was not found.'
+		);
+
+		return;
+
+		}
+
+		const complaintModal =
+		bootstrap.Modal.getOrCreateInstance(
+		complaintModalElement,
+		{
+		backdrop: true,
+		keyboard: true
+		}
+		);
+
+		/* Close detail modal first */
+
+		const detailModalElement =
+		detailModalId
+		? document.getElementById(
+		detailModalId
+		)
+		: null;
+
+		if (
+		detailModalElement &&
+		detailModalElement.classList.contains('show')
+		) {
+
+		const detailModal =
+		bootstrap.Modal.getInstance(
+		detailModalElement
+		) ||
+		bootstrap.Modal.getOrCreateInstance(
+		detailModalElement
+		);
+
+		const openComplaintAfterClose =
+		function () {
+
+		detailModalElement.removeEventListener(
+		'hidden.bs.modal',
+		openComplaintAfterClose
+		);
+
+		complaintModal.show();
+
+		};
+
+		detailModalElement.addEventListener(
+		'hidden.bs.modal',
+		openComplaintAfterClose
+		);
+
+		detailModal.hide();
+
+		}
+		else {
+
+		complaintModal.show();
+
+		}
+
+		}
+
+		/* Cancel booking */
+
+		function cancelRequest(bookingId) {
+
+		if (!bookingId) {
+
+		showError(
+		'Booking ID is missing.'
+		);
+
+		return;
+
+		}
+
+		Swal.fire({
+
+		title: 'Cancel Booking?',
+
+		text:
+		'Are you sure you want to cancel this booking?',
+
+		icon: 'warning',
+
+		showCancelButton: true,
+
+		confirmButtonColor: '#d33',
+
+		cancelButtonColor: '#6c757d',
+
+		confirmButtonText: 'Yes, Cancel',
+
+		cancelButtonText: 'No'
+
+		}).then((result) => {
+
+		if (!result.isConfirmed) {
+
+		return;
+
+		}
+
+		window.location.href =
+		'@Url.Action("CancelBooking", "Customer")' +
+		'?id=' +
+		encodeURIComponent(bookingId);
+
+		});
+
+		}
+
+		/* Customer reschedule modal */
+
+		function openReschedule(
+		bookingId,
+		currentDate,
+		currentTime
+		) {
+
+		if (!bookingId) {
+
+		showError(
+		'Booking ID is missing.'
+		);
+
+		return;
+
+		}
+
+		const bookingIdInput =
+		document.getElementById(
+		'rescheduleBookingId'
+		);
+
+		const currentDateElement =
+		document.getElementById(
+		'rescheduleCurrentDate'
+		);
+
+		const currentTimeElement =
+		document.getElementById(
+		'rescheduleCurrentTime'
+		);
+
+		const newDateInput =
+		document.getElementById(
+		'newDateInput'
+		);
+
+		const newTimeInput =
+		document.getElementById('newTimeInput');
+
+		wireCustomerRescheduleFieldValidation();
+
+		if (bookingIdInput) {
+
+		bookingIdInput.value =
+		bookingId;
+
+		}
+
+		if (currentDateElement) {
+
+		currentDateElement.innerText =
+		currentDate || 'N/A';
+
+		}
+
+		if (currentTimeElement) {
+
+		currentTimeElement.innerText =
+		currentTime || 'N/A';
+
+		}
+
+		if (newDateInput) {
+
+		newDateInput.value = '';
+
+		}
+
+		if (newTimeInput) {
+
+		newTimeInput.value = '';
+
+		}
+
+		/* Prevent past dates */
+
+		if (newDateInput) {
+
+		const now =
+		new Date();
+
+		const year =
+		now.getFullYear();
+
+		const month =
+		String(
+		now.getMonth() + 1
+		).padStart(
+		2,
+		'0'
+		);
+
+		const day =
+		String(
+		now.getDate()
+		).padStart(
+		2,
+		'0'
+		);
+
+		const today =
+		year +
+		'-' +
+		month +
+		'-' +
+		day;
+
+		newDateInput.min =
+		today;
+
+		}
+
+		const modalElement =
+		document.getElementById(
+		'rescheduleModal'
+		);
+
+		if (!modalElement) {
+
+		showError(
+		'Reschedule modal was not found.'
+		);
+
+		return;
+
+		}
+
+		const modal =
+		bootstrap.Modal.getOrCreateInstance(
+		modalElement,
+		{
+		backdrop: true,
+		keyboard: true
+		}
+		);
+
+		modal.show();
+
+		}
+
+		/* Provider reschedule modal */
+
+		function openProviderReschedule(bookingId) {
+
+		if (!bookingId) {
+
+		showError(
+		'Booking ID is missing.'
+		);
+
+		return;
+
+		}
+
+		currentProviderRescheduleBookingId =
+		String(bookingId);
+
+		const bookingData =
+		providerRescheduleData[
+		String(bookingId)
+		];
+
+		if (!bookingData) {
+
+		showError(
+		'Reschedule request information could not be found.'
+		);
+
+		return;
+
+		}
+
+		const oldDate =
+		document.getElementById(
+		'providerOldDate'
+		);
+
+		const oldTime =
+		document.getElementById(
+		'providerOldTime'
+		);
+
+		const newDate =
+		document.getElementById(
+		'providerNewDate'
+		);
+
+		const newTime =
+		document.getElementById(
+		'providerNewTime'
+		);
+
+		if (oldDate) {
+
+		oldDate.innerText =
+		bookingData.oldDate || 'N/A';
+
+		}
+
+		if (oldTime) {
+
+		oldTime.innerText =
+		bookingData.oldTime || 'N/A';
+
+		}
+
+		if (newDate) {
+
+		newDate.innerText =
+		bookingData.newDate || 'N/A';
+
+		}
+
+		if (newTime) {
+
+		newTime.innerText =
+		bookingData.newTime || 'N/A';
+
+		}
+
+		const modalElement =
+		document.getElementById(
+		'providerRescheduleModal'
+		);
+
+		if (!modalElement) {
+
+		showError(
+		'Provider reschedule modal was not found.'
+		);
+
+		return;
+
+		}
+
+		const modal =
+		bootstrap.Modal.getOrCreateInstance(
+		modalElement,
+		{
+		backdrop: true,
+		keyboard: true
+		}
+		);
+
+		modal.show();
+
+		}
+
+		/* Provider reschedule data */
+		@{
+							var providerRescheduleJson = System.Text.Json.JsonSerializer.Serialize(
+							Model?.Bookings?
+							.Where(b => b.IsRescheduledByProvider)
+							.ToDictionary(
+							b => b.Id.ToString(),
+							b => (object)new
+							{
+												oldDate = b.BookingDate.ToString("yyyy-MM-dd"),
+												oldTime = b.BookingTime ?? "",
+												newDate = b.RequestedDate.HasValue
+							? b.RequestedDate.Value.ToString("yyyy-MM-dd")
+							: "",
+												newTime = b.RequestedTime ?? ""
+							}
+							)
+							?? new System.Collections.Generic.Dictionary<string, object>()
+							);
+		}
+
+		const providerRescheduleData = @Html.Raw(providerRescheduleJson);
+
+		/* Rating */
+
+		function openRating(
+		bookingId,
+		providerId
+		) {
+
+		const bookingInput =
+		document.getElementById(
+		'rateBookingId'
+		);
+
+		const providerInput =
+		document.getElementById(
+		'rateProviderId'
+		);
+
+		const ratingInput =
+		document.getElementById(
+		'ratingValueInput'
+		);
+
+		const feedbackInput =
+		document.getElementById(
+		'feedbackComment'
+		);
+
+		if (bookingInput) {
+
+		bookingInput.value =
+		bookingId || '';
+
+		}
+
+		if (providerInput) {
+
+		providerInput.value =
+		providerId || '';
+
+		}
+
+		if (ratingInput) {
+
+		ratingInput.value =
+		'0';
+
+		}
+
+		if (feedbackInput) {
+
+		feedbackInput.value =
+		'';
+
+		}
+
+		setRating(0);
+
+		const modalElement =
+		document.getElementById(
+		'rateModal'
+		);
+
+		if (!modalElement) {
+
+		return;
+
+		}
+
+		bootstrap.Modal
+		.getOrCreateInstance(
+		modalElement
+		)
+		.show();
+
+		}
+
+		/* Set rating */
+
+		function setRating(value) {
+
+		const ratingInput =
+		document.getElementById(
+		'ratingValueInput'
+		);
+
+		if (ratingInput) {
+
+		ratingInput.value =
+		value;
+
+		}
+
+		document
+		.querySelectorAll('.star')
+		.forEach(star => {
+
+		const starValue =
+		parseInt(
+		star.getAttribute(
+		'data-value'
+		)
+		);
+
+		if (starValue <= value) {
+
+		star.classList.remove(
+		'text-secondary'
+		);
+
+		star.classList.add(
+		'text-warning'
+		);
+
+		}
+		else {
+
+		star.classList.remove(
+		'text-warning'
+		);
+
+		star.classList.add(
+		'text-secondary'
+		);
+
+		}
+
+		});
+
+		}
+
+		/* Move modals to body */
+
+		function openDetails(bookingId) {
+		if (!bookingId) return;
+
+		const modalId = `detailModal_${bookingId}`;
+		let modalElement = document.getElementById(modalId);
+
+		// Detail modals are kept in <template> elements so the browser
+		// does not build dozens of hidden Bootstrap modal DOM trees on
+		// the initial dashboard load. The exact same modal markup is
+		// created only when the customer asks to view that booking.
+		if (!modalElement) {
+		const template =
+		document.getElementById(`detailModalTemplate_${bookingId}`);
+
+		if (!template) {
+		console.error("Booking detail template not found:", bookingId);
+		return;
+		}
+
+		const fragment = template.content.cloneNode(true);
+		modalElement = fragment.querySelector(`#${CSS.escape(modalId)}`);
+
+		if (!modalElement) {
+		console.error("Booking detail modal not found:", bookingId);
+		return;
+		}
+
+		document.body.appendChild(fragment);
+
+		modalElement = document.getElementById(modalId);
+
+		if (!modalElement) return;
+
+		modalElement.addEventListener("hidden.bs.modal", function () {
+		const instance = bootstrap.Modal.getInstance(modalElement);
+		if (instance) instance.dispose();
+		modalElement.remove();
+		}, { once: true });
+		}
+
+		const modal =
+		bootstrap.Modal.getOrCreateInstance(modalElement);
+
+		modal.show();
+
+		// Always initialize the profile map when Edit Profile opens.
+		// The shown.bs.modal listener below remains as a second safety net.
+		setTimeout(function () {
+		loadCustomerProfileGoogleMaps()
+		.catch(function (error) {
+		console.error('Customer profile Google Maps loading error:', error);
+		showCustomerProfileMapFallback();
+		});
+		}, 250);
+		}
+
+		/* Move bootstrap modals to body */
+
+		function moveModalsToBody() {
+
+		document
+		.querySelectorAll('.modal')
+		.forEach(modal => {
+
+		if (
+		modal.parentElement !==
+		document.body
+		) {
+
+		document.body.appendChild(
+		modal
+		);
+
+		}
+
+		});
+
+		}
+
+		/* Clean bootstrap modal backdrop */
+
+		function cleanModalBackdrop() {
+
+		const visibleModal =
+		document.querySelector(
+		'.modal.show'
+		);
+
+		if (!visibleModal) {
+
+		document
+		.querySelectorAll(
+		'.modal-backdrop'
+		)
+		.forEach(backdrop => {
+
+		backdrop.remove();
+
+		});
+
+		document.body.classList.remove(
+		'modal-open'
+		);
+
+		document.body.style.removeProperty(
+		'padding-right'
+		);
+
+		}
+
+		}
+
+		/* Submit customer reschedule */
+
+		function validateCustomerRescheduleFields(showMessages = true) {
+
+		const dateInput = document.getElementById('newDateInput');
+		const timeInput = document.getElementById('newTimeInput');
+		let valid = true;
+
+		if (dateInput) dateInput.classList.remove('is-invalid');
+		if (timeInput) timeInput.classList.remove('is-invalid');
+
+		const dateError = document.getElementById('newDateError');
+		const timeError = document.getElementById('newTimeError');
+		if (dateError) { dateError.textContent = ''; dateError.style.display = 'none'; }
+		if (timeError) { timeError.textContent = ''; timeError.style.display = 'none'; }
+
+		if (dateInput && dateInput.value) {
+		const selected = new Date(dateInput.value + 'T00:00:00');
+		const today = new Date();
+		today.setHours(0,0,0,0);
+		if (selected < today) {
+		if (showMessages) showRescheduleFieldError('date', 'This date is not available.');
+		valid = false;
+		}
+		}
+
+		if (timeInput && timeInput.value) {
+		const parts = timeInput.value.split(':');
+		const h = Number(parts[0]);
+		const m = Number(parts[1]);
+		if (!Number.isFinite(h) || !Number.isFinite(m) || h < 0 || h > 23 || m < 0 || m > 59) {
+		if (showMessages) showRescheduleFieldError('time', 'This time is not available.');
+		valid = false;
+		}
+		}
+
+		return valid;
+		}
+
+		function wireCustomerRescheduleFieldValidation() {
+		const dateInput = document.getElementById('newDateInput');
+		const timeInput = document.getElementById('newTimeInput');
+		if (dateInput && !dateInput.dataset.validationWired) {
+		dateInput.dataset.validationWired = '1';
+		dateInput.addEventListener('input', () => validateCustomerRescheduleFields(true));
+		dateInput.addEventListener('change', () => validateCustomerRescheduleFields(true));
+		}
+		if (timeInput && !timeInput.dataset.validationWired) {
+		timeInput.dataset.validationWired = '1';
+		timeInput.addEventListener('input', () => validateCustomerRescheduleFields(true));
+		timeInput.addEventListener('change', () => validateCustomerRescheduleFields(true));
+		}
+		}
+
+		function clearRescheduleFieldErrors() {
+
+		const dateError = document.getElementById('newDateError');
+		const timeError = document.getElementById('newTimeError');
+
+		if (dateError) {
+		dateError.textContent = '';
+		dateError.style.display = 'none';
+		}
+
+		if (timeError) {
+		timeError.textContent = '';
+		timeError.style.display = 'none';
+		}
+
+		document.getElementById('newDateInput')?.classList.remove('is-invalid');
+		document.getElementById('newTimeInput')?.classList.remove('is-invalid');
+		}
+
+		function showRescheduleFieldError(field, message) {
+
+		const input =
+		document.getElementById(field === 'date' ? 'newDateInput' : 'newTimeInput');
+
+		const error =
+		document.getElementById(field === 'date' ? 'newDateError' : 'newTimeError');
+
+		if (input)
+		input.classList.add('is-invalid');
+
+		if (error) {
+		error.textContent = message;
+		error.style.display = 'block';
+		}
+		}
+
+		function showRescheduleValidationFromServer(message) {
+
+		const text = String(message || 'Unable to send reschedule request.');
+		const lower = text.toLowerCase();
+
+		if (lower.includes('not available on')) {
+		showRescheduleFieldError('date', 'This date is not available.');
+		return;
+		}
+
+		if (lower.includes('available only between') ||
+		lower.includes('valid time')) {
+		showRescheduleFieldError('time', 'This time is not available.');
+		return;
+		}
+
+		if (lower.includes('date')) {
+		showRescheduleFieldError('date', 'This date is not available.');
+		return;
+		}
+
+		if (lower.includes('time')) {
+		showRescheduleFieldError('time', 'This time is not available.');
+		return;
+		}
+
+		showError(text);
+		}
+
+		async function submitReschedule(event) {
+
+		if (event) {
+
+		event.preventDefault();
+
+		}
+
+		const bookingId =
+		document.getElementById(
+		'rescheduleBookingId'
+		)?.value;
+
+		const newDate =
+		document.getElementById(
+		'newDateInput'
+		)?.value;
+
+		const newTime =
+		document.getElementById('newTimeInput')?.value?.trim() || "";
+
+		clearRescheduleFieldErrors();
+
+		/* Validation */
+
+		if (!bookingId) {
+
+		showError(
+		'Booking ID is missing.'
+		);
+
+		return false;
+
+		}
+
+		if (!newDate) {
+
+		showRescheduleFieldError(
+		'date',
+		'Please select a date.'
+		);
+
+		return false;
+
+		}
+
+		if (!newTime) {
+
+		showRescheduleFieldError(
+		'time',
+		'Please select a time.'
+		);
+
+		return false;
+
+		}
+
+		if (!validateCustomerRescheduleFields(true)) {
+		return false;
+		}
+
+		/* Prevent past date */
+
+		const selectedDate =
+		new Date(
+		newDate + 'T00:00:00'
+		);
+
+		const today =
+		new Date();
+
+		today.setHours(
+		0,
+		0,
+		0,
+		0
+		);
+
+		if (selectedDate < today) {
+
+		showRescheduleFieldError(
+		'date',
+		'This date is not available.'
+		);
+
+		return false;
+
+		}
+
+		const submitButton =
+		document.getElementById(
+		'submitRescheduleBtn'
+		);
+
+		if (submitButton) {
+
+		submitButton.disabled =
+		true;
+
+		submitButton.innerHTML =
+		'<span class="spinner-border spinner-border-sm me-1"></span> Sending...';
+
+		}
+
+		try {
+
+		/* Form data */
+
+		const formData =
+		new FormData();
+
+		formData.append(
+		'id',
+		bookingId
+		);
+
+		formData.append(
+		'newDate',
+		newDate
+		);
+
+		formData.append(
+		'newTime',
+		newTime
+		);
+
+		/* Anti forgery token */
+
+		const token =
+		document.querySelector(
+		'#rescheduleForm input[name="__RequestVerificationToken"]'
+		);
+
+		if (token && token.value) {
+
+		formData.append(
+		'__RequestVerificationToken',
+		token.value
+		);
+
+		}
+
+		/* Send request */
+
+		const response =
+		await fetch(
+		'@Url.Action("SubmitReschedule", "Customer")',
+		{
+		method: 'POST',
+		body: formData,
+		headers: {
+		'X-Requested-With':
+		'XMLHttpRequest'
+		}
+		}
+		);
+
+		/* Response */
+
+		if (!response.ok) {
+
+		let errorMessage =
+		'Unable to send reschedule request.';
+
+		try {
+
+		const responseText =
+		await response.text();
+
+		if (responseText) {
+		try {
+		const errorData = JSON.parse(responseText);
+		errorMessage =
+		errorData.message ||
+		errorData.error ||
+		errorMessage;
+		}
+		catch {
+		errorMessage = responseText;
+		}
+		}
+
+		}
+		catch (error) {
+
+		console.error(
+		'Reschedule response error:',
+		error
+		);
+
+		}
+
+		throw new Error(
+		errorMessage
+		);
+
+		}
+
+		/* Close modal */
+
+		const modalElement =
+		document.getElementById(
+		'rescheduleModal'
+		);
+
+		if (modalElement) {
+
+		const modal =
+		bootstrap.Modal.getInstance(
+		modalElement
+		) ||
+		bootstrap.Modal.getOrCreateInstance(
+		modalElement
+		);
+
+		modal.hide();
+
+		}
+
+		/* Success popup */
+
+		await Swal.fire({
+
+		title: 'Request Sent Successfully!',
+
+		text:
+		'Your reschedule request has been sent to the provider successfully.',
+
+		icon: 'success',
+
+		confirmButtonColor:
+		'#d97600',
+
+		confirmButtonText:
+		'OK'
+
+		});
+
+		/* Reload page */
+
+		window.location.reload();
+
+		}
+		catch (error) {
+
+		console.error(
+		'Submit Reschedule Error:',
+		error
+		);
+
+		showRescheduleValidationFromServer(
+		error.message ||
+		'Something went wrong while sending the reschedule request.'
+		);
+
+		}
+		finally {
+
+		if (submitButton) {
+
+		submitButton.disabled =
+		false;
+
+		submitButton.innerHTML =
+		'<i class="bi bi-send me-1"></i> Send Reschedule Request';
+
+		}
+
+		}
+
+		return false;
+
+		}
+
+		/* Respond to provider reschedule */
+
+		async function respondReschedule(
+		bookingId,
+		actionType
+		) {
+
+		if (!bookingId) {
+
+		showError(
+		'Booking ID is missing.'
+		);
+
+		return;
+
+		}
+
+		const normalizedAction =
+		String(actionType)
+		.toLowerCase() === 'accept'
+		? 'Accept'
+		: 'Reject';
+
+		const isAccept =
+		normalizedAction === 'Accept';
+
+		const result =
+		await Swal.fire({
+
+		title:
+		isAccept
+		? 'Accept Reschedule?'
+		: 'Reject Reschedule?',
+
+		text:
+		isAccept
+		? 'The provider requested a new date and time. Accepting will apply the requested schedule.'
+		: 'The original booking date and time will remain unchanged.',
+
+		icon: 'question',
+
+		showCancelButton: true,
+
+		confirmButtonColor:
+		isAccept
+		? '#198754'
+		: '#dc3545',
+
+		cancelButtonColor:
+		'#6c757d',
+
+		confirmButtonText:
+		isAccept
+		? 'Yes, Accept'
+		: 'Yes, Reject',
+
+		cancelButtonText:
+		'Cancel'
+
+		});
+
+		if (!result.isConfirmed) {
+
+		return;
+
+		}
+
+		try {
+
+		const formData =
+		new FormData();
+
+		formData.append(
+		'id',
+		bookingId
+		);
+
+		formData.append(
+		'action',
+		normalizedAction
+		);
+
+		const token =
+		getAntiForgeryToken();
+
+		if (token) {
+
+		formData.append(
+		'__RequestVerificationToken',
+		token
+		);
+
+		}
+
+		const response =
+		await fetch(
+		'@Url.Action("RespondReschedule", "Customer")',
+		{
+		method: 'POST',
+		body: formData,
+		headers: {
+		'X-Requested-With':
+		'XMLHttpRequest'
+		}
+		}
+		);
+
+		if (!response.ok) {
+
+		let errorMessage =
+		'Failed to process reschedule request.';
+
+		try {
+
+		const responseText =
+		await response.text();
+
+		if (responseText) {
+
+		errorMessage =
+		responseText;
+
+		}
+
+		}
+		catch (error) {
+
+		console.error(
+		error
+		);
+
+		}
+
+		throw new Error(
+		errorMessage
+		);
+
+		}
+
+		const modalElement =
+		document.getElementById(
+		'providerRescheduleModal'
+		);
+
+		if (modalElement) {
+
+		const modal =
+		bootstrap.Modal.getInstance(
+		modalElement
+		);
+
+		if (modal) {
+
+		modal.hide();
+
+		}
+
+		}
+
+		await Swal.fire({
+
+		title: 'Success!',
+
+		text:
+		isAccept
+		? 'Provider reschedule request accepted successfully.'
+		: 'Provider reschedule request rejected successfully.',
+
+		icon: 'success',
+
+		confirmButtonColor:
+		'#d97600'
+
+		});
+
+		window.location.reload();
+
+		}
+		catch (error) {
+
+		console.error(
+		'Respond Reschedule Error:',
+		error
+		);
+
+		showError(
+		error.message ||
+		'Something went wrong while processing the reschedule request.'
+		);
+
+		}
+
+		}
+
+		/* Live booking action visibility */
+
+		function parseBookingStartLocal(dateText, timeText) {
+		if (!dateText || !timeText) return null;
+		let value = String(timeText).trim();
+		const match = value.match(/^(\d{1,2}):(\d{2})(?:\s*([AaPp][Mm]))?$/);
+		if (!match) return null;
+		let h = Number(match[1]);
+		const m = Number(match[2]);
+		const ap = (match[3] || '').toUpperCase();
+		if (ap === 'PM' && h < 12) h += 12;
+		if (ap === 'AM' && h === 12) h = 0;
+		if (h > 23 || m > 59) return null;
+		const d = new Date(`${dateText}T00:00:00`);
+		if (Number.isNaN(d.getTime())) return null;
+		d.setHours(h, m, 0, 0);
+		return d;
+		}
+
+		function updateCustomerCancellationButtons() {
+		document.querySelectorAll('.cancel-booking-btn').forEach(button => {
+		const status = String(button.dataset.bookingStatus || '').trim().toLowerCase();
+		if (status === 'pending') {
+		button.style.display = '';
+		return;
+		}
+		if (status !== 'accepted') {
+		button.style.display = 'none';
+		return;
+		}
+		const start = parseBookingStartLocal(button.dataset.bookingDate, button.dataset.bookingTime);
+		button.style.display = start && new Date() < new Date(start.getTime() - 2 * 60 * 60 * 1000) ? '' : 'none';
+		});
+		}
+
+		function markCustomerRatingSubmitted(bookingId) {
+		if (!bookingId) return;
+		const safeId = String(bookingId).replace(/"/g, '');
+		const button = document.querySelector(`.customer-rate-btn[data-rate-booking-id="${safeId}"]`);
+		if (button) button.remove();
+		}
+
+		function applyCustomerComplaintState() {
+		// The database state rendered by the controller is authoritative.
+		// Do not hide a complaint button using browser/localStorage state.
+		}
+
+		function markCustomerComplaintFiled(bookingId) {
+		if (!bookingId) return;
+		const safeId = String(bookingId).replace(/"/g, '');
+		const button = document.querySelector(`.customer-complaint-btn[data-complaint-booking-id="${safeId}"]`);
+		if (button) button.remove();
+		}
+
+		/* DOM ready */
+
+		document.addEventListener(
+		'DOMContentLoaded',
+		function () {
+
+		updateCustomerCancellationButtons();
+		applyCustomerComplaintState();
+		setInterval(updateCustomerCancellationButtons, 30000);
+
+		/* Move all modals outside request cards */
+
+		moveModalsToBody();
+
+		/* Complaint issue change */
+
+		const typeSelect =
+		document.getElementById(
+		'issueTitle'
+		);
+
+		const otherBox =
+		document.getElementById(
+		'otherBox'
+		);
+
+		const otherInput =
+		document.getElementById(
+		'OtherIssueText'
+		);
+
+		if (
+		typeSelect &&
+		otherBox &&
+		otherInput
+		) {
+
+		typeSelect.addEventListener(
+		'change',
+		function () {
+
+		if (
+		this.value ===
+		'Other'
+		) {
+
+		otherBox.style.display =
+		'block';
+
+		otherInput.setAttribute(
+		'required',
+		'required'
+		);
+
+		}
+		else {
+
+		otherBox.style.display =
+		'none';
+
+		otherInput.removeAttribute(
+		'required'
+		);
+
+		otherInput.value =
+		'';
+
+		}
+
+		}
+		);
+
+		}
+
+		/* Star events */
+
+		document
+		.querySelectorAll('.star')
+		.forEach(star => {
+
+		star.addEventListener(
+		'click',
+		function () {
+
+		const value =
+		parseInt(
+		this.getAttribute(
+		'data-value'
+		)
+		);
+
+		if (
+		!isNaN(value)
+		) {
+
+		setRating(
+		value
+		);
+
+		}
+
+		}
+		);
+
+		});
+
+		/*
+		 * Rating form
+		 * Ajax submit + success popup
+		 */
+
+		const rateForm =
+		document.getElementById(
+		'rateForm'
+		);
+
+		if (rateForm) {
+
+		rateForm.addEventListener(
+		'submit',
+		async function (event) {
+
+		event.preventDefault();
+
+		/* Validation */
+
+		if (!rateForm.checkValidity()) {
+
+		rateForm.reportValidity();
+
+		return;
+
+		}
+
+		const bookingId =
+		document.getElementById(
+		'rateBookingId'
+		)?.value
+		?.trim();
+
+		const providerId =
+		document.getElementById(
+		'rateProviderId'
+		)?.value
+		?.trim();
+
+		const ratingValue =
+		parseInt(
+		document.getElementById(
+		'ratingValueInput'
+		)?.value || '0'
+		);
+
+		if (!bookingId) {
+
+		showError(
+		'Booking ID is missing.'
+		);
+
+		return;
+
+		}
+
+		if (!providerId) {
+
+		showError(
+		'Provider ID is missing.'
+		);
+
+		return;
+
+		}
+
+		if (!ratingValue || ratingValue < 1) {
+
+		showError(
+		'Please select a rating.'
+		);
+
+		return;
+
+		}
+
+		const submitButton =
+		document.getElementById(
+		'submitRatingBtn'
+		);
+
+		if (submitButton) {
+
+		submitButton.disabled = true;
+
+		submitButton.innerHTML =
+		'<span class="spinner-border spinner-border-sm me-1"></span> Submitting...';
+
+		}
+
+		try {
+
+		const formData =
+		new FormData(rateForm);
+
+		const response =
+		await fetch(
+		rateForm.action,
+		{
+		method: 'POST',
+		body: formData,
+		headers: {
+		'X-Requested-With':
+		'XMLHttpRequest',
+		'Accept': 'application/json'
+		}
+		}
+		);
+
+		// RateProvider currently redirects after saving the rating.
+		// fetch follows that redirect, so a successful save can return
+		// the History HTML instead of JSON. Treat a successful HTTP
+		// response as a completed rating submission and keep the user
+		// on the current dashboard page.
+		if (!response.ok) {
+		throw new Error(
+		'Unable to submit rating.'
+		);
+		}
+
+		/* Close rating modal */
+
+		const rateModalElement =
+		document.getElementById(
+		'rateModal'
+		);
+
+		if (rateModalElement) {
+
+		const rateModal =
+		bootstrap.Modal.getInstance(
+		rateModalElement
+		) ||
+		bootstrap.Modal.getOrCreateInstance(
+		rateModalElement
+		);
+
+		rateModal.hide();
+
+		}
+
+		/* Success popup */
+
+		await Swal.fire({
+
+		title:
+		'Rating Submitted Successfully!',
+
+		text:
+		'Your rating has been submitted successfully.',
+
+		icon: 'success',
+
+		confirmButtonColor:
+		'#d97600',
+
+		confirmButtonText: 'OK'
+
+		});
+
+		/* Stay on customer dashboard */
+
+		// Remove ONLY the Rate Now button. Stay on the current page.
+		markCustomerRatingSubmitted(bookingId);
+
+		}
+		catch (error) {
+
+		console.error(
+		'Rating Submit Error:',
+		error
+		);
+
+		showError(
+		error.message ||
+		'Something went wrong while submitting your rating.'
+		);
+
+		}
+		finally {
+
+		if (submitButton) {
+
+		submitButton.disabled = false;
+
+		submitButton.innerHTML =
+		'Submit';
+
+		}
+
+		}
+
+		}
+		);
+
+		}
+
+		/* Reschedule form */
+
+		const rescheduleForm =
+		document.getElementById(
+		'rescheduleForm'
+		);
+
+		if (rescheduleForm) {
+
+		rescheduleForm.addEventListener(
+		'submit',
+		submitReschedule
+		);
+
+		}
+
+		/*
+		 * Complaint form
+		 * Ajax submit + success popup
+		 */
+
+		const complaintForm =
+		document.getElementById(
+		'complaintForm'
+		);
+
+		if (complaintForm) {
+
+		complaintForm.addEventListener(
+		'submit',
+		async function (event) {
+
+		event.preventDefault();
+
+		/* Validation */
+
+		if (
+		!complaintForm.checkValidity()
+		) {
+
+		complaintForm.reportValidity();
+
+		return;
+
+		}
+
+		/* Important values check */
+
+		const bookingId =
+		document.getElementById(
+		'complaintBookingId'
+		)?.value
+		?.trim();
+
+		const providerId =
+		document.getElementById(
+		'complaintProviderId'
+		)?.value
+		?.trim();
+
+		const providerName =
+		document.getElementById(
+		'complaintProviderName'
+		)?.value
+		?.trim();
+
+		if (!bookingId) {
+
+		showError(
+		'Booking ID is missing.'
+		);
+
+		return;
+
+		}
+
+		if (!providerId) {
+
+		showError(
+		'Provider ID is missing.'
+		);
+
+		return;
+
+		}
+
+		if (!providerName) {
+
+		showError(
+		'Provider name is missing.'
+		);
+
+		return;
+
+		}
+
+		const submitButton =
+		document.getElementById(
+		'submitComplaintBtn'
+		);
+
+		if (submitButton) {
+
+		submitButton.disabled =
+		true;
+
+		submitButton.innerHTML =
+		'<span class="spinner-border spinner-border-sm me-1"></span> Submitting...';
+
+		}
+
+		try {
+
+		/* Form data */
+
+		const formData =
+		new FormData(
+		complaintForm
+		);
+
+		/* Send complaint */
+
+		const response =
+		await fetch(
+		complaintForm.action,
+		{
+		method: 'POST',
+		body: formData,
+		headers: {
+		'X-Requested-With':
+		'XMLHttpRequest'
+		}
+		}
+		);
+
+		/* Response */
+
+		if (!response.ok) {
+
+		let errorMessage =
+		'Unable to submit complaint.';
+
+		try {
+
+		const responseText =
+		await response.text();
+
+		if (responseText) {
+
+		errorMessage =
+		responseText;
+
+		}
+
+		}
+		catch (error) {
+
+		console.error(
+		'Complaint response error:',
+		error
+		);
+
+		}
+
+		throw new Error(
+		errorMessage
+		);
+
+		}
+
+		markCustomerComplaintFiled(
+		document.getElementById('complaintBookingId')?.value
+		);
+
+		/* Close complaint modal */
+
+		const complaintModalElement =
+		document.getElementById(
+		'complaintModal'
+		);
+
+		if (complaintModalElement) {
+
+		const complaintModal =
+		bootstrap.Modal.getInstance(
+		complaintModalElement
+		) ||
+		bootstrap.Modal.getOrCreateInstance(
+		complaintModalElement
+		);
+
+		complaintModal.hide();
+
+		}
+
+		/* Success popup */
+
+		await Swal.fire({
+
+		title:
+		'Complaint Submitted Successfully!',
+
+		text:
+		'Your complaint has been submitted successfully. Our support team will review it within 24 hours.',
+
+		icon:
+		'success',
+
+		confirmButtonColor:
+		'#d97600',
+
+		confirmButtonText:
+		'OK'
+
+		});
+
+		/* Stay on current page */
+
+		// Complaint button has already been removed.
+		// Do not reload or navigate away from the dashboard.
+
+		}
+		catch (error) {
+
+		console.error(
+		'Complaint Submit Error:',
+		error
+		);
+
+		showError(
+		error.message ||
+		'Something went wrong while submitting your complaint.'
+		);
+
+		}
+		finally {
+
+		if (submitButton) {
+
+		submitButton.disabled =
+		false;
+
+		submitButton.innerHTML =
+		'<i class="bi bi-send me-1"></i> Submit Complaint';
+
+		}
+
+		}
+
+		}
+		);
+
+		}
+
+		/* Prevent past dates */
+
+		const newDateInput =
+		document.getElementById(
+		'newDateInput'
+		);
+
+		if (newDateInput) {
+
+		const now =
+		new Date();
+
+		const year =
+		now.getFullYear();
+
+		const month =
+		String(
+		now.getMonth() + 1
+		).padStart(
+		2,
+		'0'
+		);
+
+		const day =
+		String(
+		now.getDate()
+		).padStart(
+		2,
+		'0'
+		);
+
+		const today =
+		year +
+		'-' +
+		month +
+		'-' +
+		day;
+
+		newDateInput.setAttribute(
+		'min',
+		today
+		);
+
+		}
+
+		/* Clean leftover bootstrap backdrops */
+
+		document.addEventListener(
+		'hidden.bs.modal',
+		function () {
+
+		setTimeout(
+		function () {
+
+		cleanModalBackdrop();
+
+		},
+		50
+		);
+
+		}
+		);
+
+		// Let the dashboard render first, then immediately ask for
+		// profile completion when required.
+		setTimeout(showFirstTimeProfilePrompt, 350);
+
+		}
+		);
+
+		/* Customer profile modal */
+
+		function openCustomerProfile() {
+		const modalElement =
+		document.getElementById('customerProfileModal');
+
+		if (!modalElement) return;
+
+		const title = document.getElementById('customerProfileModalTitle');
+		const subtitle = document.getElementById('customerProfileModalSubtitle');
+
+		if (title) title.textContent = 'Edit Your Profile';
+		if (subtitle) subtitle.textContent = 'Update your permanent customer information.';
+
+		const errorBox =
+		document.getElementById('customerProfileError');
+
+		const successBox =
+		document.getElementById('customerProfileSuccess');
+
+		if (errorBox) {
+		errorBox.classList.add('d-none');
+		errorBox.textContent = '';
+		}
+
+		if (successBox) {
+		successBox.classList.add('d-none');
+		successBox.textContent = '';
+		}
+
+		const modal =
+		bootstrap.Modal.getOrCreateInstance(modalElement);
+
+		modal.show();
+		}
+
+		// Show the completion prompt automatically when the customer reaches
+		// the dashboard and the permanent profile is still incomplete.
+		function showFirstTimeProfilePrompt() {
+		const profileIncomplete = document.body.dataset.profileIncomplete === "true";
+
+		if (!profileIncomplete) return;
+
+		Swal.fire({
+		icon: 'info',
+		title: 'Complete Your Profile',
+		text: 'Please complete your profile.',
+		showCancelButton: true,
+		confirmButtonText: 'Complete Profile',
+		cancelButtonText: 'Maybe Later',
+		confirmButtonColor: '#d97600',
+		cancelButtonColor: '#6c757d',
+		allowOutsideClick: true,
+		allowEscapeKey: true
+		}).then((result) => {
+		if (result.isConfirmed) {
+		openCustomerProfile();
+
+		const title = document.getElementById('customerProfileModalTitle');
+		const subtitle = document.getElementById('customerProfileModalSubtitle');
+
+		if (title) title.textContent = 'Complete Your Profile';
+		if (subtitle) subtitle.textContent = 'Please complete your permanent customer information.';
+		}
+		});
+		}
+
+		const customerProfileImageInput =
+		document.getElementById('customerProfileImageFile');
+
+		if (customerProfileImageInput) {
+		customerProfileImageInput.addEventListener(
+		'change',
+		function () {
+
+		const file = this.files && this.files[0];
+
+		if (!file) return;
+
+		const allowedTypes = [
+		'image/jpeg',
+		'image/png',
+		'image/webp'
+		];
+
+		if (!allowedTypes.includes(file.type)) {
+		this.value = '';
+
+		Swal.fire({
+		icon: 'error',
+		title: 'Invalid Image',
+		text: 'Please select a JPG, JPEG, PNG or WEBP image.'
+		});
+
+		return;
+		}
+
+		if (file.size > 5 * 1024 * 1024) {
+		this.value = '';
+
+		Swal.fire({
+		icon: 'error',
+		title: 'Image Too Large',
+		text: 'Profile image must be 5 MB or smaller.'
+		});
+
+		return;
+		}
+
+		const reader = new FileReader();
+
+		reader.onload = function (event) {
+
+		const modalImage =
+		document.getElementById(
+		'customerModalProfileImage'
+		);
+
+		const dashboardImage =
+		document.getElementById(
+		'dashboardProfileImage'
+		);
+
+		if (modalImage)
+		modalImage.src = event.target.result;
+
+		if (dashboardImage)
+		dashboardImage.src = event.target.result;
+		};
+
+		reader.readAsDataURL(file);
+		}
+		);
+		}
+
+		let customerProfileMap = null;
+		let customerProfileMarker = null;
+		let customerProfileGeocoder = null;
+		let customerProfileAutocomplete = null;
+		let customerProfileMapsLoading = null;
+		let customerProfileMapsLoaded = false;
+		let customerProfileMapsResolve = null;
+		let customerProfileMapsReject = null;
+		let customerProfileMapsTimeout = null;
+
+		window.initCustomerProfileMap = function () {
+		try {
+		if (customerProfileMapsTimeout) {
+		clearTimeout(customerProfileMapsTimeout);
+		customerProfileMapsTimeout = null;
+		}
+
+		if (!window.google || !google.maps) {
+		throw new Error('Google Maps object unavailable.');
+		}
+
+		customerProfileMapsLoaded = true;
+		customerProfileGeocoder = new google.maps.Geocoder();
+		renderCustomerProfileMap();
+
+		if (customerProfileMapsResolve) {
+		const resolve = customerProfileMapsResolve;
+		customerProfileMapsResolve = null;
+		customerProfileMapsReject = null;
+		resolve();
+		}
+		} catch (error) {
+		console.error('Customer profile Google Maps initialization error:', error);
+		if (customerProfileMapsReject) {
+		const reject = customerProfileMapsReject;
+		customerProfileMapsResolve = null;
+		customerProfileMapsReject = null;
+		reject(error);
+		}
+		}
+		};
+
+		window.gm_authFailure = function () {
+		console.error('Google Maps authentication failed for Customer Profile map.');
+		customerProfileMapsLoaded = false;
+
+		if (customerProfileMapsTimeout) {
+		clearTimeout(customerProfileMapsTimeout);
+		customerProfileMapsTimeout = null;
+		}
+
+		const error = new Error('Google Maps authentication failed.');
+
+		if (customerProfileMapsReject) {
+		const reject = customerProfileMapsReject;
+		customerProfileMapsResolve = null;
+		customerProfileMapsReject = null;
+		reject(error);
+		}
+		};
+
+		function loadCustomerProfileGoogleMaps() {
+		if (customerProfileMapsLoaded && window.google && google.maps) {
+		if (!customerProfileGeocoder) {
+		customerProfileGeocoder = new google.maps.Geocoder();
+		}
+		renderCustomerProfileMap();
+		return Promise.resolve();
+		}
+
+		if (window.google && google.maps) {
+		customerProfileMapsLoaded = true;
+		if (!customerProfileGeocoder) {
+		customerProfileGeocoder = new google.maps.Geocoder();
+		}
+		renderCustomerProfileMap();
+		return Promise.resolve();
+		}
+
+		if (customerProfileMapsLoading) {
+		return customerProfileMapsLoading;
+		}
+
+		const apiKey = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+																																																																(Configuration["GoogleMaps:ApiKey"]
+																																																																?? Configuration["GoogleMapsApiKey"]
+																																																																?? Configuration["GoogleMaps.ApiKey"]
+																																																																?? System.Environment.GetEnvironmentVariable("GOOGLE_MAPS_API_KEY")
+																																																																?? "").Trim()
+																																																																));
+
+		if (!apiKey) {
+		return Promise.reject(new Error('Google Maps API key is missing from configuration.'));
+		}
+
+		window.initCustomerProfileMap = window.initCustomerProfileMap;
+
+		customerProfileMapsLoading = new Promise(function (resolve, reject) {
+		customerProfileMapsResolve = resolve;
+		customerProfileMapsReject = reject;
+
+		customerProfileMapsTimeout = setTimeout(function () {
+		customerProfileMapsResolve = null;
+		customerProfileMapsReject = null;
+		customerProfileMapsLoading = null;
+		reject(new Error('Google Maps API loading timed out.'));
+		}, 15000);
+
+		const existingScript = document.querySelector('script[data-servicego-customer-maps="true"]');
+
+		if (existingScript) {
+		if (window.google && google.maps) {
+		window.initCustomerProfileMap();
+		}
+		return;
+		}
+
+		const script = document.createElement('script');
+		script.async = true;
+		script.defer = true;
+		script.dataset.servicegoCustomerMaps = 'true';
+		script.src =
+		'https://maps.googleapis.com/maps/api/js' +
+		'?key=' + encodeURIComponent(apiKey) +
+		'&libraries=places' +
+		'&language=en' +
+		'&region=PK' +
+		'&callback=initCustomerProfileMap' +
+		'&loading=async' +
+		'&v=weekly';
+
+		script.onerror = function () {
+		if (customerProfileMapsTimeout) {
+		clearTimeout(customerProfileMapsTimeout);
+		customerProfileMapsTimeout = null;
+		}
+		customerProfileMapsResolve = null;
+		customerProfileMapsReject = null;
+		customerProfileMapsLoading = null;
+		reject(new Error('Google Maps script failed to load.'));
+		};
+
+		document.head.appendChild(script);
+		});
+
+		return customerProfileMapsLoading;
+		}
+
+		function renderCustomerProfileMap() {
+		const mapElement = document.getElementById('customerProfileMap');
+
+		if (!mapElement || !window.google || !google.maps) {
+		return;
+		}
+
+		mapElement.style.width = '100%';
+		mapElement.style.height = '300px';
+
+		if (!customerProfileGeocoder) {
+		customerProfileGeocoder = new google.maps.Geocoder();
+		}
+
+		if (customerProfileMap) {
+		setTimeout(function () {
+		if (customerProfileMap && google.maps.event) {
+		google.maps.event.trigger(customerProfileMap, 'resize');
+		}
+		}, 150);
+		return;
+		}
+
+		const latInput = document.getElementById('customerProfileLatitude');
+		const lngInput = document.getElementById('customerProfileLongitude');
+		const savedLat = parseFloat(latInput?.value);
+		const savedLng = parseFloat(lngInput?.value);
+
+		const hasSavedLocation =
+		Number.isFinite(savedLat) && Number.isFinite(savedLng);
+
+		const center = hasSavedLocation
+		? { lat: savedLat, lng: savedLng }
+		: { lat: 33.6844, lng: 73.0479 };
+
+		customerProfileMap = new google.maps.Map(mapElement, {
+		center: center,
+		zoom: hasSavedLocation ? 16 : 12,
+		mapTypeControl: false,
+		streetViewControl: false,
+		fullscreenControl: true,
+		clickableIcons: true
+		});
+
+		if (hasSavedLocation) {
+		setCustomerProfileMapLocation(savedLat, savedLng, 'Saved location');
+		}
+
+		customerProfileMap.addListener('click', function (event) {
+		if (!event || !event.latLng) return;
+		setCustomerProfileMapLocation(
+		event.latLng.lat(),
+		event.latLng.lng(),
+		'Location selected'
+		);
+
+		reverseCustomerProfileGeocode(
+		event.latLng.lat(),
+		event.latLng.lng()
+		);
+		});
+
+		const searchInput = document.getElementById('customerProfileAddressSearch');
+
+		if (
+		searchInput &&
+		google.maps.places &&
+		!customerProfileAutocomplete
+		) {
+		customerProfileAutocomplete =
+		new google.maps.places.Autocomplete(searchInput, {
+		fields: ['formatted_address', 'geometry', 'name'],
+		componentRestrictions: { country: 'pk' }
+		});
+
+		customerProfileAutocomplete.addListener('place_changed', function () {
+		const place = customerProfileAutocomplete.getPlace();
+
+		if (
+		place &&
+		place.geometry &&
+		place.geometry.location
+		) {
+		const address =
+		place.formatted_address ||
+		place.name ||
+		searchInput.value;
+
+		const addressField =
+		document.getElementById('customerProfileAddress');
+
+		if (addressField) {
+		addressField.value = address;
+		}
+
+		searchInput.value = address;
+
+		setCustomerProfileMapLocation(
+		place.geometry.location.lat(),
+		place.geometry.location.lng(),
+		'Address location selected'
+		);
+		}
+		});
+		}
+
+		setTimeout(function () {
+		if (customerProfileMap && window.google && google.maps) {
+		google.maps.event.trigger(customerProfileMap, 'resize');
+		}
+		}, 300);
+		}
+
+		document.addEventListener('shown.bs.modal', function (event) {
+		if (!event.target || event.target.id !== 'customerProfileModal') {
+		return;
+		}
+
+		loadCustomerProfileGoogleMaps()
+		.then(function () {
+		setTimeout(function () {
+		if (customerProfileMap && window.google && google.maps) {
+		google.maps.event.trigger(customerProfileMap, 'resize');
+
+		const latInput = document.getElementById('customerProfileLatitude');
+		const lngInput = document.getElementById('customerProfileLongitude');
+		const lat = parseFloat(latInput?.value);
+		const lng = parseFloat(lngInput?.value);
+
+		if (Number.isFinite(lat) && Number.isFinite(lng)) {
+		customerProfileMap.setCenter({ lat: lat, lng: lng });
+		customerProfileMap.setZoom(16);
+		}
+		}
+		}, 150);
+		})
+		.catch(function (error) {
+		console.error('Customer profile Google Maps loading error:', error);
+		showCustomerProfileMapFallback();
+		});
+		});
+
+		function setCustomerProfileMapLocation(lat, lng, label) {
+		// Always store the coordinates in the hidden inputs first, so Save works
+		// even if the map object could not be drawn.
+		const checkLat = Number(lat);
+		const checkLng = Number(lng);
+
+		if (
+		Number.isFinite(checkLat) && Number.isFinite(checkLng) &&
+		checkLat >= -90 && checkLat <= 90 &&
+		checkLng >= -180 && checkLng <= 180
+		) {
+		saveCustomerProfileCoordinates(checkLat, checkLng, label);
+		}
+
+		if (!customerProfileMap || !window.google || !google.maps) {
+		console.error('Customer profile map object is not ready (coordinates were still saved in the form).');
+		return;
+		}
+
+		const position = {
+		lat: Number(lat),
+		lng: Number(lng)
+		};
+
+		if (
+		!Number.isFinite(position.lat) ||
+		!Number.isFinite(position.lng) ||
+		position.lat < -90 ||
+		position.lat > 90 ||
+		position.lng < -180 ||
+		position.lng > 180
+		) {
+		return;
+		}
+
+		customerProfileMap.setCenter(position);
+		customerProfileMap.setZoom(17);
+
+		// Keep one marker on the map and always move it to the
+		// newly selected/search/current location.
+		if (!customerProfileMarker) {
+		customerProfileMarker = new google.maps.Marker({
+		position: position,
+		map: customerProfileMap,
+		draggable: true,
+		title: 'Customer Location',
+		zIndex: 1000
+		});
+
+		customerProfileMarker.addListener('dragend', function (event) {
+		if (!event || !event.latLng) return;
+
+		const dragLat = event.latLng.lat();
+		const dragLng = event.latLng.lng();
+
+		saveCustomerProfileCoordinates(
+		dragLat,
+		dragLng,
+		'Location adjusted'
+		);
+
+		reverseCustomerProfileGeocode(dragLat, dragLng);
+		});
+		} else {
+		customerProfileMarker.setMap(customerProfileMap);
+		customerProfileMarker.setPosition(position);
+		customerProfileMarker.setVisible(true);
+		}
+
+		saveCustomerProfileCoordinates(lat, lng, label);
+
+		// Recalculate the map after Bootstrap modal layout settles.
+		setTimeout(function () {
+		if (customerProfileMap && window.google && google.maps) {
+		google.maps.event.trigger(customerProfileMap, 'resize');
+		customerProfileMap.setCenter(position);
+		}
+		}, 100);
+		}
+
+		function saveCustomerProfileCoordinates(lat, lng, label) {
+		const latInput = document.getElementById('customerProfileLatitude');
+		const lngInput = document.getElementById('customerProfileLongitude');
+
+		if (latInput) {
+		latInput.value = Number(lat).toFixed(7);
+		}
+
+		if (lngInput) {
+		lngInput.value = Number(lng).toFixed(7);
+		}
+
+		const text = document.getElementById('customerProfileLocationText');
+
+		if (text) {
+		text.innerHTML =
+		`<span class="text-success fw-semibold"><i class="bi bi-check-circle-fill me-1"></i>${label}: ${Number(lat).toFixed(6)}, ${Number(lng).toFixed(6)}</span>`;
+		}
+		}
+
+		function reverseCustomerProfileGeocode(lat, lng) {
+		if (!customerProfileGeocoder) return;
+
+		customerProfileGeocoder.geocode(
+		{
+		location: {
+		lat: Number(lat),
+		lng: Number(lng)
+		}
+		},
+		function (results, status) {
+		if (
+		status === 'OK' &&
+		results &&
+		results[0]
+		) {
+		const address = results[0].formatted_address || '';
+		const addressField = document.getElementById('customerProfileAddress');
+		const searchField = document.getElementById('customerProfileAddressSearch');
+
+		if (address && addressField) {
+		addressField.value = address;
+		}
+
+		if (address && searchField) {
+		searchField.value = address;
+		}
+		}
+		}
+		);
+		}
+
+		function showCustomerProfileMapFallback(query) {
+		const mapElement = document.getElementById('customerProfileMap');
+		if (!mapElement) return;
+
+		const address =
+		(query || document.getElementById('customerProfileAddressSearch')?.value || '').trim()
+		|| document.getElementById('customerProfileAddress')?.value?.trim()
+		|| 'Rawalpindi, Pakistan';
+
+		const iframe = document.createElement('iframe');
+		iframe.style.width = '100%';
+		iframe.style.height = '300px';
+		iframe.style.border = '0';
+		iframe.style.borderRadius = '12px';
+		iframe.loading = 'lazy';
+		iframe.referrerPolicy = 'no-referrer-when-downgrade';
+		iframe.title = 'Customer Google Map';
+		const latInput = document.getElementById('customerProfileLatitude');
+		const lngInput = document.getElementById('customerProfileLongitude');
+		const savedLat = parseFloat(latInput?.value);
+		const savedLng = parseFloat(lngInput?.value);
+
+		const mapQuery =
+		Number.isFinite(savedLat) && Number.isFinite(savedLng)
+		? savedLat + ',' + savedLng
+		: address;
+
+		iframe.src =
+		'https://maps.google.com/maps?q=' +
+		encodeURIComponent(mapQuery) +
+		'&z=17&output=embed';
+
+		mapElement.innerHTML = '';
+		mapElement.appendChild(iframe);
+		}
+
+		async function searchCustomerProfileAddress() {
+		const input = document.getElementById('customerProfileAddressSearch');
+		const addressField = document.getElementById('customerProfileAddress');
+		const button = document.getElementById('customerAddressSearchBtn');
+		const query = input?.value.trim();
+
+		if (!query) {
+		if (typeof Swal !== 'undefined') {
+		Swal.fire({
+		icon: 'info',
+		title: 'Enter an address',
+		text: 'Please enter an address first.',
+		confirmButtonColor: '#d97600'
+		});
+		}
+		input?.focus();
+		return;
+		}
+
+		if (button) {
+		button.disabled = true;
+		button.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Searching...';
+		}
+
+		try {
+		await loadCustomerProfileGoogleMaps();
+
+		if (!customerProfileGeocoder && window.google?.maps) {
+		customerProfileGeocoder = new google.maps.Geocoder();
+		}
+
+		if (!customerProfileGeocoder) {
+		throw new Error('Google Maps Geocoder is not available.');
+		}
+
+		if (!customerProfileMap) {
+		renderCustomerProfileMap();
+		}
+
+		customerProfileGeocoder.geocode(
+		{
+		address: query + ', Pakistan',
+		region: 'PK'
+		},
+		function (results, status) {
+		if (button) {
+		button.disabled = false;
+		button.innerHTML = '<i class="bi bi-search me-1"></i> Search';
+		}
+
+		if (
+		status === 'OK' &&
+		results &&
+		results.length > 0 &&
+		results[0]?.geometry?.location
+		) {
+		const result = results[0];
+		const location = result.geometry.location;
+		const lat = location.lat();
+		const lng = location.lng();
+		const address = result.formatted_address || query;
+
+		if (addressField) addressField.value = address;
+		if (input) input.value = address;
+
+		setCustomerProfileMapLocation(
+		lat,
+		lng,
+		'Address location selected'
+		);
+
+		reverseCustomerProfileGeocode(lat, lng);
+
+		if (customerProfileMap) {
+		customerProfileMap.setCenter({ lat, lng });
+		customerProfileMap.setZoom(17);
+		setTimeout(function () {
+		google.maps.event.trigger(customerProfileMap, 'resize');
+		}, 150);
+		}
+
+		return;
+		}
+
+		let message = 'Address search could not find a location.';
+		if (status === 'ZERO_RESULTS') {
+		message = 'Address could not be found. Please enter a more complete address.';
+		} else if (status === 'REQUEST_DENIED') {
+		message = 'Google Maps search was denied. Please check the Geocoding API, Maps JavaScript API, billing, and API-key restrictions.';
+		} else if (status) {
+		message = 'Address search error. Status: ' + status;
+		}
+
+		if (typeof Swal !== 'undefined') {
+		Swal.fire({
+		icon: 'warning',
+		title: 'Address not found',
+		text: message,
+		confirmButtonColor: '#d97600'
+		});
+		}
+		}
+		);
+		}
+		catch (error) {
+		console.error('Customer profile address search error:', error);
+
+		if (button) {
+		button.disabled = false;
+		button.innerHTML = '<i class="bi bi-search me-1"></i> Search';
+		}
+
+		if (typeof Swal !== 'undefined') {
+		Swal.fire({
+		icon: 'error',
+		title: 'Search failed',
+		text: 'Google Maps could not search this address. Please try again.',
+		confirmButtonColor: '#d97600'
+		});
+		}
+		}
+		}
+
+		function getCustomerProfileLocation() {
+		const locationText = document.getElementById('customerProfileLocationText');
+		const button = document.getElementById('customerLocationBtn');
+
+		if (!navigator.geolocation) {
+		if (locationText) {
+		locationText.innerHTML = '<span class="text-danger">Geolocation is not supported by this browser.</span>';
+		}
+		return;
+		}
+
+		if (button) {
+		button.disabled = true;
+		button.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Getting...';
+		}
+
+		navigator.geolocation.getCurrentPosition(
+		function (position) {
+		const lat = position.coords.latitude;
+		const lng = position.coords.longitude;
+
+		loadCustomerProfileGoogleMaps()
+		.then(function () {
+		setCustomerProfileMapLocation(
+		lat,
+		lng,
+		'Current location selected'
+		);
+
+		reverseCustomerProfileGeocode(lat, lng);
+
+		if (button) {
+		button.disabled = false;
+		button.innerHTML = '<i class="bi bi-check2 me-1"></i> Location Selected';
+		}
+		})
+		.catch(function (error) {
+		console.error('Customer location map error:', error);
+
+		if (button) {
+		button.disabled = false;
+		button.innerHTML = '<i class="bi bi-crosshair me-1"></i> Use My Location';
+		}
+		});
+		},
+		function (error) {
+		if (button) {
+		button.disabled = false;
+		button.innerHTML = '<i class="bi bi-crosshair me-1"></i> Use My Location';
+		}
+
+		if (locationText) {
+		let message = 'Location access denied. Please allow location permission.';
+		if (error && error.code === 2) {
+		message = 'Your current location could not be determined. Please try again.';
+		} else if (error && error.code === 3) {
+		message = 'Location request timed out. Please try again.';
+		}
+
+		locationText.innerHTML =
+		'<span class="text-danger">' + message + '</span>';
+		}
+		},
+		{
+		enableHighAccuracy: true,
+		timeout: 15000,
+		maximumAge: 0
+		}
+		);
+		}
+
+		const customerProfileForm =
+		document.getElementById(
+		'customerProfileForm'
+		);
+
+		if (customerProfileForm) {
+
+		customerProfileForm.addEventListener(
+		'submit',
+		async function (event) {
+
+		event.preventDefault();
+
+		const errorBox =
+		document.getElementById(
+		'customerProfileError'
+		);
+
+		const successBox =
+		document.getElementById(
+		'customerProfileSuccess'
+		);
+
+		const saveButton =
+		document.getElementById(
+		'saveCustomerProfileBtn'
+		);
+
+		const phone =
+		document.getElementById(
+		'customerProfilePhone'
+		);
+
+		const city =
+		document.getElementById(
+		'customerProfileCity'
+		);
+
+		const address =
+		document.getElementById(
+		'customerProfileAddress'
+		);
+
+		if (errorBox) {
+		errorBox.classList.add('d-none');
+		errorBox.textContent = '';
+		}
+
+		if (successBox) {
+		successBox.classList.add('d-none');
+		successBox.textContent = '';
+		}
+
+		if (!phone || !phone.value.trim()) {
+		if (errorBox) {
+		errorBox.textContent =
+		'Phone number is required.';
+		errorBox.classList.remove('d-none');
+		}
+		phone?.focus();
+		return;
+		}
+
+		if (!city || !city.value.trim()) {
+		if (errorBox) {
+		errorBox.textContent =
+		'City is required.';
+		errorBox.classList.remove('d-none');
+		}
+		city?.focus();
+		return;
+		}
+
+		const addressSearchBox =
+		document.getElementById(
+		'customerProfileAddressSearch'
+		);
+
+		const typedAddress =
+		(addressSearchBox?.value || '').trim();
+
+		if (!typedAddress) {
+		if (errorBox) {
+		errorBox.textContent =
+		'Permanent location is required. Search your address or use My Location.';
+		errorBox.classList.remove('d-none');
+		}
+		addressSearchBox?.focus();
+		return;
+		}
+
+		// The address that will be saved is the one confirmed on the map.
+		if (!address || typedAddress !== address.value.trim()) {
+		if (errorBox) {
+		errorBox.textContent =
+		'Please press Search to confirm your address on the map, or use My Location.';
+		errorBox.classList.remove('d-none');
+		}
+		addressSearchBox?.focus();
+		return;
+		}
+
+		const latCheck = document.getElementById('customerProfileLatitude')?.value;
+		const lngCheck = document.getElementById('customerProfileLongitude')?.value;
+
+		if (!latCheck || !lngCheck) {
+		if (errorBox) {
+		errorBox.textContent =
+		'Please select your location on the map (Search, click on map, or Use My Location).';
+		errorBox.classList.remove('d-none');
+		}
+		return;
+		}
+
+		const formData =
+		new FormData(customerProfileForm);
+
+		const token =
+		customerProfileForm.querySelector(
+		'input[name="__RequestVerificationToken"]'
+		);
+
+		if (token) {
+		formData.set(
+		'__RequestVerificationToken',
+		token.value
+		);
+		}
+
+		if (saveButton) {
+		saveButton.disabled = true;
+		saveButton.innerHTML =
+		'<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
+		}
+
+		try {
+
+		const response =
+		await fetch(
+		customerProfileForm.action,
+		{
+		method: 'POST',
+		body: formData,
+		headers: {
+		'X-Requested-With':
+		'XMLHttpRequest'
+		}
+		}
+		);
+
+		const text =
+		await response.text();
+
+		let data = null;
+
+		try {
+		data = JSON.parse(text);
+		}
+		catch {
+		throw new Error(
+		'Server returned an invalid response.'
+		);
+		}
+
+		if (!response.ok || !data.success) {
+		throw new Error(
+		data.message ||
+		'Unable to save your profile.'
+		);
+		}
+
+		if (successBox) {
+		successBox.textContent =
+		data.message ||
+		'Your profile has been updated successfully.';
+		successBox.classList.remove('d-none');
+		}
+
+		const dashboardPhone =
+		document.getElementById(
+		'dashboardCustomerPhone'
+		);
+
+		const dashboardCity =
+		document.getElementById(
+		'dashboardCustomerCity'
+		);
+
+		const dashboardAddress =
+		document.getElementById(
+		'dashboardCustomerAddress'
+		);
+
+		if (dashboardPhone) {
+		dashboardPhone.textContent =
+		data.profile.phone || 'N/A';
+		}
+
+		if (dashboardCity) {
+		dashboardCity.textContent =
+		data.profile.city || 'N/A';
+		}
+
+		if (dashboardAddress) {
+		dashboardAddress.textContent =
+		data.profile.address || 'N/A';
+		}
+
+		// The profile is now complete. Future opens are edit mode.
+		const updatedTitle = document.getElementById('customerProfileModalTitle');
+		const updatedSubtitle = document.getElementById('customerProfileModalSubtitle');
+		if (updatedTitle) updatedTitle.textContent = 'Edit Your Profile';
+		if (updatedSubtitle) updatedSubtitle.textContent = 'Update your permanent customer information.';
+
+		if (data.profile.profileImage) {
+
+		const modalImage =
+		document.getElementById(
+		'customerModalProfileImage'
+		);
+
+		const dashboardImage =
+		document.getElementById(
+		'dashboardProfileImage'
+		);
+
+		const mobileProfileImage =
+		document.getElementById(
+		'mobileCustomerProfileImage'
+		);
+
+		const cacheBustedImage =
+		data.profile.profileImage + '?v=' + Date.now();
+
+		if (modalImage)
+		modalImage.src = cacheBustedImage;
+
+		if (dashboardImage)
+		dashboardImage.src = cacheBustedImage;
+
+		if (mobileProfileImage)
+		mobileProfileImage.src = cacheBustedImage;
+		}
+
+		await Swal.fire({
+		icon: 'success',
+		title: 'Profile Updated',
+		text:
+		'Your profile information has been saved permanently.',
+		confirmButtonColor: '#d97600',
+		confirmButtonText: 'OK'
+		});
+
+		const modalElement =
+		document.getElementById(
+		'customerProfileModal'
+		);
+
+		if (modalElement) {
+		const modal =
+		bootstrap.Modal.getOrCreateInstance(
+		modalElement
+		);
+
+		modal.hide();
+		}
+
+		if (data.bookingCreated && data.redirectUrl) {
+		window.location.href = data.redirectUrl;
+		return;
+		}
+
+		}
+		catch (error) {
+
+		if (errorBox) {
+		errorBox.textContent =
+		error.message ||
+		'Something went wrong while saving your profile.';
+		errorBox.classList.remove('d-none');
+		}
+
+		}
+		finally {
+
+		if (saveButton) {
+		saveButton.disabled = false;
+		saveButton.innerHTML =
+		'<i class="bi bi-check2-circle me-1"></i> Save Changes';
+		}
+		}
+		}
+		);
+		}
+
+	</script>
+
+	<script id="servicego-ampm-time-input-fix">
+		document.addEventListener("input", function (event) {
+		const id = event.target && event.target.id;
+		if (["pNewHour","pNewMinute","newHourInput","newMinuteInput"].includes(id)) {
+		event.target.value = event.target.value.replace(/\D/g, "").slice(0, 2);
+		}
+		});
+	</script>
+
+	<script id="servicego-customer-dashboard-load-more">
+		document.addEventListener("DOMContentLoaded", function () {
+		const container = document.getElementById("requestContainer");
+		if (!container) return;
+
+		// Completed bookings
+		// 1-15 -> all shown, no button
+		// 16+ -> first 15 + Load More
+		// After loading the maximum 30 -> Show Less
+		// Show Less -> returns to first 15
+		const completedCards = Array.from(
+		container.querySelectorAll('.request-card[data-booking-category="completed"]')
+		);
+
+		const totalCompleted = completedCards.length;
+		const maxCompleted = Math.min(totalCompleted, 30);
+
+		if (totalCompleted <= 15) {
+		completedCards.forEach(function (card) {
+		card.hidden = false;
+		});
+		return;
+		}
+
+		let visibleCompleted = 15;
+
+		const button = document.createElement("button");
+		button.type = "button";
+		button.className = "btn btn-outline-warning d-block mx-auto mt-4 mb-4 px-4 py-2 fw-semibold";
+		button.id = "customerBookingsLoadMore";
+		button.textContent = "Load More";
+		button.setAttribute("aria-controls", "requestContainer");
+
+		container.parentNode.insertBefore(button, container.nextSibling);
+
+		function updateCompleted() {
+		completedCards.forEach(function (card, index) {
+		card.hidden = index >= visibleCompleted;
+		});
+
+		if (visibleCompleted >= maxCompleted) {
+		button.textContent = "Show Less";
+		button.setAttribute("aria-expanded", "true");
+		} else {
+		button.textContent = "Load More";
+		button.setAttribute("aria-expanded", "false");
+		}
+		}
+
+		button.addEventListener("click", function () {
+		if (visibleCompleted >= maxCompleted) {
+		visibleCompleted = 15;
+		} else {
+		visibleCompleted = Math.min(
+		visibleCompleted + 15,
+		maxCompleted
+		);
+		}
+
+		updateCompleted();
+		});
+
+		updateCompleted();
+		});
+	</script>
+
+	<script>
+		/*
+		 * Provider detail google map - lazy load
+		 * Google Maps stays enabled. The map iframe is only loaded
+		 * when the customer opens that booking's View Details modal.
+		 */
+		document.addEventListener("shown.bs.modal", function (event) {
+		const modal = event.target;
+		if (!modal || !modal.id || !modal.id.startsWith("detailModal_")) {
+		return;
+		}
+
+		const mapFrame = modal.querySelector("iframe[data-google-map-src]");
+		if (!mapFrame) {
+		return;
+		}
+
+		if (!mapFrame.getAttribute("src")) {
+		const mapSrc = mapFrame.getAttribute("data-google-map-src");
+		if (mapSrc) {
+		mapFrame.setAttribute("src", mapSrc);
+		}
+		}
+		});
+	</script>
+
+	<script>
+		/*
+		 * Customer booking category tabs
+		 * Shows only the selected booking category without changing
+		 * the existing booking cards, actions, modals or layout.
+		 */
+		document.addEventListener("DOMContentLoaded", function () {
+		const container = document.getElementById("requestContainer");
+		if (!container) return;
+
+		const tabs = Array.from(document.querySelectorAll(".booking-category-tab"));
+		const items = Array.from(container.querySelectorAll(".booking-item"));
+		const legacyEmptyState = document.getElementById("legacyBookingEmptyState");
+		if (legacyEmptyState) legacyEmptyState.style.display = "none";
+
+		const emptyState = document.createElement("div");
+		emptyState.className = "booking-empty-state";
+		emptyState.id = "bookingCategoryEmptyState";
+		container.appendChild(emptyState);
+
+		function updateCounts() {
+		["pending", "accepted", "completed"].forEach(function (category) {
+		const count = items.filter(function (item) {
+		return item.dataset.bookingCategory === category;
+		}).length;
+		const countEl = document.getElementById(category + "BookingCount");
+		if (countEl) countEl.textContent = count;
+		});
+		}
+
+		function showCategory(category) {
+		let visibleCount = 0;
+
+		items.forEach(function (item) {
+		const visible = item.dataset.bookingCategory === category;
+		item.style.display = visible ? "block" : "none";
+		if (visible) visibleCount++;
+		});
+
+		tabs.forEach(function (tab) {
+		const active = tab.dataset.bookingCategory === category;
+		tab.classList.toggle("active", active);
+		tab.setAttribute("aria-selected", active ? "true" : "false");
+		});
+
+		if (visibleCount === 0) {
+		const emptyInfo = {
+		pending: { icon: "bi-hourglass-split", hint: "New booking requests will show up here." },
+		accepted: { icon: "bi-calendar-check", hint: "Bookings accepted by providers will show up here." },
+		completed: { icon: "bi-check-circle", hint: "Your finished services will show up here." }
+		}[category] || { icon: "bi-inbox", hint: "" };
+
+		emptyState.innerHTML =
+		'<span class="empty-icon"><i class="bi ' + emptyInfo.icon + '"></i></span>' +
+		'<span class="empty-title">No ' + category.charAt(0).toUpperCase() + category.slice(1) + ' Bookings</span>' +
+		'<span class="empty-hint">' + emptyInfo.hint + '</span>';
+		emptyState.style.display = "block";
+		} else {
+		emptyState.style.display = "none";
+		}
+		}
+
+		tabs.forEach(function (tab) {
+		tab.addEventListener("click", function () {
+		showCategory(tab.dataset.bookingCategory);
+		});
+		});
+
+		updateCounts();
+
+		const params = new URLSearchParams(window.location.search);
+		const focusBookingId = params.get("bookingId");
+		const focusedItem = focusBookingId
+		? items.find(function (item) {
+		return String(item.dataset.bookingId) === String(focusBookingId);
+		})
+		: null;
+
+		if (focusedItem) {
+		// Notification clicks open the exact booking, and the
+		// matching category tab is activated so the status is
+		// never shown under the wrong tab.
+		const focusedCategory = focusedItem.dataset.bookingCategory || "pending";
+		const focusedTab = tabs.find(function (tab) {
+		return tab.dataset.bookingCategory === focusedCategory;
+		});
+
+		if (focusedTab) {
+		tabs.forEach(function (tab) {
+		const active = tab === focusedTab;
+		tab.classList.toggle("active", active);
+		tab.setAttribute("aria-selected", active ? "true" : "false");
+		});
+		}
+
+		items.forEach(function (item) { item.style.display = "none"; });
+		emptyState.style.display = "none";
+		focusedItem.style.display = "block";
+		setTimeout(function () {
+		if (typeof openDetails === "function") {
+		openDetails(focusBookingId);
+		}
+		}, 120);
+		} else {
+		showCategory("pending");
+		}
+		});
+	</script>
+</body>
+
+</html>

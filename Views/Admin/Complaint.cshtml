@@ -1,0 +1,4227 @@
+﻿@model IEnumerable<ServiceGo.Models.ComplaintModel>
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ServicesGo - Complaints Management</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+          rel="stylesheet" />
+    <link rel="icon"
+          href="@Url.Content("~/images/Logo.png")"
+          type="image/x-icon" />
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        html,
+        body {
+            margin: 0;
+            min-height: 100%;
+            color: #222;
+        }
+
+        body {
+            background: #f5f7fb;
+            overflow-x: hidden;
+        }
+
+        /* Mobile header */
+
+        .mobile-header {
+            display: none;
+            height: 60px;
+            background: linear-gradient(135deg, #ffb45e, #ff7f36);
+            position: fixed;
+            inset: 0 0 auto;
+            z-index: 1500;
+            padding: 0 20px;
+            align-items: center;
+            justify-content: space-between;
+            color: #fff;
+            box-shadow: 0 2px 10px rgba(0,0,0,.12);
+        }
+
+        .menu-toggle-btn {
+            background: transparent;
+            border: 0;
+            color: #fff;
+            font-size: 22px;
+            cursor: pointer;
+        }
+
+        .mobile-brand {
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        /* Sidebar */
+
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            background: linear-gradient(180deg, #ffb45e, #ff7f36);
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 25px 0;
+            z-index: 2000;
+            transition: transform .3s ease;
+            overflow-y: auto;
+        }
+
+        .sidebar-close-btn {
+            display: none;
+            position: absolute;
+            top: 14px;
+            right: 12px;
+            width: 34px;
+            height: 34px;
+            border: none;
+            border-radius: 50%;
+            background: rgba(255,255,255,.18);
+            color: #fff;
+            font-size: 17px;
+            cursor: pointer;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            transition: all .2s ease;
+        }
+
+            .sidebar-close-btn:hover {
+                background: rgba(255,255,255,.30);
+                transform: scale(1.05);
+            }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 0 25px;
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 25px;
+        }
+
+            .brand img {
+                width: 36px;
+                height: 36px;
+                object-fit: contain;
+                border-radius: 4px;
+            }
+
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sidebar li {
+            width: 100%;
+        }
+
+            .sidebar li a,
+            .sidebar .dropdown-toggle {
+                display: flex !important;
+                align-items: center;
+                justify-content: space-between;
+                width: 100%;
+                padding: 14px 25px;
+                color: #fff;
+                text-decoration: none;
+                font-size: 15px;
+                opacity: .9;
+                cursor: pointer;
+                transition: .2s ease;
+            }
+
+                .sidebar li a:hover,
+                .sidebar .dropdown-toggle:hover {
+                    background: rgba(255,255,255,.15);
+                    opacity: 1;
+                }
+
+            .sidebar li.active > a {
+                background: rgba(255,255,255,.20);
+                opacity: 1;
+                font-weight: 600;
+                border-left: 4px solid #fff;
+                padding-left: 21px;
+            }
+
+        .toggle-left {
+            display: flex;
+            align-items: center;
+        }
+
+        .sidebar i {
+            width: 20px;
+            margin-right: 12px;
+            text-align: center;
+        }
+
+        .arrow-icon {
+            font-size: 12px;
+            transition: .3s ease;
+        }
+
+        .dropdown-item.open .arrow-icon {
+            transform: rotate(180deg);
+        }
+
+        .submenu {
+            list-style: none;
+            background: rgba(0,0,0,.08);
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height .3s ease;
+            padding: 0;
+        }
+
+        .dropdown-item.open .submenu {
+            max-height: 180px;
+        }
+
+        .submenu li a {
+            display: block !important;
+            padding: 10px 25px 10px 57px !important;
+            font-size: 14px;
+            opacity: .85;
+        }
+
+        .logout {
+            padding-top: 20px;
+            border-top: 1px solid rgba(255,255,255,.2);
+        }
+
+            .logout a {
+                display: flex;
+                align-items: center;
+                padding: 0 25px;
+                color: #fff;
+                text-decoration: none;
+                font-size: 15px;
+            }
+
+            .logout i {
+                width: 20px;
+                margin-right: 12px;
+            }
+
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.4);
+            z-index: 1900;
+        }
+
+        /* Main content */
+
+        .main-content {
+            margin-left: 260px;
+            padding: 40px;
+            width: calc(100% - 260px);
+            min-height: 100vh;
+        }
+
+        .page-header {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+            .page-header h1 {
+                font-size: 28px;
+                font-weight: 600;
+                margin: 0;
+            }
+
+            .page-header p {
+                color: #666;
+                margin: 5px 0 0;
+                font-size: 14px;
+            }
+
+        /* Search */
+
+        .search-box {
+            width: 300px;
+            position: relative;
+        }
+
+            .search-box i {
+                position: absolute;
+                left: 16px;
+                top: 50%;
+                transform: translateY(-50%);
+                color: #98a2b3;
+                z-index: 2;
+            }
+
+            .search-box input {
+                width: 100%;
+                height: 44px;
+                border: 1px solid #e4e7ec;
+                background: #fff;
+                border-radius: 12px;
+                padding: 0 15px 0 45px;
+                outline: 0;
+                font-size: 13px;
+            }
+
+                .search-box input:focus {
+                    border-color: #ff9b4a;
+                    box-shadow: 0 0 0 3px rgba(255,155,74,.12);
+                }
+
+        /* Filters */
+
+        .filter-card {
+            background: #fff;
+            border: 1px solid #e9edf3;
+            border-radius: 16px;
+            padding: 8px;
+            margin-bottom: 18px;
+            display: inline-block;
+            max-width: 100%;
+        }
+
+        .filter-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .filter-btn {
+            border: 0;
+            background: transparent;
+            color: #667085;
+            border-radius: 999px;
+            padding: 9px 15px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: .2s ease;
+            white-space: nowrap;
+        }
+
+            .filter-btn:hover {
+                background: #f3f5f8;
+            }
+
+            .filter-btn.active {
+                background: #111827;
+                color: #fff;
+                box-shadow: 0 4px 12px rgba(0,0,0,.10);
+            }
+
+        .tab-count {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 22px;
+            height: 21px;
+            padding: 0 6px;
+            margin-left: 4px;
+            border-radius: 999px;
+            background: #eef2f6;
+            color: #667085;
+            font-size: 10px;
+            font-weight: 800;
+        }
+
+        .filter-btn.active .tab-count {
+            background: rgba(255,255,255,.18);
+            color: #fff;
+        }
+
+        /* Table */
+
+        .complaint-card {
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 5px 20px rgba(16,24,40,.05);
+            overflow: hidden;
+        }
+
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        #complaintsTable {
+            width: 100%;
+            min-width: 760px;
+            margin: 0;
+        }
+
+            #complaintsTable thead th {
+                background: #f8fafc;
+                color: #667085;
+                border-bottom: 1px solid #e9edf3;
+                padding: 15px 12px;
+                font-size: 11px;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: .05em;
+                white-space: nowrap;
+            }
+
+            #complaintsTable tbody td {
+                padding: 16px 12px;
+                border-bottom: 1px solid #f0f2f5;
+                vertical-align: middle;
+            }
+
+            #complaintsTable tbody tr:hover {
+                background: #fcfcfd;
+            }
+
+        .complaint-id {
+            color: #111827;
+            font-size: 14px;
+            font-weight: 800;
+        }
+
+        .complaint-type {
+            color: #98a2b3;
+            font-size: 10px;
+            margin-top: 3px;
+        }
+
+        .user-mini {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 190px;
+        }
+
+        .user-avatar {
+            width: 38px;
+            height: 38px;
+            flex: 0 0 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: #eef2f6;
+            border: 1px solid #e1e5ea;
+            color: #344054;
+            font-size: 14px;
+            font-weight: 800;
+        }
+
+        .role-pill {
+            display: inline-flex;
+            padding: 3px 8px;
+            border-radius: 999px;
+            background: #f2f4f7;
+            color: #667085;
+            font-size: 9px;
+            font-weight: 700;
+        }
+
+        .warning-count-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            min-width: 52px;
+            padding: 7px 12px;
+            border-radius: 999px;
+            background: #fff8e8;
+            border: 1px solid #ffe2a8;
+            color: #9a6700;
+            font-size: 11px;
+            font-weight: 800;
+        }
+
+        /* Status */
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 6px 11px;
+            border-radius: 999px;
+            border: 1px solid transparent;
+            font-size: 10px;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        .status-pending {
+            background: #fff7e6;
+            color: #9a6700;
+            border-color: #ffe0a3;
+        }
+
+        .status-warning {
+            background: #eef8ff;
+            color: #1769aa;
+            border-color: #b9e1ff;
+        }
+
+        .status-resolved {
+            background: #ecfdf3;
+            color: #087443;
+            border-color: #abefc6;
+        }
+
+        .status-blocked {
+            background: #fff1f3;
+            color: #b42318;
+            border-color: #fecdca;
+        }
+
+        .status-default {
+            background: #f2f4f7;
+            color: #475467;
+            border-color: #eaecf0;
+        }
+
+        /* Details button */
+
+        .btn-details {
+            border: 1px solid #d0d5dd;
+            background: #fff;
+            color: #344054;
+            border-radius: 10px !important;
+            padding: 8px 14px;
+            font-size: 11px;
+            font-weight: 700;
+            transition: all .2s ease;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+            .btn-details:hover {
+                background: #fff8f1;
+                border-color: #ff9b4a;
+                color: #e87520;
+                transform: translateY(-1px);
+            }
+
+            .btn-details:active {
+                transform: translateY(0);
+            }
+
+        /* Empty state */
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .empty-icon {
+            width: 60px;
+            height: 60px;
+            margin: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: #f2f4f7;
+            color: #98a2b3;
+            font-size: 22px;
+        }
+
+        /* Details popup */
+
+        .complaint-details-overlay {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            padding: 20px;
+            background: rgba(15, 23, 42, .68);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 999999;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: opacity .20s ease, visibility .20s ease;
+        }
+
+            .complaint-details-overlay.open {
+                opacity: 1;
+                visibility: visible;
+                pointer-events: auto;
+            }
+
+        .complaint-details-popup {
+            position: relative;
+            z-index: 1000000;
+            width: min(900px, 100%);
+            max-height: calc(100vh - 40px);
+            display: flex;
+            flex-direction: column;
+            background: #fff;
+            border-radius: 22px;
+            overflow: hidden;
+            box-shadow: 0 30px 90px rgba(0,0,0,.30), 0 10px 30px rgba(0,0,0,.12);
+            transform: translateY(15px) scale(.97);
+            transition: transform .22s ease;
+        }
+
+        .complaint-details-overlay.open .complaint-details-popup {
+            transform: translateY(0) scale(1);
+        }
+
+        @@keyframes popupIn {
+            from {
+                opacity: 0;
+                transform: translateY(18px) scale(.97);
+            }
+
+            to {
+                opacity: 1;
+                transform: none;
+            }
+        }
+
+        /* Popup header */
+
+        .popup-header {
+            flex: 0 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+            padding: 20px 25px;
+            background: #fff;
+            border-bottom: 1px solid #eef0f3;
+        }
+
+        .popup-eyebrow {
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: .12em;
+            color: #ff8a3d;
+            margin-bottom: 4px;
+        }
+
+        .popup-header h3 {
+            margin: 0;
+            color: #1d2939;
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .popup-close {
+            width: 40px;
+            height: 40px;
+            flex: 0 0 40px;
+            border: 0;
+            border-radius: 50%;
+            background: #f2f4f7;
+            color: #667085;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all .2s ease;
+        }
+
+            .popup-close:hover {
+                background: #fff1e6;
+                color: #ef7d32;
+                transform: rotate(5deg);
+            }
+
+        /* Popup body */
+
+        .popup-body {
+            flex: 1 1 auto;
+            min-height: 0;
+            padding: 22px 25px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            background: #fff;
+        }
+
+            .popup-body::-webkit-scrollbar {
+                width: 7px;
+            }
+
+            .popup-body::-webkit-scrollbar-track {
+                background: #f5f7fa;
+            }
+
+            .popup-body::-webkit-scrollbar-thumb {
+                background: #d0d5dd;
+                border-radius: 20px;
+            }
+
+                .popup-body::-webkit-scrollbar-thumb:hover {
+                    background: #98a2b3;
+                }
+
+        /* User card */
+
+        .popup-user-card {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 16px;
+            border: 1px solid #eaecf0;
+            border-radius: 18px;
+            background: #fafbfc;
+        }
+
+        .popup-avatar {
+            width: 55px;
+            height: 55px;
+            flex: 0 0 55px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #eef2f6;
+            border: 1px solid #dfe4ea;
+            color: #344054;
+            font-size: 18px;
+            font-weight: 800;
+        }
+
+        .popup-user-info {
+            min-width: 0;
+            flex: 1;
+        }
+
+        .popup-user-name-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+            .popup-user-name-row h4 {
+                margin: 0;
+                color: #1d2939;
+                font-size: 16px;
+                font-weight: 700;
+                word-break: break-word;
+            }
+
+        .popup-role {
+            display: inline-flex;
+            padding: 4px 9px;
+            border-radius: 999px;
+            background: #f2f4f7;
+            color: #667085;
+            font-size: 10px;
+            font-weight: 700;
+        }
+
+        .popup-user-id {
+            margin-top: 5px;
+            color: #98a2b3;
+            font-size: 11px;
+        }
+
+            .popup-user-id strong {
+                color: #475467;
+            }
+
+        .popup-status {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 7px 12px;
+            border-radius: 999px;
+            font-size: 10px;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        /* Popup sections */
+
+        .popup-section {
+            margin-top: 20px;
+        }
+
+        .popup-section-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            color: #344054;
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+            .popup-section-title i {
+                color: #ff8a3d;
+            }
+
+        /* Info grid */
+
+        .popup-info-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+
+        .popup-info-card {
+            min-width: 0;
+            padding: 13px 14px;
+            border: 1px solid #eaecf0;
+            border-radius: 14px;
+            background: #fff;
+        }
+
+            .popup-info-card span {
+                display: block;
+                margin-bottom: 5px;
+                color: #98a2b3;
+                font-size: 9px;
+                font-weight: 800;
+                text-transform: uppercase;
+                letter-spacing: .05em;
+            }
+
+            .popup-info-card strong {
+                display: block;
+                color: #344054;
+                font-size: 12px;
+                word-break: break-word;
+                overflow-wrap: anywhere;
+            }
+
+        /* History */
+
+        .popup-history-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+
+        .popup-history-card {
+            text-align: center;
+            padding: 15px 10px;
+            border-radius: 16px;
+            border: 1px solid #eaecf0;
+        }
+
+        .complaints-history {
+            background: #f5f8ff;
+        }
+
+        .warnings-history {
+            background: #fffaf0;
+        }
+
+        .blocks-history {
+            background: #fff5f5;
+        }
+
+        .popup-history-icon {
+            font-size: 15px;
+            margin-bottom: 7px;
+            color: #667085;
+        }
+
+        .complaints-history .popup-history-icon {
+            color: #667eea;
+        }
+
+        .warnings-history .popup-history-icon {
+            color: #d89000;
+        }
+
+        .blocks-history .popup-history-icon {
+            color: #d92d20;
+        }
+
+        .popup-history-number {
+            color: #344054;
+            font-size: 24px;
+            line-height: 1;
+            font-weight: 900;
+        }
+
+        .popup-history-label {
+            margin-top: 6px;
+            color: #667085;
+            font-size: 10px;
+            font-weight: 700;
+        }
+
+        /* Complaint details */
+
+        .popup-details-box {
+            min-height: 120px;
+            max-height: 260px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 15px;
+            border: 1px solid #eaecf0;
+            border-radius: 15px;
+            background: #f8fafc;
+            color: #475467;
+            font-size: 13px;
+            line-height: 1.7;
+            white-space: pre-wrap;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+        }
+
+            .popup-details-box::-webkit-scrollbar {
+                width: 6px;
+            }
+
+            .popup-details-box::-webkit-scrollbar-track {
+                background: #eef2f6;
+            }
+
+            .popup-details-box::-webkit-scrollbar-thumb {
+                background: #cbd5e1;
+                border-radius: 20px;
+            }
+
+        /* Popup footer */
+
+        .popup-footer {
+            flex: 0 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 16px 25px;
+            background: #fff;
+            border-top: 1px solid #eef0f3;
+        }
+
+        .popup-close-btn {
+            border: 1px solid #d0d5dd;
+            background: #fff;
+            color: #475467;
+            border-radius: 10px;
+            padding: 9px 17px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: .2s ease;
+        }
+
+            .popup-close-btn:hover {
+                background: #f8fafc;
+                border-color: #98a2b3;
+            }
+
+        .popup-actions {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .popup-action {
+            border: 0;
+            border-radius: 10px;
+            padding: 9px 14px;
+            font-size: 11px;
+            font-weight: 800;
+            cursor: pointer;
+            color: #fff;
+            transition: all .2s ease;
+        }
+
+            .popup-action:hover {
+                transform: translateY(-1px);
+            }
+
+        .resolve-action {
+            background: #12b76a;
+        }
+
+            .resolve-action:hover {
+                background: #039855;
+            }
+
+        .warning-action {
+            background: #f79009;
+        }
+
+            .warning-action:hover {
+                background: #dc6803;
+            }
+
+        .block-action {
+            background: #f04438;
+        }
+
+            .block-action:hover {
+                background: #d92d20;
+            }
+
+        .popup-action.d-none {
+            display: none !important;
+        }
+
+        /* Responsive table */
+
+        @@media(max-width:992px) {
+
+            .mobile-header {
+                display: flex;
+            }
+
+            .sidebar {
+                transform: translateX(-100%);
+                box-shadow: 5px 0 20px rgba(0,0,0,.15);
+            }
+
+                .sidebar.active {
+                    transform: translateX(0);
+                }
+
+            .sidebar-close-btn {
+                display: flex;
+            }
+
+            .sidebar-overlay.active {
+                display: block;
+            }
+
+            .main-content {
+                margin-left: 0;
+                width: 100%;
+                padding: 85px 20px 30px;
+            }
+
+            .page-header h1 {
+                font-size: 24px;
+            }
+
+            .search-box {
+                width: 100%;
+            }
+        }
+
+        /* Mobile - no horizontal scroll */
+
+        @@media(max-width:700px) {
+
+            body {
+                overflow-x: hidden;
+            }
+
+            .main-content {
+                padding: 76px 10px 25px;
+            }
+
+            .page-header {
+                gap: 12px;
+                margin-bottom: 15px;
+            }
+
+                .page-header h1 {
+                    font-size: 20px;
+                    line-height: 1.25;
+                }
+
+                .page-header p {
+                    font-size: 10px;
+                    line-height: 1.5;
+                    margin-top: 4px;
+                }
+
+            .search-box {
+                width: 100%;
+            }
+
+                .search-box input {
+                    height: 42px;
+                    font-size: 11px;
+                    border-radius: 11px;
+                }
+            /* Filter card */
+
+            .filter-card {
+                display: block;
+                width: 100%;
+                padding: 6px;
+                margin-bottom: 12px;
+                border-radius: 14px;
+            }
+
+            .filter-list {
+                width: 100%;
+                overflow-x: auto;
+                flex-wrap: nowrap;
+                gap: 3px;
+                scrollbar-width: none;
+            }
+
+                .filter-list::-webkit-scrollbar {
+                    display: none;
+                }
+
+            .filter-btn {
+                flex: 0 0 auto;
+                padding: 8px 10px;
+                font-size: 10px;
+            }
+
+            .tab-count {
+                min-width: 19px;
+                height: 19px;
+                font-size: 9px;
+                padding: 0 5px;
+            }
+            /* Table becomes cards */
+
+            .complaint-card {
+                border-radius: 15px;
+                background: transparent;
+                box-shadow: none;
+                overflow: visible;
+            }
+
+            .table-responsive {
+                overflow-x: visible !important;
+                width: 100%;
+            }
+
+            #complaintsTable {
+                width: 100% !important;
+                min-width: 0 !important;
+                display: block;
+                margin: 0;
+                border: 0;
+            }
+
+                #complaintsTable thead {
+                    display: none;
+                }
+
+                #complaintsTable tbody {
+                    display: block;
+                    width: 100%;
+                }
+
+                    #complaintsTable tbody tr {
+                        display: block;
+                        width: 100%;
+                        margin: 0 0 12px;
+                        padding: 10px;
+                        background: #fff;
+                        border: 1px solid #e8ecf2;
+                        border-radius: 16px;
+                        box-shadow: 0 5px 16px rgba(16,24,40,.055);
+                    }
+
+                        #complaintsTable tbody tr:hover {
+                            background: #fff;
+                        }
+
+                    #complaintsTable tbody td {
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        width: 100%;
+                        min-width: 0;
+                        padding: 9px 5px;
+                        border-bottom: 1px solid #f0f2f5;
+                        font-size: 11px;
+                        gap: 10px;
+                    }
+
+                        #complaintsTable tbody td:last-child {
+                            border-bottom: 0;
+                            padding-top: 11px;
+                            padding-bottom: 2px;
+                        }
+
+                        #complaintsTable tbody td::before {
+                            content: attr(data-label);
+                            flex: 0 0 85px;
+                            color: #98a2b3;
+                            font-size: 8px;
+                            font-weight: 800;
+                            text-transform: uppercase;
+                            letter-spacing: .04em;
+                        }
+
+                        #complaintsTable tbody td:first-child {
+                            display: block;
+                            padding: 3px 5px 11px;
+                            border-bottom: 1px solid #eaecf0;
+                        }
+
+                            #complaintsTable tbody td:first-child::before {
+                                display: none;
+                            }
+
+                            #complaintsTable tbody td:first-child .complaint-id {
+                                font-size: 14px;
+                            }
+
+                            #complaintsTable tbody td:first-child .complaint-type {
+                                font-size: 9px;
+                                margin-top: 3px;
+                            }
+
+                        #complaintsTable tbody td:nth-child(2) {
+                            align-items: center;
+                        }
+
+                            #complaintsTable tbody td:nth-child(2) .user-mini {
+                                min-width: 0;
+                                flex: 1;
+                                justify-content: flex-end;
+                            }
+
+                            #complaintsTable tbody td:nth-child(2) .user-avatar {
+                                width: 34px;
+                                height: 34px;
+                                flex: 0 0 34px;
+                                font-size: 12px;
+                            }
+
+                            #complaintsTable tbody td:nth-child(2) .fw-semibold {
+                                font-size: 11px !important;
+                                max-width: 145px;
+                                overflow: hidden;
+                                text-overflow: ellipsis;
+                                white-space: nowrap;
+                            }
+
+                            #complaintsTable tbody td:nth-child(2) .small {
+                                font-size: 8px !important;
+                            }
+
+                            #complaintsTable tbody td:nth-child(2) .role-pill {
+                                font-size: 8px;
+                                padding: 2px 6px;
+                            }
+
+                        #complaintsTable tbody td:nth-child(3) {
+                            min-height: 42px;
+                        }
+
+                        #complaintsTable tbody td:nth-child(4) {
+                            min-height: 42px;
+                        }
+
+                        #complaintsTable tbody td:nth-child(5) {
+                            min-height: 38px;
+                        }
+
+                        #complaintsTable tbody td:nth-child(6) {
+                            display: block;
+                            text-align: right;
+                        }
+
+                            #complaintsTable tbody td:nth-child(6)::before {
+                                display: none;
+                            }
+
+                            #complaintsTable tbody td:nth-child(6) .btn-details {
+                                width: 100%;
+                                min-height: 40px;
+                                padding: 9px 12px;
+                                font-size: 10px;
+                                border-radius: 10px !important;
+                                background: #fffaf5;
+                                border-color: #ffd5b5;
+                                color: #e87520;
+                            }
+
+            .warning-count-pill {
+                min-width: 48px;
+                padding: 6px 10px;
+                font-size: 10px;
+            }
+
+            .status-badge {
+                padding: 5px 9px;
+                font-size: 9px;
+            }
+            /* Empty */
+
+            .empty-state {
+                padding: 45px 15px;
+                background: #fff;
+                border-radius: 15px;
+            }
+            /* Mobile modal */
+
+            .complaint-details-overlay {
+                padding: 7px;
+                align-items: flex-end;
+            }
+
+            .complaint-details-popup {
+                width: 100%;
+                max-height: calc(100vh - 14px);
+                border-radius: 19px 19px 15px 15px;
+            }
+
+            .popup-header {
+                padding: 13px 15px;
+                min-height: 58px;
+            }
+
+            .popup-eyebrow {
+                font-size: 8px;
+                margin-bottom: 2px;
+            }
+
+            .popup-header h3 {
+                font-size: 16px;
+            }
+
+            .popup-close {
+                width: 34px;
+                height: 34px;
+                flex: 0 0 34px;
+                font-size: 13px;
+            }
+
+            .popup-body {
+                padding: 13px;
+            }
+
+            .popup-user-card {
+                gap: 10px;
+                padding: 11px;
+                border-radius: 14px;
+            }
+
+            .popup-avatar {
+                width: 43px;
+                height: 43px;
+                flex: 0 0 43px;
+                font-size: 15px;
+            }
+
+            .popup-user-name-row h4 {
+                font-size: 13px;
+            }
+
+            .popup-role {
+                padding: 3px 7px;
+                font-size: 8px;
+            }
+
+            .popup-user-id {
+                font-size: 9px;
+                margin-top: 3px;
+            }
+
+            .popup-status {
+                padding: 5px 8px;
+                font-size: 8px;
+            }
+
+            .popup-section {
+                margin-top: 14px;
+            }
+
+            .popup-section-title {
+                margin-bottom: 7px;
+                font-size: 10px;
+            }
+
+            .popup-info-grid,
+            .popup-history-grid {
+                grid-template-columns: 1fr;
+                gap: 7px;
+            }
+
+            .popup-info-card {
+                padding: 9px 11px;
+                border-radius: 11px;
+            }
+
+                .popup-info-card span {
+                    font-size: 7px;
+                    margin-bottom: 3px;
+                }
+
+                .popup-info-card strong {
+                    font-size: 10px;
+                }
+
+            .popup-history-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .popup-history-card {
+                padding: 10px 5px;
+                border-radius: 11px;
+            }
+
+            .popup-history-icon {
+                font-size: 11px;
+                margin-bottom: 4px;
+            }
+
+            .popup-history-number {
+                font-size: 18px;
+            }
+
+            .popup-history-label {
+                font-size: 7px;
+                line-height: 1.3;
+                margin-top: 4px;
+            }
+
+            .popup-details-box {
+                min-height: 90px;
+                max-height: 150px;
+                padding: 11px;
+                border-radius: 11px;
+                font-size: 10px;
+                line-height: 1.6;
+            }
+
+            .popup-footer {
+                padding: 10px 13px;
+                flex-direction: column-reverse;
+                align-items: stretch;
+                gap: 8px;
+            }
+
+            .popup-actions {
+                width: 100%;
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 5px;
+            }
+
+            .popup-action {
+                min-width: 0;
+                width: 100%;
+                padding: 8px 4px;
+                font-size: 8px;
+                border-radius: 8px;
+            }
+
+                .popup-action i {
+                    margin-right: 2px;
+                }
+
+            .popup-close-btn {
+                width: 100%;
+                padding: 8px;
+                font-size: 10px;
+            }
+        }
+
+        @@media(max-width:380px) {
+
+            .main-content {
+                padding-left: 8px;
+                padding-right: 8px;
+            }
+
+            .filter-btn {
+                padding: 7px 8px;
+                font-size: 9px;
+            }
+
+            #complaintsTable tbody tr {
+                padding: 8px;
+            }
+
+            #complaintsTable tbody td::before {
+                flex-basis: 75px;
+                font-size: 7px;
+            }
+
+            #complaintsTable tbody td:nth-child(2) .fw-semibold {
+                max-width: 120px;
+            }
+
+            .popup-history-label {
+                font-size: 6px;
+            }
+
+            .popup-action {
+                font-size: 7px;
+            }
+        }
+    </style>
+    <style>
+        /* Complaint list stays simple; history and actions remain inside Details. */
+        .issue-pill {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 999px;
+            background: #fff3df;
+            color: #d97600;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .popup-history-number {
+            font-size: 1.35rem !important;
+            font-weight: 700 !important;
+        }
+    </style>
+
+
+    <style id="servicego-admin-caret-fix">
+        body, body * {
+            caret-color: transparent !important;
+        }
+
+        input, textarea, select, [contenteditable="true"], [contenteditable=""] {
+            caret-color: auto !important;
+        }
+
+            input[type="button"], input[type="submit"], input[type="reset"], input[type="checkbox"], input[type="radio"], input[type="file"], select {
+                caret-color: transparent !important;
+            }
+    </style>
+
+    <style id="servicego-swal-layer-fix">
+        .swal2-container {
+            z-index: 10000000 !important;
+        }
+    </style>
+
+    <style id="servicego-admin-logo-fix">
+        .servicego-home-logo {
+            display: inline-block;
+            text-decoration: none;
+            cursor: default;
+        }
+
+            .servicego-home-logo img {
+                cursor: default;
+            }
+    </style>
+
+    <style id="servicego-admin-logout-modal">
+        .servicego-logout-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 99999;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,.45);
+            padding: 20px;
+        }
+
+            .servicego-logout-modal.show {
+                display: flex;
+            }
+
+        .servicego-logout-box {
+            width: min(360px, 92vw);
+            background: #fff;
+            border-radius: 14px;
+            padding: 24px;
+            text-align: center;
+            box-shadow: 0 12px 40px rgba(0,0,0,.25);
+        }
+
+            .servicego-logout-box h3 {
+                margin: 0 0 8px;
+                font-size: 20px;
+                color: #222;
+            }
+
+            .servicego-logout-box p {
+                margin: 0 0 20px;
+                color: #666;
+                font-size: 14px;
+            }
+
+        .servicego-logout-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+            .servicego-logout-actions button {
+                border: 0;
+                border-radius: 8px;
+                padding: 9px 18px;
+                cursor: pointer;
+                font-size: 14px;
+            }
+
+        .servicego-logout-cancel {
+            background: #e9ecef;
+            color: #333;
+        }
+
+        .servicego-logout-confirm {
+            background: #d97600;
+            color: #fff;
+        }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style id="servicego-sidebar-arrow-fix">
+        /*
+                 * Bootstrap's .dropdown-toggle adds its own caret (::after) on top of our
+                 * chevron icon -> two arrows. Keep only the chevron icon.
+                 */
+        .sidebar .dropdown-toggle::after {
+            display: none !important;
+            content: none !important;
+        }
+
+        /* Bootstrap also styles li.dropdown-item (padding, hover colour...). Reset it. */
+        .sidebar li.dropdown-item {
+            padding: 0 !important;
+            background: transparent !important;
+            color: inherit !important;
+            white-space: normal !important;
+            clear: none !important;
+        }
+
+            .sidebar li.dropdown-item:hover,
+            .sidebar li.dropdown-item:focus {
+                background: transparent !important;
+            }
+
+        .sidebar .arrow-icon {
+            width: auto !important;
+            margin-right: 0 !important;
+            flex-shrink: 0;
+        }
+    </style>
+    <style id="servicego-unified-ui">
+        /*
+                 * ServicesGo - unified mobile layout + popups (shared by all admin pages)
+                 * Only look & feel is changed here. No page logic is touched.
+                 */
+        :root {
+            --sg-orange: #ff7f36;
+            --sg-orange-2: #ffb45e;
+            --sg-ink: #1d2939;
+            --sg-muted: #64748b;
+            --sg-line: #e8ecf2;
+            --sg-pad: 24px;
+        }
+
+        @@keyframes sgFade {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @@keyframes sgPop {
+            from {
+                opacity: 0;
+                transform: translateY(18px) scale(.97);
+            }
+
+            to {
+                opacity: 1;
+                transform: none;
+            }
+        }
+
+        @@keyframes sgSheet {
+            from {
+                transform: translateY(100%);
+            }
+
+            to {
+                transform: none;
+            }
+        }
+
+        /* Sidebar: highlight the page you are on */
+        .sidebar ul li a.sg-current {
+            background: rgba(255,255,255,.22) !important;
+            opacity: 1 !important;
+            font-weight: 600;
+            box-shadow: inset 4px 0 0 #fff;
+        }
+
+        /* Load more button */
+        button.servicego-load-more {
+            border: 1.5px solid var(--sg-orange-2);
+            background: #fff;
+            color: #e8690f;
+            font-weight: 600;
+            font-size: 14px;
+            border-radius: 12px;
+            padding: 11px 24px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: background .2s ease, color .2s ease;
+        }
+
+            button.servicego-load-more:hover {
+                background: var(--sg-orange);
+                border-color: var(--sg-orange);
+                color: #fff;
+            }
+
+        /* Popups (all pages) */
+        .modal {
+            background: rgba(15,23,42,.62) !important;
+            -webkit-backdrop-filter: blur(4px);
+            backdrop-filter: blur(4px);
+            animation: sgFade .2s ease;
+        }
+
+        .modal-content {
+            border-radius: 22px !important;
+            padding: 26px var(--sg-pad) var(--sg-pad) !important;
+            box-shadow: 0 30px 80px rgba(15,23,42,.35) !important;
+            animation: sgPop .25s cubic-bezier(.2,.8,.2,1);
+            overscroll-behavior: contain;
+            scrollbar-width: thin;
+        }
+
+        .modal-title {
+            font-size: 21px !important;
+            font-weight: 600 !important;
+            color: var(--sg-ink) !important;
+            margin-bottom: 18px !important;
+        }
+
+        /* close (x) button */
+        .modal-close-x,
+        .close-modal {
+            position: absolute !important;
+            top: 14px !important;
+            right: 14px !important;
+            width: 38px;
+            height: 38px;
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: #f2f4f7;
+            color: #667085 !important;
+            font-size: 17px !important;
+            line-height: 1;
+            cursor: pointer;
+            z-index: 5;
+            transition: background .2s ease, color .2s ease;
+        }
+
+        .close-modal {
+            font-size: 24px !important;
+        }
+
+            .modal-close-x:hover,
+            .close-modal:hover {
+                background: #fff1e6;
+                color: var(--sg-orange) !important;
+            }
+
+        /* section headings inside review popups */
+        .modal-content .section-title {
+            font-size: 15px !important;
+            color: var(--sg-ink) !important;
+            text-transform: none !important;
+            letter-spacing: 0 !important;
+            border-bottom: 0 !important;
+            border-left: 4px solid var(--sg-orange);
+            padding: 2px 0 2px 10px !important;
+            margin: 24px 0 12px !important;
+        }
+
+        .modal-content .info-grid {
+            background: #fafbfc !important;
+            border: 1px solid #eef0f3 !important;
+            border-radius: 14px !important;
+        }
+
+        .modal-content .info-label {
+            font-size: 12px;
+            color: var(--sg-muted);
+            font-weight: 500;
+        }
+
+        .modal-content .info-value {
+            color: var(--sg-ink);
+        }
+
+        .modal-content .media-card,
+        .modal-content .service-video-block,
+        .modal-content .google-map-container {
+            border-radius: 14px !important;
+            border-color: #eef0f3 !important;
+        }
+
+        .modal-content .zoom-box {
+            border-radius: 10px;
+        }
+
+        .modal-content .pop-row {
+            border-bottom-color: #f1f4f8;
+        }
+
+        .modal-content .pop-label {
+            color: var(--sg-muted);
+            font-weight: 500;
+        }
+
+        .modal-content img {
+            border-radius: 14px;
+        }
+
+        /* wallet popup input */
+        .actual-amount-box {
+            background: #fff8f2;
+            border: 1px solid #ffe3cc;
+            border-radius: 14px;
+            padding: 14px;
+        }
+
+        .actual-amount-input-wrap {
+            border-radius: 10px !important;
+        }
+
+            .actual-amount-input-wrap:focus-within {
+                border-color: var(--sg-orange) !important;
+                box-shadow: 0 0 0 3px rgba(255,127,54,.15);
+            }
+
+        /* popup footer buttons: stay visible while the popup scrolls */
+        .pop-footer-buttons,
+        .modal-actions {
+            position: sticky;
+            bottom: 0;
+            z-index: 4;
+            margin: 26px calc(-1 * var(--sg-pad)) calc(-1 * var(--sg-pad)) !important;
+            padding: 14px var(--sg-pad) max(16px, env(safe-area-inset-bottom));
+            background: #fff;
+            border-top: 1px solid #eef0f3;
+            gap: 12px !important;
+        }
+
+            .pop-btn-block,
+            .pop-btn-close,
+            .pop-btn-approve,
+            .pop-btn-reject,
+            .modal-actions .btn {
+                border-radius: 12px !important;
+                padding: 12px 24px !important;
+                min-height: 46px;
+                min-width: 130px;
+                font-family: inherit;
+                font-weight: 600 !important;
+                font-size: 14px !important;
+                transition: transform .15s ease, filter .15s ease;
+            }
+
+                .pop-btn-block:active,
+                .pop-btn-close:active,
+                .pop-btn-approve:active,
+                .pop-btn-reject:active,
+                .modal-actions .btn:active {
+                    transform: scale(.97);
+                }
+
+        /* SweetAlert2 popups (every confirm / success / error) */
+        .swal2-container {
+            -webkit-backdrop-filter: blur(3px);
+            backdrop-filter: blur(3px);
+        }
+
+        .swal2-popup {
+            border-radius: 22px !important;
+            padding: 26px 22px 22px !important;
+            font-family: 'Poppins', sans-serif !important;
+            box-shadow: 0 30px 80px rgba(15,23,42,.35) !important;
+        }
+
+        .swal2-title {
+            font-size: 21px !important;
+            font-weight: 600 !important;
+            color: var(--sg-ink) !important;
+            padding: .3em 0 0 !important;
+        }
+
+        .swal2-html-container {
+            font-size: 14px !important;
+            line-height: 1.55;
+            color: #667085 !important;
+        }
+
+        .swal2-actions {
+            width: 100%;
+            gap: 10px;
+            flex-wrap: nowrap !important;
+            margin-top: 1.4em !important;
+        }
+
+        .swal2-styled {
+            flex: 1 1 0;
+            margin: 0 !important;
+            border-radius: 12px !important;
+            padding: 12px 14px !important;
+            font-size: 14px !important;
+            font-weight: 600 !important;
+            box-shadow: none !important;
+        }
+
+            .swal2-styled:focus {
+                box-shadow: 0 0 0 3px rgba(255,127,54,.25) !important;
+            }
+
+        /* scroll lock while a popup is open */
+        html.sg-modal-open,
+        html.sg-modal-open body {
+            overflow: hidden !important;
+        }
+
+        @@media (prefers-reduced-motion: reduce) {
+            .modal, .modal-content {
+                animation: none !important;
+            }
+        }
+
+        /* PHONE LAYOUT (same on every page) */
+        @@media (max-width: 768px) {
+            :root {
+                --sg-pad: 16px;
+            }
+            /* top bar */
+            .mobile-header {
+                height: 58px !important;
+                padding: 0 14px !important;
+                box-shadow: 0 4px 18px rgba(255,127,54,.28) !important;
+            }
+
+            .mobile-brand {
+                font-size: 18px !important;
+                font-weight: 700 !important;
+            }
+
+            .menu-toggle-btn {
+                width: 42px;
+                height: 42px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 12px !important;
+                font-size: 21px !important;
+            }
+
+                .menu-toggle-btn:active {
+                    background: rgba(255,255,255,.2) !important;
+                }
+
+            .mobile-header > :last-child:not(.mobile-brand) {
+                width: 42px !important;
+                flex: 0 0 42px;
+            }
+            /* slide-in menu */
+            .sidebar {
+                width: 285px !important;
+                max-width: 84% !important;
+                box-shadow: 10px 0 30px rgba(15,23,42,.22) !important;
+            }
+
+            .sidebar-overlay {
+                background: rgba(15,23,42,.5) !important;
+            }
+            /* page frame */
+            .main-content {
+                padding: 76px 14px 28px !important;
+            }
+
+            .page-header-row,
+            .page-header {
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 12px !important;
+                margin-bottom: 16px !important;
+            }
+
+                .page-title,
+                .page-header h1,
+                .welcome-section h1 {
+                    font-size: 22px !important;
+                    line-height: 1.3 !important;
+                }
+
+            .search-container,
+            .search-box {
+                width: 100% !important;
+                max-width: none !important;
+            }
+
+                .search-container input,
+                .search-box input {
+                    height: 46px !important;
+                    font-size: 14px !important;
+                    border-radius: 12px !important;
+                }
+
+                .search-container > i {
+                    top: 50% !important;
+                    transform: translateY(-50%) !important;
+                }
+            /* dashboard cards */
+            .metrics-grid .card {
+                min-width: 100% !important;
+                border-radius: 16px !important;
+            }
+            /* tables become cards (rows keep their own show/hide logic) */
+            .table-container {
+                background: transparent !important;
+                padding: 0 !important;
+                border: 0 !important;
+                box-shadow: none !important;
+                overflow: visible !important;
+            }
+
+                .table-container table,
+                .table-container tbody {
+                    display: block !important;
+                    width: 100% !important;
+                    min-width: 0 !important;
+                }
+
+                .table-container thead {
+                    display: none !important;
+                }
+
+                .table-container tbody tr {
+                    width: 100% !important;
+                    background: #fff !important;
+                    border: 1px solid var(--sg-line) !important;
+                    border-radius: 16px !important;
+                    margin: 0 0 12px !important;
+                    padding: 6px 14px !important;
+                    box-shadow: 0 5px 16px rgba(16,24,40,.06) !important;
+                }
+
+                .table-container tbody td {
+                    display: flex !important;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 12px;
+                    width: 100% !important;
+                    min-height: 44px;
+                    padding: 11px 0 !important;
+                    border: 0 !important;
+                    border-bottom: 1px solid #f1f4f8 !important;
+                    font-size: 13px !important;
+                    text-align: right !important;
+                    white-space: normal !important;
+                    overflow-wrap: anywhere;
+                    word-break: break-word;
+                }
+
+                    .table-container tbody td:last-child {
+                        border-bottom: 0 !important;
+                    }
+
+                    .table-container tbody td::before {
+                        content: attr(data-label);
+                        flex: 0 0 auto;
+                        max-width: 42%;
+                        margin-right: auto;
+                        text-align: left;
+                        color: var(--sg-muted);
+                        font-size: 12px;
+                        font-weight: 600;
+                        text-transform: none !important;
+                        letter-spacing: 0 !important;
+                    }
+                    /* action cell = one full-width button */
+                    .table-container tbody td[data-label="Actions"],
+                    .table-container tbody td[data-label="Action"],
+                    .table-container tbody td:has(.btn-view) {
+                        display: block !important;
+                        padding: 12px 0 8px !important;
+                    }
+
+                        .table-container tbody td[data-label="Actions"]::before,
+                        .table-container tbody td[data-label="Action"]::before,
+                        .table-container tbody td:has(.btn-view)::before {
+                            display: none !important;
+                        }
+
+                    .table-container tbody td .btn-view {
+                        width: 100% !important;
+                        max-width: 100% !important;
+                        justify-content: center;
+                        padding: 11px 14px !important;
+                        font-size: 13px !important;
+                        border-radius: 12px !important;
+                    }
+                    /* empty row */
+                    .table-container tbody td[colspan] {
+                        display: block !important;
+                        text-align: center !important;
+                        padding: 26px 10px !important;
+                    }
+
+                        .table-container tbody td[colspan]::before {
+                            display: none !important;
+                        }
+
+                .table-container .badge,
+                .badge {
+                    font-size: 11px !important;
+                    padding: 5px 10px !important;
+                    border-radius: 999px;
+                }
+
+            button.servicego-load-more {
+                width: 100%;
+                max-width: none;
+            }
+            /* complaints page: same card feel, readable sizes */
+            #complaintsTable tbody td,
+            #warningsTable tbody td {
+                font-size: 12.5px !important;
+            }
+
+                #complaintsTable tbody td::before {
+                    font-size: 11px !important;
+                    font-weight: 600 !important;
+                    text-transform: none !important;
+                    letter-spacing: 0 !important;
+                    color: var(--sg-muted) !important;
+                    flex: 0 0 auto !important;
+                }
+
+            #warningsTable,
+            #warningsTable tbody {
+                display: block;
+                width: 100%;
+            }
+
+                #warningsTable thead {
+                    display: none;
+                }
+
+                #warningsTable tbody tr {
+                    display: block;
+                    background: #fff;
+                    border: 1px solid var(--sg-line);
+                    border-radius: 16px;
+                    margin: 0 0 12px;
+                    padding: 8px 12px;
+                    box-shadow: 0 5px 16px rgba(16,24,40,.06);
+                }
+
+                #warningsTable tbody td {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 10px;
+                    padding: 10px 4px;
+                    border: 0;
+                    border-bottom: 1px solid #f1f4f8;
+                    text-align: right;
+                }
+
+                    #warningsTable tbody td:last-child {
+                        border-bottom: 0;
+                    }
+
+                    #warningsTable tbody td::before {
+                        content: attr(data-label);
+                        color: var(--sg-muted);
+                        font-size: 11px;
+                        font-weight: 600;
+                        flex: 0 0 auto;
+                    }
+
+                    #warningsTable tbody td:first-child::before {
+                        display: none;
+                    }
+
+            .filter-btn {
+                font-size: 12px !important;
+            }
+            /* popups become bottom sheets */
+            .modal {
+                align-items: flex-end !important;
+                padding: 0 !important;
+            }
+
+            .modal-content {
+                width: 100% !important;
+                max-width: 100% !important;
+                max-height: 92vh !important;
+                border-radius: 24px 24px 0 0 !important;
+                padding: 22px var(--sg-pad) var(--sg-pad) !important;
+                animation: sgSheet .3s cubic-bezier(.2,.8,.2,1);
+            }
+
+                .modal-content::before {
+                    content: "";
+                    display: block;
+                    width: 42px;
+                    height: 4px;
+                    border-radius: 4px;
+                    background: #d0d5dd;
+                    margin: -10px auto 16px;
+                }
+
+            .modal-close-x,
+            .close-modal {
+                top: 12px !important;
+                right: 12px !important;
+            }
+
+            .pop-footer-buttons,
+            .modal-actions {
+                margin-top: 22px !important;
+            }
+
+                .pop-btn-block,
+                .pop-btn-close,
+                .pop-btn-approve,
+                .pop-btn-reject,
+                .modal-actions .btn {
+                    flex: 1 1 0 !important;
+                    max-width: none !important;
+                    min-width: 0;
+                    width: auto;
+                }
+
+            .modal-content .info-grid {
+                grid-template-columns: repeat(2, 1fr) !important;
+            }
+        }
+
+        @@media (max-width: 576px) {
+            .modal-content .info-grid {
+                grid-template-columns: 1fr !important;
+            }
+            /* SweetAlert2 also slides up from the bottom on phones */
+            .swal2-container {
+                padding: 0 !important;
+            }
+
+                .swal2-container.swal2-center > .swal2-popup {
+                    grid-column: 1 / -1 !important;
+                    place-self: end stretch !important;
+                    width: 100% !important;
+                    max-width: 100% !important;
+                    margin: 0 !important;
+                    border-radius: 24px 24px 0 0 !important;
+                    padding-bottom: calc(20px + env(safe-area-inset-bottom)) !important;
+                }
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <!-- Mobile header -->
+
+    <div class="mobile-header">
+
+        <button type="button"
+                class="menu-toggle-btn"
+                id="menuToggle">
+
+            <i class="fa-solid fa-bars"></i>
+
+        </button>
+
+        <div class="mobile-brand">
+            ServicesGo
+        </div>
+
+        <div style="width:22px"></div>
+
+    </div>
+
+
+    <!-- Sidebar overlay -->
+
+    <div class="sidebar-overlay"
+         id="sidebarOverlay">
+    </div>
+
+
+    <!-- Sidebar -->
+
+    <aside class="sidebar"
+           id="sidebar">
+
+        <button type="button"
+                class="sidebar-close-btn"
+                id="sidebarCloseBtn"
+                aria-label="Close Menu">
+
+            <i class="fa-solid fa-xmark"></i>
+
+        </button>
+
+
+        <div>
+
+            <div class="brand">
+
+                <span class="servicego-home-logo">
+                    <img src="/images/Logo.png"
+                         alt="ServicesGo Logo" />
+                </span>
+
+                <span class="servicego-home-logo servicego-home-text" style="color:inherit;">
+                    ServicesGo
+                </span>
+
+            </div>
+
+
+            <ul>
+
+                <li>
+
+                    <a href="/Admin/Dashboard">
+
+                        <span class="toggle-left">
+
+                            <i class="fa-solid fa-house"></i>
+
+                            <span>
+                                Dashboard
+                            </span>
+
+                        </span>
+
+                        <span></span>
+
+                    </a>
+
+                </li>
+
+
+                <li class="dropdown-item">
+
+                    <div class="dropdown-toggle">
+
+                        <span class="toggle-left">
+
+                            <i class="fa-solid fa-users"></i>
+
+                            <span>
+                                Customers
+                            </span>
+
+                        </span>
+
+                        <i class="fa-solid fa-chevron-down arrow-icon"></i>
+
+                    </div>
+
+
+                    <ul class="submenu">
+
+                        <li>
+                            <a href="/Admin/ActiveCustomers">
+                                Active
+                            </a>
+                        </li>
+
+                        <li>
+                            <a href="/Admin/BlockedCustomers">
+                                Blocked
+                            </a>
+                        </li>
+
+                    </ul>
+
+                </li>
+
+
+                <li class="dropdown-item">
+
+                    <div class="dropdown-toggle">
+
+                        <span class="toggle-left">
+
+                            <i class="fa-solid fa-user-gear"></i>
+
+                            <span>
+                                Service Providers
+                            </span>
+
+                        </span>
+
+                        <i class="fa-solid fa-chevron-down arrow-icon"></i>
+
+                    </div>
+
+
+                    <ul class="submenu">
+
+                        <li>
+                            <a href="/Admin/ActiveProviders">
+                                Active
+                            </a>
+                        </li>
+
+                        <li>
+                            <a href="/Admin/PendingProviders">
+                                Pending
+                            </a>
+                        </li>
+
+                        <li>
+                            <a href="/Admin/BlockedProviders">
+                                Blocked
+                            </a>
+                        </li>
+
+                    </ul>
+
+                </li>
+
+
+                <li class="active">
+
+                    <a href="/Admin/Complaint">
+
+                        <span class="toggle-left">
+
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+
+                            <span>
+                                Complaints
+                            </span>
+
+                        </span>
+
+                        <span></span>
+
+                    </a>
+
+                </li>
+
+
+                <li>
+
+                    <a href="/Admin/WalletRequests">
+
+                        <span class="toggle-left">
+
+                            <i class="fa-solid fa-wallet"></i>
+
+                            <span>
+                                Wallet Requests
+                            </span>
+
+                        </span>
+
+                        <span></span>
+
+                    </a>
+
+                </li>
+            </ul>
+
+        </div>
+
+
+        <div class="logout">
+            <a href="/Admin/Logout">
+
+                <i class="fa-solid fa-right-from-bracket"></i>
+                <span>Logout</span>
+            </a>
+
+        </div>
+
+    </aside>
+
+
+    <!-- Main content -->
+
+    <main class="main-content">
+
+        <div id="alertBox"
+             class="alert alert-danger d-none alert-dismissible fade show rounded-4 shadow-sm"
+             role="alert">
+
+            <i class="fa-solid fa-circle-exclamation me-2"></i>
+
+            <span id="alertMessage"></span>
+
+            <button type="button"
+                    class="btn-close"
+                    onclick="hideAlert()">
+            </button>
+
+        </div>
+
+
+        <div class="page-header">
+
+            <div>
+
+                <h1>
+                    Complaints Management
+                </h1>
+
+                <p>
+                    Review and manage customer &amp; provider complaints
+                </p>
+
+            </div>
+
+
+            <div class="search-box">
+
+                <i class="fa-solid fa-magnifying-glass"></i>
+
+                <input type="text"
+                       id="searchInput"
+                       placeholder="Search complaint or user..."
+                       autocomplete="off" />
+
+            </div>
+
+        </div>
+
+
+        <!-- All complaints -->
+
+        <div class="filter-card">
+
+            <div class="filter-list" id="complaintTabs">
+
+                <button type="button"
+                        class="filter-btn active"
+                        id="allComplaintsTab">
+
+                    <i class="fa-solid fa-layer-group me-1"></i>
+
+                    All Complaints
+
+                    <span class="tab-count" id="allComplaintsCount">0</span>
+
+                </button>
+
+                <button type="button"
+                        class="filter-btn"
+                        id="warningsTab">
+
+                    <i class="fa-solid fa-triangle-exclamation me-1"></i>
+
+                    Warnings Sent
+
+                    <span class="tab-count" id="warningsCount">0</span>
+
+                </button>
+
+            </div>
+
+        </div>
+
+
+        <!-- Complaint table -->
+
+        <div class="complaint-card">
+
+            <div class="table-responsive">
+
+                <table class="table table-hover align-middle"
+                       id="complaintsTable">
+
+                    <thead>
+
+                        <tr>
+
+                            <th class="ps-4">Complaint</th>
+
+                            <th>Reported User</th>
+
+                            <th>Issue</th>
+
+                            <th>Date</th>
+
+                            <th class="text-end pe-4">Action</th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody>
+
+                        @if (Model != null)
+                        {
+                            foreach (var item in Model)
+                            {
+                                var targetName =
+                                string.IsNullOrWhiteSpace(item.TargetUserName)
+                                ? (item.ComplaintType == "Customer vs Provider"
+                                ? item.ProviderName
+                                : item.CustomerName)
+                                : item.TargetUserName;
+
+                                var targetId =
+                                string.IsNullOrWhiteSpace(item.TargetUserId)
+                                ? (item.ComplaintType == "Customer vs Provider"
+                                ? item.ProviderId
+                                : item.CustomerId)
+                                : item.TargetUserId;
+
+                                var targetRole =
+                                string.IsNullOrWhiteSpace(item.TargetRole)
+                                ? (item.ComplaintType == "Customer vs Provider"
+                                ? "Provider"
+                                : "Customer")
+                                : item.TargetRole;
+
+                                var safeName =
+                                string.IsNullOrWhiteSpace(targetName)
+                                ? "User"
+                                : targetName;
+
+                                <tr id="row-@item.Id"
+                                    data-search="@($"{item.ComplaintId} {safeName} {targetId} {item.IssueCategory} {item.ComplaintType}")">
+
+                                    <!-- Complaint -->
+
+                                    <td class="ps-4"
+                                        data-label="Complaint">
+
+                                        <div class="complaint-id">
+                                            #@item.ComplaintId
+                                        </div>
+
+                                        <div class="complaint-type">
+
+                                            @(item.ComplaintType == "Customer vs Provider"
+                                                                                ? "Customer → Provider"
+                                                                                : "Provider → Customer")
+
+                                        </div>
+
+                                    </td>
+
+
+                                    <!-- User -->
+
+                                    <td data-label="User">
+
+                                        <div class="user-mini">
+
+                                            <div class="user-avatar">
+
+                                                @(string.IsNullOrWhiteSpace(safeName)
+                                                                                        ? "U"
+                                                                                        : safeName.Substring(0, 1).ToUpper())
+
+                                            </div>
+
+
+                                            <div>
+
+                                                <div class="fw-semibold text-dark"
+                                                     style="font-size:13px">
+
+                                                    @safeName
+
+                                                </div>
+
+
+                                                <div class="small text-muted">
+
+                                                    <span class="role-pill">
+                                                        @targetRole
+                                                    </span>
+
+                                                    <span class="ms-1">
+                                                        @targetId
+                                                    </span>
+
+                                                </div>
+
+                                            </div>
+
+                                        </div>
+
+                                    </td>
+
+
+                                    <!-- Issue -->
+
+                                    <td data-label="Issue">
+
+                                        <span class="issue-pill">
+
+                                            @(string.IsNullOrWhiteSpace(item.IssueCategory) ||
+                                                                                item.IssueCategory.Equals("General", StringComparison.OrdinalIgnoreCase)
+                                                                                ? (string.IsNullOrWhiteSpace(item.OtherIssue) ? "Reported Issue" : item.OtherIssue)
+                                                                                : item.IssueCategory)
+
+                                </span>
+
+                                    </td>
+
+
+                                    <!-- Date -->
+
+                                    <td class="small text-muted"
+                                        data-label="Date">
+
+                                        @item.CreatedAt.ToString("dd MMM yyyy")
+
+                                    </td>
+
+
+                                    <!-- Details -->
+
+                                    <td class="text-end pe-4"
+                                        data-label="Action">
+
+                                        <button type="button"
+                                                class="btn btn-details"
+                                                data-id="@item.Id"
+                                                data-complaint-id="@item.ComplaintId"
+                                                data-type="@item.ComplaintType"
+                                                data-role="@targetRole"
+                                                data-target-id="@targetId"
+                                                data-target-name="@safeName"
+                                                data-issue="@(string.IsNullOrWhiteSpace(item.IssueCategory) || item.IssueCategory.Equals("General", StringComparison.OrdinalIgnoreCase) ? (string.IsNullOrWhiteSpace(item.OtherIssue) ? "Reported Issue" : item.OtherIssue) : item.IssueCategory)"
+                                                data-details="@item.ComplaintDetails"
+                                                data-prev-complaints="@item.PreviousComplaintsCount"
+                                                data-prev-warnings="@item.PreviousWarningsCount"
+                                                data-total-warnings="@(item.PreviousWarningsCount + (item.WarningSent ? 1 : 0))"
+                                                data-prev-blocks="@item.PreviousBlockedCount"
+                                                data-current-warning="@item.WarningSent.ToString().ToLowerInvariant()"
+                                                data-target-blocked="@item.TargetIsBlocked.ToString().ToLowerInvariant()">
+
+                                            <i class="fa-solid fa-circle-info me-1"></i>
+
+                                            Details
+
+                                        </button>
+
+                                    </td>
+
+                                </tr>
+                                                }
+                        }
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+
+            <div id="emptyState"
+                 class="empty-state d-none">
+
+                <div class="empty-icon">
+
+                    <i class="fa-solid fa-inbox"></i>
+
+                </div>
+
+                <h5 class="mt-3 fw-bold">
+                    No complaints found
+                </h5>
+
+                <p class="text-muted small">
+                    Search by complaint ID, user, issue, or complaint type.
+                </p>
+
+            </div>
+
+        </div>
+
+        <!-- Warnings sent -->
+
+        <div class="complaint-card d-none" id="warningsView">
+
+            <div class="table-responsive">
+
+                <table class="table table-hover align-middle"
+                       id="warningsTable">
+
+                    <thead>
+                        <tr>
+                            <th class="ps-4">Complaint</th>
+                            <th>Reported User</th>
+                            <th>Issue</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        @{
+                            var warningComplaints =
+                            ViewBag.WarningComplaints as IEnumerable<ServiceGo.Models.ComplaintModel>;
+                        }
+
+                        @if (warningComplaints != null)
+                        {
+                            foreach (var item in warningComplaints)
+                            {
+                                var warningTargetName =
+                                string.IsNullOrWhiteSpace(item.TargetUserName)
+                                ? (item.ComplaintType == "Customer vs Provider"
+                                ? item.ProviderName
+                                : item.CustomerName)
+                                : item.TargetUserName;
+
+                                var warningTargetId =
+                                string.IsNullOrWhiteSpace(item.TargetUserId)
+                                ? (item.ComplaintType == "Customer vs Provider"
+                                ? item.ProviderId
+                                : item.CustomerId)
+                                : item.TargetUserId;
+
+                                var warningTargetRole =
+                                string.IsNullOrWhiteSpace(item.TargetRole)
+                                ? (item.ComplaintType == "Customer vs Provider"
+                                ? "Provider"
+                                : "Customer")
+                                : item.TargetRole;
+
+                                var warningSafeName =
+                                string.IsNullOrWhiteSpace(warningTargetName)
+                                ? "User"
+                                : warningTargetName;
+
+                                <tr data-search="@($"{item.ComplaintId} {warningSafeName} {warningTargetId} {item.IssueCategory} {item.ComplaintType}")">
+
+                                    <td class="ps-4">
+                                        <div class="complaint-id">
+                                            #@item.ComplaintId
+                                        </div>
+
+                                        <div class="complaint-type">
+                                            @(item.ComplaintType == "Customer vs Provider"
+                                                                                ? "Customer → Provider"
+                                                                                : "Provider → Customer")
+                                                                                                    </div>
+                                                                                                </td>
+
+                                    <td>
+                                        <div class="user-mini">
+                                            <div class="user-avatar">
+                                                @(string.IsNullOrWhiteSpace(warningSafeName)
+                                                                                        ? "U"
+                                                                                        : warningSafeName.Substring(0, 1).ToUpper())
+                                                                                                                                </div>
+
+                                            <div>
+                                                <div class="fw-semibold text-dark"
+                                                     style="font-size:13px">
+                                                    @warningSafeName
+                                                </div>
+
+                                                <div class="small text-muted">
+                                                    <span class="role-pill">
+                                                        @warningTargetRole
+                                                    </span>
+
+                                                    <span class="ms-1">
+                                                        @warningTargetId
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <td>
+                                        <span class="issue-pill">
+                                            @(string.IsNullOrWhiteSpace(item.IssueCategory) ||
+                                                                                item.IssueCategory.Equals("General", StringComparison.OrdinalIgnoreCase)
+                                                                                ? (string.IsNullOrWhiteSpace(item.OtherIssue) ? "Reported Issue" : item.OtherIssue)
+                                                                                : item.IssueCategory)
+                                </span>
+                            </td>
+
+                                    <td class="small text-muted">
+                                        @item.CreatedAt.ToString("dd MMM yyyy")
+                                    </td>
+
+                                </tr>
+                                                }
+                        }
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+            <div id="warningsEmptyState"
+                 class="empty-state d-none">
+
+                <div class="empty-icon">
+                    <i class="fa-solid fa-inbox"></i>
+                </div>
+
+                <h5 class="mt-3 fw-bold">
+                    No warnings found
+                </h5>
+
+                <p class="small mb-0">
+                    No warning records match your search.
+                </p>
+
+            </div>
+
+        </div>
+
+
+    </main>
+
+
+    <!-- Custom details popup -->
+
+    <div id="complaintDetailsOverlay"
+         class="complaint-details-overlay"
+         aria-hidden="true">
+
+        <div class="complaint-details-popup"
+             role="dialog"
+             aria-modal="true"
+             aria-labelledby="modalPopupTitle">
+
+            <div class="popup-header">
+
+                <div>
+
+                    <div class="popup-eyebrow">
+                        COMPLAINT DETAILS
+                    </div>
+
+                    <h3 id="modalPopupTitle">
+                        Review Complaint
+                    </h3>
+
+                </div>
+
+
+                <button type="button"
+                        class="popup-close"
+                        id="closeComplaintPopup"
+                        aria-label="Close">
+
+                    <i class="fa-solid fa-xmark"></i>
+
+                </button>
+
+            </div>
+
+
+            <div class="popup-body">
+
+                <input type="hidden"
+                       id="modalDbId" />
+
+                <input type="hidden"
+                       id="modalComplaintId" />
+
+                <input type="hidden"
+                       id="modalComplaintType" />
+
+                <input type="hidden"
+                       id="modalTargetUserId" />
+
+
+                <div class="popup-user-card">
+
+                    <div class="popup-avatar"
+                         id="modalAvatar">
+                        U
+                    </div>
+
+
+                    <div class="popup-user-info">
+
+                        <div class="popup-user-name-row">
+
+                            <h4 id="modalTargetNameText">
+                                User
+                            </h4>
+
+                            <span class="popup-role"
+                                  id="modalTargetRole">
+                                User
+                            </span>
+
+                        </div>
+
+
+                        <div class="popup-user-id">
+
+                            <i class="fa-regular fa-id-card"></i>
+
+                            User ID:
+
+                            <strong id="modalTargetIdText">
+                                -
+                            </strong>
+
+                        </div>
+
+                    </div>
+                </div>
+
+
+                <div class="popup-section">
+
+                    <div class="popup-section-title">
+
+                        <i class="fa-solid fa-circle-info"></i>
+
+                        Complaint Information
+
+                    </div>
+
+
+                    <div class="popup-info-grid">
+
+                        <div class="popup-info-card">
+
+                            <span>
+                                Complaint ID
+                            </span>
+
+                            <strong id="modalComplaintIdText">
+                                -
+                            </strong>
+
+                        </div>
+
+
+                        <div class="popup-info-card">
+
+                            <span>
+                                Complaint Type
+                            </span>
+
+                            <strong id="modalComplaintTypeText">
+                                -
+                            </strong>
+
+                        </div>
+
+
+                        <div class="popup-info-card">
+
+                            <span>
+                                Issue Category
+                            </span>
+
+                            <strong id="modalIssueCategoryText">
+                                -
+                            </strong>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <div class="popup-section">
+
+                    <div class="popup-section-title">
+
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+
+                        User History
+
+                    </div>
+
+
+                    <div class="popup-history-grid">
+
+                        <div class="popup-history-card complaints-history">
+
+                            <div class="popup-history-icon">
+                                <i class="fa-solid fa-file-circle-exclamation"></i>
+                            </div>
+
+                            <div class="popup-history-number" id="histComplaints">0</div>
+
+                            <div class="popup-history-label">Previous Complaints</div>
+
+                        </div>
+
+
+                        <div class="popup-history-card warnings-history">
+
+                            <div class="popup-history-icon">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                            </div>
+
+                            <div class="popup-history-number" id="histWarnings">0</div>
+
+                            <div class="popup-history-label">Previous Warnings</div>
+
+                        </div>
+
+
+                        <div class="popup-history-card blocks-history">
+
+                            <div class="popup-history-icon">
+                                <i class="fa-solid fa-ban"></i>
+                            </div>
+
+                            <div class="popup-history-number" id="histBlocks">0</div>
+
+                            <div class="popup-history-label">Previous Blocks</div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <div class="popup-section">
+
+                    <div class="popup-section-title">
+
+                        <i class="fa-solid fa-align-left"></i>
+
+                        Complaint Details
+
+                    </div>
+
+
+                    <div class="popup-details-box"
+                         id="modalDetailsText">
+
+                        No details provided.
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="popup-footer">
+
+                <button type="button"
+                        class="popup-close-btn"
+                        id="popupCloseBottom">
+
+                    Close
+
+                </button>
+
+
+                <div class="popup-actions">
+                    <button type="button"
+                            class="popup-action warning-action"
+                            id="warningBtn">
+
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+
+                        Send Warning
+
+                    </button>
+
+
+                    <button type="button"
+                            class="popup-action block-action"
+                            id="blockBtn">
+
+                        <i class="fa-solid fa-ban"></i>
+
+                        Block User
+
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- Javascript -->
+
+    <script>
+
+        const $ = function (id) {
+            return document.getElementById(id);
+        };
+
+
+        /* Alert */
+
+        function showAlert(message) {
+
+            $("alertMessage").innerText =
+                message || "Something went wrong.";
+
+            $("alertBox").classList.remove("d-none");
+
+            window.scrollTo({
+                top: 0,
+                behavior: "smooth"
+            });
+        }
+
+
+        function hideAlert() {
+
+            $("alertBox").classList.add("d-none");
+
+        }
+
+
+        /* Open details popup */
+
+        function openDetailsModal(button) {
+
+            if (!button) {
+                return;
+            }
+
+            hideAlert();
+
+            const d = button.dataset;
+
+            const dbId =
+                d.id || "";
+
+            const complaintId =
+                d.complaintId || "";
+
+            const complaintType =
+                d.type || "";
+
+            const targetRole =
+                d.role || "User";
+
+            const targetUserId =
+                d.targetId || "";
+
+            const targetUserName =
+                d.targetName || "User";
+
+            const issue =
+                (d.issue || "").trim();
+
+            const exactIssue =
+                (!issue || issue.toLowerCase() === "general")
+                    ? "Reported Issue"
+                    : issue;
+
+            const details =
+                d.details || "No details provided.";
+
+            $("modalDbId").value =
+                dbId;
+
+            $("modalComplaintId").value =
+                complaintId;
+
+            $("modalComplaintType").value =
+                complaintType;
+
+            $("modalTargetUserId").value =
+                targetUserId;
+
+
+            $("modalTargetNameText").innerText =
+                targetUserName;
+
+            $("modalTargetRole").innerText =
+                targetRole;
+
+            $("modalTargetIdText").innerText =
+                targetUserId || "-";
+
+
+            const cleanName =
+                (targetUserName || "").trim();
+
+
+            $("modalAvatar").innerText =
+                cleanName.length > 0
+                    ? cleanName.charAt(0).toUpperCase()
+                    : "U";
+
+
+            $("modalComplaintIdText").innerText =
+                complaintId
+                    ? "#" + complaintId
+                    : "-";
+
+
+            $("modalComplaintTypeText").innerText =
+                complaintType || "-";
+
+
+            $("modalIssueCategoryText").innerText =
+                exactIssue;
+
+
+            $("modalDetailsText").innerText =
+                details || "No details provided.";
+
+
+            const previousComplaints =
+                Number.parseInt(
+                    d.prevComplaints || "0",
+                    10
+                ) || 0;
+
+
+            const previousWarnings =
+                Number.parseInt(
+                    d.prevWarnings || "0",
+                    10
+                ) || 0;
+
+
+            const previousBlocks =
+                Number.parseInt(
+                    d.prevBlocks || "0",
+                    10
+                ) || 0;
+
+
+            $("histComplaints").innerText =
+                String(previousComplaints);
+
+            $("histWarnings").innerText =
+                String(previousWarnings);
+
+            $("histBlocks").innerText =
+                String(previousBlocks);
+
+
+            $("warningBtn").dataset.complaintId = dbId;
+
+            $("blockBtn").dataset.complaintId = dbId;
+
+
+            const overlay =
+                $("complaintDetailsOverlay");
+
+
+            if (!overlay) {
+                return;
+            }
+
+
+            overlay.classList.add("open");
+
+
+            overlay.setAttribute(
+                "aria-hidden",
+                "false"
+            );
+
+
+            document.body.style.overflow =
+                "hidden";
+
+
+            setTimeout(function () {
+
+                if ($("closeComplaintPopup")) {
+
+                    $("closeComplaintPopup").focus();
+
+                }
+
+            }, 50);
+        }
+
+
+        /* Close popup */
+
+        function closeComplaintPopup() {
+
+            const overlay =
+                $("complaintDetailsOverlay");
+
+
+            if (!overlay) {
+                return;
+            }
+
+
+            overlay.classList.remove("open");
+
+            overlay.setAttribute(
+                "aria-hidden",
+                "true"
+            );
+
+
+            document.body.style.overflow =
+                "";
+        }
+
+
+        /*
+         * Details button
+         * Safe event delegation
+         */
+
+        document.addEventListener(
+            "click",
+            function (event) {
+
+                const detailsButton =
+                    event.target.closest(".btn-details");
+
+
+                if (detailsButton) {
+
+                    event.preventDefault();
+
+                    event.stopPropagation();
+
+                    openDetailsModal(
+                        detailsButton
+                    );
+
+                    return;
+                }
+
+            }
+        );
+
+
+        /* X close */
+
+        $("closeComplaintPopup")
+            .addEventListener(
+                "click",
+                function (event) {
+
+                    event.preventDefault();
+
+                    event.stopPropagation();
+
+                    closeComplaintPopup();
+
+                }
+            );
+
+
+        /* Bottom close */
+
+        $("popupCloseBottom")
+            .addEventListener(
+                "click",
+                function (event) {
+
+                    event.preventDefault();
+
+                    event.stopPropagation();
+
+                    closeComplaintPopup();
+
+                }
+            );
+
+
+        /* Click outside popup */
+
+        $("complaintDetailsOverlay")
+            .addEventListener(
+                "click",
+                function (event) {
+
+                    if (
+                        event.target ===
+                        event.currentTarget
+                    ) {
+
+                        closeComplaintPopup();
+
+                    }
+
+                }
+            );
+
+
+        /* Esc close popup */
+
+        document.addEventListener(
+            "keydown",
+            function (event) {
+
+                if (
+                    event.key === "Escape" &&
+                    $("complaintDetailsOverlay")
+                        .classList.contains("open")
+                ) {
+
+                    closeComplaintPopup();
+
+                }
+
+            }
+        );
+
+
+        /* Post JSON */
+
+        async function postJson(
+            url,
+            payload
+        ) {
+
+            const response =
+                await fetch(
+                    url,
+                    {
+                        method: "POST",
+
+                        headers: {
+                            "Content-Type":
+                                "application/json",
+
+                            "Accept":
+                                "application/json"
+                        },
+
+                        body:
+                            JSON.stringify(
+                                payload
+                            )
+                    }
+                );
+
+
+            let data;
+
+
+            try {
+
+                data =
+                    await response.json();
+
+            }
+            catch {
+
+                data = {
+                    success: false,
+                    message:
+                        "Invalid server response."
+                };
+
+            }
+
+
+            if (
+                !response.ok ||
+                !data.success
+            ) {
+
+                throw new Error(
+                    data.message ||
+                    "Request failed."
+                );
+
+            }
+
+
+            return data;
+        }
+
+
+        /* Payload */
+
+        function getPayload() {
+
+            const dbId =
+                Number.parseInt(
+                    $("modalDbId").value,
+                    10
+                );
+
+
+            return {
+
+                id:
+                    Number.isFinite(dbId)
+                        ? dbId
+                        : 0,
+
+                complaintId:
+                    $("modalComplaintId")
+                        .value || ""
+
+            };
+        }
+
+
+        /* Send warning */
+
+        $("warningBtn").addEventListener(
+            "click",
+            async function () {
+                const payload = getPayload();
+
+                if (!payload.id && !payload.complaintId) {
+                    showAlert("Invalid complaint ID.");
+                    return;
+                }
+
+                const confirmResult = await Swal.fire({
+                    title: "Send Official Warning?",
+                    text: "Are you sure you want to send an official warning to this user?",
+                    icon: "warning",
+                    showCancelButton: true,
+                    confirmButtonText: "Yes, Send Warning",
+                    cancelButtonText: "Cancel",
+                    reverseButtons: true,
+                    confirmButtonColor: "#d97600",
+                    cancelButtonColor: "#6c757d"
+                });
+
+                if (!confirmResult.isConfirmed) {
+                    return;
+                }
+
+                try {
+                    const data = await postJson(
+                        "/Admin/SendWarning",
+                        payload
+                    );
+
+                    closeComplaintPopup();
+
+                    window.location.href =
+                        data.nextPage || "/Admin/Complaint?view=warnings";
+                }
+                catch (error) {
+                    showAlert(
+                        error.message ||
+                        "Warning could not be sent."
+                    );
+                }
+            }
+        );
+
+
+        /* Block user */
+
+        $("blockBtn").addEventListener(
+            "click",
+            async function () {
+                const payload = getPayload();
+
+                if (!payload.id && !payload.complaintId) {
+                    showAlert("Invalid complaint ID.");
+                    return;
+                }
+
+                const confirmResult = await Swal.fire({
+                    title: "Block User?",
+                    text: "Are you sure you want to block this user?",
+                    icon: "warning",
+                    showCancelButton: true,
+                    confirmButtonText: "Yes, Block",
+                    cancelButtonText: "Cancel",
+                    reverseButtons: true,
+                    confirmButtonColor: "#d97600",
+                    cancelButtonColor: "#6c757d"
+                });
+
+                if (!confirmResult.isConfirmed) {
+                    return;
+                }
+
+                try {
+                    const data = await postJson(
+                        "/Admin/BlockComplaintUser",
+                        payload
+                    );
+
+                    closeComplaintPopup();
+
+                    if (data.nextPage) {
+                        window.location.href = data.nextPage;
+                    }
+                    else if (
+                        String(data.blockedUserType || "").toLowerCase() === "provider"
+                    ) {
+                        window.location.href = "/Admin/BlockedProviders";
+                    }
+                    else {
+                        window.location.href = "/Admin/BlockedCustomers";
+                    }
+                }
+                catch (error) {
+                    showAlert(
+                        error.message ||
+                        "User could not be blocked."
+                    );
+                }
+            }
+        );
+
+
+        /* Search + tabs */
+
+        let currentView = "all";
+
+        function applySearch() {
+
+            const search =
+                ($("searchInput").value || "")
+                    .trim()
+                    .toLowerCase();
+
+            const activeTableId =
+                currentView === "warnings"
+                    ? "#warningsTable tbody tr"
+                    : "#complaintsTable tbody tr";
+
+            const rows =
+                document.querySelectorAll(activeTableId);
+
+            let visible = 0;
+
+            rows.forEach(function (row) {
+
+                const text =
+                    (row.dataset.search || "")
+                        .toLowerCase();
+
+                const show =
+                    !search ||
+                    text.includes(search);
+
+                row.style.display =
+                    show ? "" : "none";
+
+                if (show) {
+                    visible++;
+                }
+
+            });
+
+            const emptyId =
+                currentView === "warnings"
+                    ? "warningsEmptyState"
+                    : "emptyState";
+
+            const empty =
+                $(emptyId);
+
+            if (empty) {
+                empty.classList.toggle(
+                    "d-none",
+                    visible !== 0
+                );
+            }
+
+            const count =
+                currentView === "warnings"
+                    ? $("warningsCount")
+                    : $("allComplaintsCount");
+
+            if (count) {
+                count.innerText =
+                    String(visible);
+            }
+        }
+
+
+        function switchComplaintView(view) {
+
+            currentView = view;
+
+            const complaintsView =
+                document.querySelector(
+                    "#complaintsTable"
+                )?.closest(".complaint-card");
+
+            const warningsView =
+                $("warningsView");
+
+            const allTab =
+                $("allComplaintsTab");
+
+            const warningTab =
+                $("warningsTab");
+
+            if (view === "warnings") {
+
+                complaintsView?.classList.add("d-none");
+                warningsView?.classList.remove("d-none");
+
+                allTab?.classList.remove("active");
+                warningTab?.classList.add("active");
+
+            }
+            else {
+
+                complaintsView?.classList.remove("d-none");
+                warningsView?.classList.add("d-none");
+
+                allTab?.classList.add("active");
+                warningTab?.classList.remove("active");
+
+            }
+
+            applySearch();
+        }
+
+
+        $("allComplaintsTab")?.addEventListener(
+            "click",
+            function () {
+                switchComplaintView("all");
+            }
+        );
+
+
+        $("warningsTab")?.addEventListener(
+            "click",
+            function () {
+                switchComplaintView("warnings");
+            }
+        );
+
+
+        $("searchInput")
+            .addEventListener(
+                "input",
+                applySearch
+            );
+
+
+        const warningRows =
+            document.querySelectorAll(
+                "#warningsTable tbody tr"
+            );
+
+        const warningCount =
+            $("warningsCount");
+
+        if (warningCount) {
+            warningCount.innerText =
+                String(warningRows.length);
+        }
+
+        const initialView =
+            new URLSearchParams(
+                window.location.search
+            ).get("view");
+
+        switchComplaintView(
+            initialView === "warnings"
+                ? "warnings"
+                : "all"
+        );
+
+
+        /* Sidebar */
+
+        document
+            .querySelectorAll(
+                ".dropdown-toggle"
+            )
+            .forEach(
+                function (toggle) {
+
+                    toggle.addEventListener(
+                        "click",
+                        function () {
+
+                            const parent =
+                                this.closest(
+                                    ".dropdown-item"
+                                );
+
+
+                            document
+                                .querySelectorAll(
+                                    ".dropdown-item"
+                                )
+                                .forEach(
+                                    function (item) {
+
+                                        if (
+                                            item !==
+                                            parent
+                                        ) {
+
+                                            item.classList.remove(
+                                                "open"
+                                            );
+
+                                        }
+
+                                    }
+                                );
+
+
+                            parent.classList.toggle(
+                                "open"
+                            );
+
+                        }
+                    );
+
+                }
+            );
+
+
+        const menuToggle =
+            $("menuToggle");
+
+
+        const sidebar =
+            $("sidebar");
+
+
+        const sidebarOverlay =
+            $("sidebarOverlay");
+
+
+        const sidebarCloseBtn =
+            $("sidebarCloseBtn");
+
+
+        /* Sidebar functions */
+
+        function openSidebar() {
+
+            sidebar.classList.add(
+                "active"
+            );
+
+            sidebarOverlay.classList.add(
+                "active"
+            );
+
+        }
+
+
+        function closeSidebar() {
+
+            sidebar.classList.remove(
+                "active"
+            );
+
+            sidebarOverlay.classList.remove(
+                "active"
+            );
+
+        }
+
+
+        function toggleSidebar() {
+
+            if (
+                sidebar.classList.contains(
+                    "active"
+                )
+            ) {
+
+                closeSidebar();
+
+            }
+            else {
+
+                openSidebar();
+
+            }
+
+        }
+
+
+        /* Hamburger */
+
+        menuToggle.addEventListener(
+            "click",
+            function () {
+
+                toggleSidebar();
+
+            }
+        );
+
+
+        /* Sidebar Cross */
+
+        sidebarCloseBtn.addEventListener(
+            "click",
+            function () {
+
+                closeSidebar();
+
+            }
+        );
+
+
+        /* Overlay */
+
+        sidebarOverlay.addEventListener(
+            "click",
+            function () {
+
+                closeSidebar();
+
+            }
+        );
+
+
+        /* Sidebar Links */
+
+        document
+            .querySelectorAll(
+                ".sidebar a"
+            )
+            .forEach(
+                function (link) {
+
+                    link.addEventListener(
+                        "click",
+                        function () {
+
+                            if (
+                                window.innerWidth <=
+                                992
+                            ) {
+
+                                closeSidebar();
+
+                            }
+
+                        }
+                    );
+
+                }
+            );
+
+
+        /* ESC closes sidebar */
+
+        document.addEventListener(
+            "keydown",
+            function (event) {
+
+                if (
+                    event.key === "Escape" &&
+                    !(
+                        $("complaintDetailsOverlay")
+                            .classList.contains("open")
+                    )
+                ) {
+
+                    closeSidebar();
+
+                }
+
+            }
+        );
+
+
+        /* Initial load */
+
+        applySearch();
+
+    </script>
+
+
+    <script id="servicego-admin-load-more">
+        document.addEventListener("DOMContentLoaded", function () {
+            const PAGE_SIZE = 15;
+            const tables = Array.from(document.querySelectorAll("table tbody"));
+
+            tables.forEach(function (tbody) {
+                const rows = Array.from(tbody.children).filter(function (el) {
+                    return el.tagName && el.tagName.toLowerCase() === "tr";
+                });
+
+                if (rows.length <= PAGE_SIZE) return;
+
+                let visible = PAGE_SIZE;
+                rows.forEach(function (row, index) {
+                    if (index >= visible) row.style.display = "none";
+                });
+
+                const button = document.createElement("button");
+                button.type = "button";
+                button.className = "btn btn-outline-warning servicego-load-more";
+                button.textContent = "Load More";
+                button.style.cssText = "display:block;margin:18px auto 5px;min-width:130px;";
+
+                const wrapper = tbody.closest("table");
+                if (wrapper && wrapper.parentNode) {
+                    wrapper.parentNode.insertBefore(button, wrapper.nextSibling);
+                } else {
+                    tbody.parentNode.appendChild(button);
+                }
+
+                button.addEventListener("click", function () {
+                    const next = Math.min(visible + PAGE_SIZE, rows.length);
+                    for (let i = visible; i < next; i++) rows[i].style.display = "";
+                    visible = next;
+                    if (visible >= rows.length) button.remove();
+                });
+            });
+        });
+    </script>
+
+    <div id="servicegoLogoutModal" class="servicego-logout-modal" aria-hidden="true">
+        <div class="servicego-logout-box" role="dialog" aria-modal="true" aria-labelledby="servicegoLogoutTitle">
+            <h3 id="servicegoLogoutTitle">Logout</h3>
+            <p>Are you sure you want to logout?</p>
+            <div class="servicego-logout-actions">
+                <button type="button" class="servicego-logout-cancel" id="servicegoLogoutCancel">Cancel</button>
+                <button type="button" class="servicego-logout-confirm" id="servicegoLogoutConfirm">Yes, Logout</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script id="servicego-admin-logout-script">
+        document.addEventListener("DOMContentLoaded", function () {
+            document.querySelectorAll(".logout a").forEach(function (link) {
+                link.addEventListener("click", async function (event) {
+                    event.preventDefault();
+
+                    const result = await Swal.fire({
+                        title: "Logout?",
+                        text: "Are you sure you want to logout?",
+                        icon: "warning",
+                        showCancelButton: true,
+                        confirmButtonText: "Yes, Logout",
+                        cancelButtonText: "Cancel",
+                        reverseButtons: true,
+                        confirmButtonColor: "#d97600",
+                        cancelButtonColor: "#6c757d"
+                    });
+
+                    if (result.isConfirmed) {
+                        window.location.href = link.getAttribute("href");
+                    }
+                });
+            });
+        });
+    </script>
+
+    <script id="servicego-unified-ui-script">
+        (function () {
+            function ready(fn) {
+                if (document.readyState !== "loading") fn();
+                else document.addEventListener("DOMContentLoaded", fn);
+            }
+
+            ready(function () {
+
+                /* 1. Highlight the current page in the sidebar and open its group */
+                try {
+                    var path = location.pathname.replace(/\/+$/, "").toLowerCase();
+                    document.querySelectorAll(".sidebar ul li a[href]").forEach(function (a) {
+                        var href = (a.getAttribute("href") || "").replace(/\/+$/, "").toLowerCase();
+                        if (href && href === path) {
+                            a.classList.add("sg-current");
+                            var group = a.closest(".dropdown-item");
+                            if (group) group.classList.add("open");
+                        }
+                    });
+                } catch (e) { }
+
+                /* 2. Give every table cell a label (needed for the phone card layout) */
+                try {
+                    document.querySelectorAll("table").forEach(function (table) {
+                        var heads = table.querySelectorAll("thead th");
+                        if (!heads.length) return;
+                        table.querySelectorAll("tbody tr").forEach(function (row) {
+                            Array.prototype.forEach.call(row.children, function (cell, i) {
+                                if (cell.tagName === "TD" &&
+                                    !cell.hasAttribute("data-label") &&
+                                    !cell.hasAttribute("colspan") &&
+                                    heads[i]) {
+                                    cell.setAttribute("data-label", heads[i].textContent.trim());
+                                }
+                            });
+                        });
+                    });
+                } catch (e) { }
+
+                /* 3. Lock the page behind an open popup */
+                try {
+                    var SEL = ".modal, .complaint-details-overlay";
+                    var syncLock = function () {
+                        var open = Array.prototype.some.call(document.querySelectorAll(SEL), function (el) {
+                            var cs = getComputedStyle(el);
+                            return cs.display !== "none" && cs.visibility !== "hidden" && cs.opacity !== "0";
+                        });
+                        document.documentElement.classList.toggle("sg-modal-open", open);
+                    };
+                    new MutationObserver(function (list) {
+                        for (var i = 0; i < list.length; i++) {
+                            if (list[i].target.matches && list[i].target.matches(SEL)) { syncLock(); return; }
+                        }
+                    }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ["style", "class"] });
+                    syncLock();
+                } catch (e) { }
+
+                /* 4. Swipe left on the menu to close it (uses the page's own close button) */
+                try {
+                    var sidebar = document.querySelector(".sidebar");
+                    var closeBtn = document.getElementById("sidebarCloseBtn");
+                    var sx = null, sy = null;
+                    if (sidebar && closeBtn) {
+                        sidebar.addEventListener("touchstart", function (e) {
+                            sx = e.touches[0].clientX; sy = e.touches[0].clientY;
+                        }, { passive: true });
+                        sidebar.addEventListener("touchend", function (e) {
+                            if (sx === null) return;
+                            var t = e.changedTouches[0];
+                            var dx = t.clientX - sx, dy = Math.abs(t.clientY - sy);
+                            sx = null;
+                            if (dx < -70 && dy < 50 && getComputedStyle(closeBtn).display !== "none") closeBtn.click();
+                        }, { passive: true });
+                    }
+                } catch (e) { }
+            });
+        })();
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,2380 @@
+﻿@model ServiceGo.Models.Register
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
+@{
+    // This page is a complete HTML document (own <html>/<head>), so it must not
+    // be wrapped by _Layout. Otherwise the browser keeps the layout's <head>
+    // (title "- ServiceGo", no logo) and ignores this page's title and icon.
+    Layout = null;
+
+    bool isReRegistration = ViewBag.IsReRegistration == true;
+
+    string registrationPendingUrl =
+        Url.Action("RegistrationPending", "Home") ?? "/";
+
+    string savedShopAddress = Model.ShopAddressInput ?? "";
+    string savedHomeAddress = Model.HomeAddressInput ?? "";
+
+    string savedShopLat =
+        Model.ShopLat?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "";
+
+    string savedShopLng =
+        Model.ShopLng?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "";
+
+    string savedHomeLat =
+        Model.HomeLat?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "";
+
+    string savedHomeLng =
+        Model.HomeLng?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "";
+
+    // Keep the registration form tied to the logged-in/signup provider.
+    // The controller remains the source of truth for the generated ID.
+    string providerIdValue = Model.ProviderId ?? "";
+    if (!string.IsNullOrWhiteSpace(providerIdValue) &&
+        !providerIdValue.StartsWith("PRO-", StringComparison.OrdinalIgnoreCase))
+    {
+        providerIdValue = "PRO-" + providerIdValue;
+    }
+    else if (string.IsNullOrWhiteSpace(providerIdValue) && Model.Id > 0)
+    {
+        providerIdValue = "PRO-" + Model.Id;
+    }
+
+    string registrationEmail =
+        !string.IsNullOrWhiteSpace(Model.Email)
+            ? Model.Email
+            : (ViewBag.Email?.ToString() ?? "");
+}
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@(isReRegistration ? "Re-Register as Provider" : "Register as Provider")</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="icon" href="@Url.Content("~/images/Logo.png")?v=2" type="image/png">
+    <link rel="shortcut icon" href="@Url.Content("~/images/Logo.png")?v=2" type="image/png">
+
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            caret-color: transparent;
+        }
+
+        /* Caret is allowed only where the user can type */
+        input,
+        textarea,
+        select {
+            caret-color: auto !important;
+        }
+
+
+        .register-card {
+            width: calc(100% - 24px);
+            max-width: 800px;
+            margin: 40px auto;
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+
+        .logo {
+            display: block;
+            max-width: 120px;
+            margin: 0 auto 20px auto;
+            cursor: pointer;
+            caret-color: transparent;
+            user-select: none;
+        }
+
+        .form-label {
+            font-weight: 700;
+            color: #343a40;
+            caret-color: transparent;
+            user-select: none;
+        }
+
+        /* Prevent caret from appearing on non-typing elements */
+        button,
+        label,
+        span,
+        .category-btn,
+        .file-upload-btn,
+        .badge,
+        .support-option,
+        .support-help-btn,
+        .modal-title,
+        .section-title,
+        .alert,
+        .form-label,
+        .map-note,
+        .preview-wrapper,
+        .btn-register,
+        #mapShop,
+        #mapHome {
+            caret-color: transparent !important;
+            user-select: none;
+        }
+
+        /* Registration page: hide shared site header */
+        .navbar {
+            display: none !important;
+        }
+
+        /* Keep the registration form clear of the footer */
+        .register-card {
+            margin-bottom: 70px;
+        }
+
+        /* Center footer and prevent it from overlapping the form */
+        .footer {
+            position: static !important;
+            width: 100% !important;
+            text-align: center !important;
+            white-space: normal !important;
+            line-height: normal !important;
+            clear: both;
+            margin-top: 20px !important;
+            padding: 20px 0 !important;
+        }
+
+            .footer .container {
+                text-align: center !important;
+            }
+
+        /* Registration Help */
+        .support-help-btn {
+            display: none !important;
+            position: fixed;
+            right: 22px;
+            bottom: 22px;
+            z-index: 1050;
+            border: none;
+            border-radius: 50px;
+            padding: 12px 18px;
+            background: #ff9800;
+            color: #fff;
+            font-weight: 700;
+            box-shadow: 0 5px 18px rgba(0,0,0,0.18);
+            cursor: pointer;
+        }
+
+            .support-help-btn:hover {
+                background: #e68900;
+            }
+
+        .support-modal .modal-header {
+            background: #ff9800;
+            color: #fff;
+        }
+
+        .support-option {
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 10px;
+            background: #fff;
+        }
+
+            .support-option strong {
+                display: block;
+                margin-bottom: 4px;
+            }
+
+            .support-option small {
+                color: #6c757d;
+            }
+
+        .support-faq {
+            display: none;
+            margin-top: 8px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            background: #f8f9fa;
+            color: #495057;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .support-email {
+            display: inline-block;
+            color: #0d6efd;
+            font-weight: 600;
+            text-decoration: none;
+            caret-color: transparent;
+        }
+
+            .support-email:hover {
+                text-decoration: underline;
+            }
+
+        /* Address Not Found Modal */
+        .address-help-modal .modal-dialog {
+            max-width: 470px;
+        }
+
+        .address-help-modal .modal-content {
+            border: none;
+            border-radius: 18px;
+            overflow: hidden;
+            box-shadow: 0 15px 45px rgba(0,0,0,0.20);
+        }
+
+        .address-help-header {
+            background: linear-gradient(135deg, #ff9800, #f57c00);
+            color: #fff;
+            padding: 18px 20px;
+        }
+
+        .address-help-title {
+            font-weight: 800;
+            margin-bottom: 5px;
+        }
+
+        .address-help-subtitle {
+            font-size: 0.9rem;
+            opacity: 0.95;
+            margin: 0;
+        }
+
+        .address-help-body {
+            padding: 20px;
+        }
+
+        .address-help-footer {
+            padding: 0 20px 20px 20px;
+        }
+
+        .map-note {
+            margin-bottom: 8px;
+        }
+
+        .agreement-box label {
+            font-weight: 600;
+        }
+
+        .client-error {
+            margin-top: 6px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            text-align: left;
+        }
+
+        .sg-field-invalid {
+            border-color: #dc3545 !important;
+            box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.12) !important;
+        }
+
+        .file-upload {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            border: 1px dashed #f0ad4e;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #fffaf3, #ffffff);
+            transition: all 0.2s ease;
+        }
+
+            .file-upload:hover {
+                border-color: #ff9800;
+                box-shadow: 0 4px 12px rgba(240, 173, 78, 0.12);
+            }
+
+            .file-upload input[type="file"] {
+                position: absolute;
+                width: 1px;
+                height: 1px;
+                padding: 0;
+                margin: -1px;
+                overflow: hidden;
+                clip: rect(0, 0, 0, 0);
+                white-space: nowrap;
+                border: 0;
+            }
+
+        .file-upload-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            min-width: 145px;
+            padding: 10px 16px;
+            border-radius: 10px;
+            background: #ff9800;
+            color: #fff;
+            font-weight: 700;
+            cursor: pointer;
+            margin: 0;
+            white-space: nowrap;
+            box-shadow: 0 3px 8px rgba(240, 173, 78, 0.22);
+            transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+            .file-upload-btn:hover {
+                background: #e68900;
+                transform: translateY(-1px);
+                box-shadow: 0 5px 12px rgba(240, 173, 78, 0.28);
+            }
+
+            .file-upload-btn:active {
+                transform: translateY(0);
+            }
+
+        .file-name {
+            flex: 1;
+            min-width: 0;
+            color: #6c757d;
+            font-size: 0.9rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            caret-color: transparent;
+        }
+
+            .file-name.selected {
+                color: #343a40;
+                font-weight: 600;
+            }
+
+        .section-title {
+            font-weight: 700;
+            color: #333;
+            border-bottom: 2px solid #f0ad4e;
+            padding-bottom: 5px;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+
+        .category-btn {
+            background: #f1f3f5;
+            border: 1px solid #ced4da;
+            padding: 6px 14px;
+            border-radius: 20px;
+            margin: 3px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            position: relative;
+            z-index: 20;
+            pointer-events: auto !important;
+            user-select: none;
+        }
+
+            .category-btn:focus,
+            .category-btn:active {
+                outline: none;
+            }
+
+            .category-btn:hover {
+                background: #e2e6ea;
+            }
+
+        .upload-box {
+            border: 2px dashed #ced4da;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            background: #fafafa;
+            margin-bottom: 10px;
+        }
+
+        .btn-register {
+            background: #ff9800;
+            border: none;
+            color: white;
+            width: 100%;
+            padding: 12px;
+            font-weight: 700;
+            border-radius: 8px;
+            margin-top: 20px;
+            transition: background 0.2s;
+        }
+
+            .btn-register:hover {
+                background: #e68900;
+            }
+
+            .btn-register:disabled {
+                background: #cccccc;
+                cursor: not-allowed;
+            }
+
+        .agreement-box {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 20px;
+            font-size: 0.95rem;
+        }
+
+        /* Google Maps container */
+        #mapShop,
+        #mapHome {
+            height: 250px;
+            min-height: 250px;
+            overflow: hidden;
+            background: #e9ecef;
+            caret-color: transparent;
+        }
+
+        .gm-style,
+        .gm-style * {
+            caret-color: transparent !important;
+        }
+
+        .pac-container {
+            z-index: 10000 !important;
+        }
+
+        @@media (max-width: 576px) {
+            .register-card {
+                margin: 12px auto;
+                padding: 18px 14px;
+                border-radius: 12px;
+            }
+
+            .file-upload {
+                flex-wrap: wrap;
+            }
+
+            .file-upload-btn {
+                min-width: 120px;
+            }
+
+            .input-group {
+                flex-wrap: wrap;
+            }
+
+                .input-group .form-control {
+                    width: 100%;
+                    border-radius: 8px !important;
+                }
+
+                .input-group .btn {
+                    width: 100%;
+                    margin-top: 6px;
+                    border-radius: 8px !important;
+                }
+
+            .agreement-box {
+                align-items: flex-start;
+            }
+
+            .support-help-btn {
+                right: 12px;
+                bottom: 12px;
+                padding: 10px 14px;
+            }
+        }
+    </style>
+    <style>
+        /* Pretty ServiceGo message popup (replaces the browser's "localhost says" alert) */
+        .sg-alert-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 100000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background: rgba(40, 24, 4, 0.5);
+            backdrop-filter: blur(3px);
+            animation: sgFade .18s ease-out;
+        }
+
+        .sg-alert-box {
+            width: 100%;
+            max-width: 380px;
+            padding: 30px 26px 24px;
+            text-align: center;
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(180deg, #fffaf2 0%, #ffffff 55%);
+            border-radius: 24px;
+            box-shadow: 0 20px 50px rgba(217, 118, 0, 0.25);
+            animation: sgPop .22s ease-out;
+        }
+
+        .sg-alert-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 70px;
+            height: 70px;
+            margin-bottom: 14px;
+            border-radius: 50%;
+            font-size: 1.9rem;
+            background: #fff4e3;
+            box-shadow: 0 6px 16px rgba(217, 118, 0, 0.18);
+        }
+
+        .sg-alert-box.success .sg-alert-icon {
+            background: #e8f8ee;
+            box-shadow: 0 6px 16px rgba(25, 135, 84, 0.2);
+        }
+
+        .sg-alert-box.error .sg-alert-icon {
+            background: #fdecec;
+            box-shadow: 0 6px 16px rgba(220, 53, 69, 0.2);
+        }
+
+        .sg-alert-title {
+            margin: 0 0 8px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #8a4b00;
+        }
+
+        .sg-alert-text {
+            margin: 0 0 20px;
+            font-size: .93rem;
+            line-height: 1.55;
+            color: #5f564a;
+            white-space: pre-line;
+            word-break: break-word;
+        }
+
+        .sg-alert-btn {
+            min-width: 120px;
+            padding: 10px 26px;
+            border: 0;
+            border-radius: 999px;
+            font-weight: 600;
+            color: #fff;
+            background: linear-gradient(135deg, #f0a030, #d97600);
+            box-shadow: 0 6px 16px rgba(217, 118, 0, 0.3);
+            cursor: pointer;
+            transition: transform .15s ease, box-shadow .15s ease;
+        }
+
+            .sg-alert-btn:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 8px 20px rgba(217, 118, 0, 0.38);
+            }
+
+        @@keyframes sgFade {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @@keyframes sgPop {
+            from {
+                opacity: 0;
+                transform: scale(.92) translateY(8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: none;
+            }
+        }
+    </style>
+
+    <style id="sg-popup-polish">
+        /* Compact message popup (replaces the browser alert) */
+        .sg-alert-overlay {
+            padding: 16px;
+            background: rgba(33, 37, 41, 0.45);
+        }
+
+        .sg-alert-box {
+            max-width: 340px;
+            padding: 24px 22px 20px;
+            border-radius: 20px;
+            background: #ffffff;
+            box-shadow: 0 18px 45px rgba(33, 37, 41, 0.22);
+        }
+
+        .sg-alert-icon {
+            width: 54px;
+            height: 54px;
+            margin-bottom: 12px;
+            font-size: 0;
+            color: #d97600;
+            background: #fff4e3;
+            box-shadow: none;
+        }
+
+            .sg-alert-icon svg {
+                width: 28px;
+                height: 28px;
+            }
+
+        .sg-alert-box.success .sg-alert-icon {
+            color: #198754;
+            background: #e8f8ee;
+            box-shadow: none;
+        }
+
+        .sg-alert-box.error .sg-alert-icon {
+            color: #dc3545;
+            background: #fdecec;
+            box-shadow: none;
+        }
+
+        .sg-alert-title {
+            margin: 0 0 6px;
+            font-size: 1.08rem;
+            font-weight: 700;
+            color: #212529;
+        }
+
+        .sg-alert-text {
+            margin: 0 0 16px;
+            font-size: 0.92rem;
+            line-height: 1.5;
+            color: #6c757d;
+        }
+
+        .sg-alert-btn {
+            min-width: 110px;
+            padding: 0.55rem 1.6rem;
+            border: 0;
+            border-radius: 12px;
+            font-weight: 600;
+            color: #ffffff;
+            background: #d97600;
+        }
+
+            .sg-alert-btn:hover {
+                background: #bf6700;
+            }
+    </style>
+
+    <style id="sg-modal-polish">
+        /* Softer, rounded Bootstrap modals */
+        .modal-content {
+            border: 0;
+            border-radius: 18px;
+            box-shadow: 0 18px 50px rgba(33, 37, 41, 0.22);
+            overflow: hidden;
+        }
+
+        .modal-backdrop.show {
+            opacity: 0.4;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="modal fade support-modal" id="registrationHelpModal" tabindex="-1" aria-labelledby="registrationHelpTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+
+                <div class="modal-header">
+                    <h5 class="modal-title" id="registrationHelpTitle">ServiceGo Registration Help</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body">
+                    <p class="mb-3">If you need help with registration, select a topic below to see the instructions.</p>
+
+                    <div class="support-option">
+                        <button type="button" class="btn btn-link p-0 text-start text-decoration-none w-100" onclick="toggleSupportFaq('certificateFaq')">
+                            <strong>What is a Certificate?</strong>
+                            <small>Information about professional certificates and affidavits</small>
+                        </button>
+                        <div id="certificateFaq" class="support-faq">
+                            If you are not sure whether you need a Professional Certificate or an Affidavit, please confirm the requirement with ServiceGo Support. Do not upload an incorrect document.
+                        </div>
+                    </div>
+
+                    <div class="support-option">
+                        <button type="button" class="btn btn-link p-0 text-start text-decoration-none w-100" onclick="toggleSupportFaq('addressFaq')">
+                            <strong>Home / Shop Address</strong>
+                            <small>Having trouble finding or setting your address?</small>
+                        </button>
+                        <div id="addressFaq" class="support-faq">
+                            Enter your complete address and press Search. If your exact house or street is not found, search for a nearby famous landmark or use your current location.
+                        </div>
+                    </div>
+
+                    <div class="support-option">
+                        <button type="button" class="btn btn-link p-0 text-start text-decoration-none w-100" onclick="toggleSupportFaq('cnicFaq')">
+                            <strong>CNIC / Documents</strong>
+                            <small>Need help uploading your CNIC or profile picture?</small>
+                        </button>
+                        <div id="cnicFaq" class="support-faq">
+                            Upload a clear JPG or PNG image. Select the correct document type and upload the CNIC Front and CNIC Back separately.
+                        </div>
+                    </div>
+
+                    <div class="support-option">
+                        <button type="button" class="btn btn-link p-0 text-start text-decoration-none w-100" onclick="toggleSupportFaq('serviceFaq')">
+                            <strong>Service Selection</strong>
+                            <small>Need help selecting your services?</small>
+                        </button>
+                        <div id="serviceFaq" class="support-faq">
+                            Select only the services that you actually provide. You can select a maximum of 3 services.
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info mb-0">
+                        <strong>ServiceGo Support</strong><br>
+                        If you still need assistance, please email:<br>
+                        <a class="support-email" href="mailto:servicego888@gmail.com?subject=ServiceGo%20Registration%20Help">
+                            servicego888@gmail.com
+                        </a>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Address Not Found / Address Help Modal -->
+    <div class="modal fade address-help-modal" id="addressHelpModal" tabindex="-1" aria-labelledby="addressHelpTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="address-help-header">
+                    <h5 class="address-help-title" id="addressHelpTitle">Address not found</h5>
+                    <p class="address-help-subtitle">Famous place / landmark likhein.</p>
+                </div>
+                <div class="address-help-body">
+                    <p class="mb-0 text-muted">
+                        Agar exact address na mile to qareeb ki famous jagah, chowk, market, park, hospital ya landmark search karein.
+                    </p>
+                </div>
+                <div class="address-help-footer">
+                    <button type="button" class="btn btn-light w-100" data-bs-dismiss="modal">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="register-card">
+
+        <img src="@Url.Content("~/images/Logo.png")" class="logo" onclick="window.location.href='@Url.Action("Index", "Home")'" />
+
+        <h3 class="text-center mb-4" style="font-weight: 800;">
+            @(isReRegistration ? "Re-Register as Provider" : "Register as Provider")
+        </h3>
+
+        @if (isReRegistration && !string.IsNullOrWhiteSpace(ViewBag.RejectionReason as string))
+        {
+            <div class="alert alert-warning text-start">
+                <strong>Reason for Previous Rejection:</strong>
+                <div>@ViewBag.RejectionReason</div>
+            </div>
+        }
+
+        @if (isReRegistration)
+        {
+            <div class="alert alert-info text-start">
+                <strong>
+                    This is a fresh re-registration form. Your existing Provider ID / registration ID is retained.
+                    Please enter the information you want to submit again. Your submission will be reviewed by the admin before approval.
+                </strong>
+            </div>
+        }
+
+        <form id="registerForm" action="@Url.Action("Register", "Home")" method="post" enctype="multipart/form-data" novalidate>
+            <input type="hidden" id="registrationPendingUrl" value="@registrationPendingUrl" />
+
+            @Html.AntiForgeryToken()
+
+            <!-- Hidden Fields for Mapping -->
+            <input type="hidden" id="registrationId" name="Id" value="@Model.Id" />
+            <input type="hidden" asp-for="SelectedServices" id="hfSelectedServices" name="SelectedServices" />
+            <input type="hidden" asp-for="SelectedServiceTypes" id="hfSelectedServiceTypes" name="SelectedServiceTypes" />
+            <input type="hidden" asp-for="AvailableDays" id="hiddenAvailableDays" name="AvailableDays" />
+            <input type="hidden" name="SignupId" value="@Model.SignupId" />
+
+            <div class="col-12 form-group mb-3">
+                <label class="form-label">Email Address</label>
+                <input type="email" name="Email" value="@registrationEmail" class="form-control" readonly />
+                <div id="emailClientError" class="client-error text-danger small"></div>
+            </div>
+
+            <input type="hidden" id="hiddenProviderIdReal" name="ProviderId" value="@providerIdValue" />
+            <input type="hidden" name="IsReRegistration" value="@(isReRegistration ? "true" : "false")" />
+
+            <div class="section-title">Personal Details</div>
+
+            <div class="row">
+                <div class="col-md-6 form-group mb-3">
+                    <label class="form-label">Full Name</label>
+                    <input id="fullNameInput" name="Name" type="text" value="@Model.Name" class="form-control" autocomplete="name" />
+                </div>
+
+                <div class="col-md-6 form-group mb-3">
+                    <label class="form-label">Father Name</label>
+                    <input id="fatherNameInput" name="FatherName" type="text" value="@Model.FatherName" class="form-control" />
+                </div>
+
+                <div class="col-md-6 form-group mb-3">
+                    <label class="form-label">Provider ID</label>
+                    <input type="text" id="displayProviderId" value="@providerIdValue" readonly class="form-control provider-id bg-light" />
+                </div>
+
+                <div class="col-md-6 form-group mb-3">
+                    <label class="form-label">CNIC Number</label>
+                    <input name="CNIC" value="@Model.CNIC" id="cnicInput" class="form-control" placeholder="XXXXX-XXXXXXX-X" maxlength="15" oninput="formatCNIC(this)" />
+                </div>
+
+                <div class="col-md-6 form-group mb-3">
+                    <label class="form-label">Phone Number</label>
+                    <input name="PhoneNumber" value="@Model.PhoneNumber" id="phoneNumber" class="form-control" maxlength="13" oninput="formatPhone(this)" />
+                </div>
+
+                <div class="col-md-6 form-group mb-3">
+                    <label class="form-label">City</label>
+                    <input id="cityInput" name="City" type="text" value="@Model.City" class="form-control" />
+                </div>
+
+                <div class="col-12 form-group mb-3">
+                    <label class="form-label">Local Address</label>
+                    <input type="text" id="localAddressInput" name="LocalAddress" value="@Model.LocalAddress" class="form-control" />
+                </div>
+
+                <div class="col-12 form-group mb-3">
+                    <label class="form-label">Permanent Address</label>
+                    <input type="text" id="permanentAddressInput" name="PermanentAddress" value="@Model.PermanentAddress" class="form-control" />
+                </div>
+            </div>
+
+            <div class="section-title">Identity Documents</div>
+            <p class="small text-muted mb-2">Upload your documents (JPG or PNG only).</p>
+
+            <div class="form-group mb-3">
+                <select id="identityDocSelect" class="form-select" onchange="handleDocSelection('identity')">
+                    <option value="">-- Select Document Type --</option>
+                    <option value="cnicFront">CNIC Front</option>
+                    <option value="cnicBack">CNIC Back</option>
+                    <option value="profilePic">Profile Picture</option>
+                </select>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(Model.CNICFrontPath))
+            {
+                <div class="alert alert-success py-2">
+                    Current CNIC Front is already saved:
+                    <a href="@Url.Content(Model.CNICFrontPath)" target="_blank">View file</a>. Upload a new one only if you want to replace it.
+                </div>
+            }
+
+            <div id="box-cnicFront" class="upload-box" style="display:none;">
+                <div class="file-upload">
+                    <input type="file" asp-for="CNICFrontInput" id="CNICFrontInput" name="CNICFrontInput" accept=".jpg,.jpeg,.png" onchange="handleDocUpload(this, 'cnicFront', 'cnicFPrev', 'identityDocSelect', 'cnicFrontFileName')" />
+                    <label for="CNICFrontInput" class="file-upload-btn">Choose File</label>
+                    <span id="cnicFrontFileName" class="file-name">No file chosen</span>
+                </div>
+                <div id="cnicFPrev"></div>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(Model.CNICBackPath))
+            {
+                <div class="alert alert-success py-2">
+                    Current CNIC Back is already saved:
+                    <a href="@Url.Content(Model.CNICBackPath)" target="_blank">View file</a>. Upload a new one only if you want to replace it.
+                </div>
+            }
+
+            <div id="box-cnicBack" class="upload-box" style="display:none;">
+                <div class="file-upload">
+                    <input type="file" asp-for="CNICBackInput" id="CNICBackInput" name="CNICBackInput" accept=".jpg,.jpeg,.png" onchange="handleDocUpload(this, 'cnicBack', 'cnicBPrev', 'identityDocSelect', 'cnicBackFileName')" />
+                    <label for="CNICBackInput" class="file-upload-btn">Choose File</label>
+                    <span id="cnicBackFileName" class="file-name">No file chosen</span>
+                </div>
+                <div id="cnicBPrev"></div>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(Model.ProfilePicPath))
+            {
+                <div class="alert alert-success py-2">
+                    Current profile picture is already saved:
+                    <a href="@Url.Content(Model.ProfilePicPath)" target="_blank">View file</a>.
+                </div>
+            }
+
+            <div id="box-profilePic" class="upload-box" style="display:none;">
+                <div class="file-upload">
+                    <input type="file" asp-for="ProfileInput" id="ProfileInput" name="ProfileInput" accept=".jpg,.jpeg,.png" onchange="handleProfileChange(this)" />
+                    <label for="ProfileInput" class="file-upload-btn">Choose Photo</label>
+                    <span id="profileFileName" class="file-name">No file chosen</span>
+                </div>
+                <div class="small text-muted mt-2" id="profileHint">
+                    <strong>Passport-size photo only:</strong> clear, front-facing, close-up of your face (head and shoulders),
+                    only you in the photo, good light, no sunglasses/mask, no full-body or far-away/stylish pictures.
+                </div>
+                <div id="profileChecking" class="small text-primary mt-1" style="display:none;">Checking photo...</div>
+                <div id="profilePrev"></div>
+            </div>
+
+            <div class="section-title">Verification Documents</div>
+            <p class="small text-muted mb-2">Upload Certificate OR Affidavit (At least one is mandatory - JPG/PNG only).</p>
+
+            <div class="form-group mb-3">
+                <select id="verifyDocSelect" class="form-select" onchange="handleDocSelection('verify')">
+                    <option value="">-- Select Document Type --</option>
+                    <option value="certBox">Professional Certificate</option>
+                    <option value="affBox">Affidavit</option>
+                </select>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(Model.CertificatePath))
+            {
+                <div class="alert alert-success py-2">
+                    Current certificate is already saved:
+                    <a href="@Url.Content(Model.CertificatePath)" target="_blank">View file</a>.
+                </div>
+            }
+
+            <div id="box-certBox" class="upload-box" style="display:none;">
+                <div class="file-upload">
+                    <input type="file" asp-for="Certificate" name="Certificate" id="Certificate" accept=".jpg,.jpeg,.png" onchange="handleDocUpload(this, 'certificate', 'certPrev', 'verifyDocSelect', 'certificateFileName')" />
+                    <label for="Certificate" class="file-upload-btn">Choose File</label>
+                    <span id="certificateFileName" class="file-name">No file chosen</span>
+                </div>
+                <div id="certPrev"></div>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(Model.AffidavitPath))
+            {
+                <div class="alert alert-success py-2">
+                    Current affidavit is already saved:
+                    <a href="@Url.Content(Model.AffidavitPath)" target="_blank">View file</a>.
+                </div>
+            }
+
+            <div id="box-affBox" class="upload-box" style="display:none;">
+                <div class="file-upload">
+                    <input type="file" asp-for="Affidavit" name="Affidavit" id="Affidavit" accept=".jpg,.jpeg,.png" onchange="handleDocUpload(this, 'affidavit', 'affPrev', 'verifyDocSelect', 'affidavitFileName')" />
+                    <label for="Affidavit" class="file-upload-btn">Choose File</label>
+                    <span id="affidavitFileName" class="file-name">No file chosen</span>
+                </div>
+                <div id="affPrev"></div>
+            </div>
+
+            <div class="alert alert-warning mt-3" style="text-align: left; background-color: #fff8ec; border: 1px solid #f3c27a; color: #7a4a00; border-radius: 12px; font-size: 0.9rem;">
+                <h6 style="font-weight: 700;">Please Note Before Uploading</h6>
+                <ul class="mb-0" style="padding-left: 20px;">
+                    <li><strong>Affidavit (required details):</strong> Your affidavit must clearly mention the <strong>name, address and phone number of your Ustad</strong> (the mentor or teacher who trained you), so that we can verify your skills.</li>
+                    <li><strong>Certificate:</strong> If you hold a professional certificate, upload a clear and readable copy. It helps build trust with customers.</li>
+                    <li><strong>Authenticity:</strong> All documents you submit must be genuine and authentic. Fake or unclear documents may delay or reject your registration.</li>
+                </ul>
+            </div>
+
+            <div class="alert alert-info mt-4" style="text-align: left; background-color: #e9f7fe; border: 1px solid #b6effb; color: #0c5460; border-radius: 12px; font-size: 0.9rem;">
+                <h6 style="font-weight: 700;">Video Requirements (Max 5 Minutes):</h6>
+                <ul class="mb-0" style="padding-left: 20px;">
+                    <li>Show your face clearly and give a brief introduction.</li>
+                    <li>Show the tools and equipment you use for your work.</li>
+                    <li>Provide a demo or sample of the services you have selected.</li>
+                    <li>Video size must be less than 50MB.</li>
+                </ul>
+            </div>
+
+            <div class="form-group mb-3 p-3" style="background: #fff8f0; border: 1px solid #f0ad4e; border-radius: 12px;">
+                <label class="form-label" style="font-weight: 700;">Upload Work Video</label>
+                @if (!string.IsNullOrWhiteSpace(Model.VideoPath))
+                {
+                    <div class="alert alert-success py-2">
+                        Current work video is already saved:
+                        <a href="@Url.Content(Model.VideoPath)" target="_blank">View video</a>. Upload a new one only if you want to replace it.
+                    </div>
+                }
+                <div class="file-upload">
+                    <input type="file" asp-for="ProviderVideo" name="ProviderVideo" id="ProviderVideo" accept="video/*" onchange="handleVideoUpload(this)" />
+                    <label for="ProviderVideo" class="file-upload-btn">Choose Video</label>
+                    <span id="videoFileName" class="file-name">No video chosen</span>
+                </div>
+            </div>
+
+            <div class="section-title">Professional Details</div>
+
+            <div class="form-group mb-3">
+                <label class="form-label">Service Category</label>
+                <div class="d-flex flex-wrap mb-2">
+                    <button type="button" class="category-btn" onclick="addService('Electrician')">Electrician</button>
+                    <button type="button" class="category-btn" onclick="addService('Plumber')">Plumber</button>
+                    <button type="button" class="category-btn" onclick="addService('Welder')">Welder</button>
+                    <button type="button" class="category-btn" onclick="addService('AC Repair')">AC Repair</button>
+                    <button type="button" class="category-btn" onclick="addService('Car mechanic')">Car mechanic</button>
+                    <button type="button" class="category-btn" onclick="addService('Carpenter')">Carpenter</button>
+                </div>
+                <div id="serviceBox"></div>
+            </div>
+
+            <div class="form-group mb-3">
+                <label class="form-label">Service Type</label>
+                <div class="mb-2">
+                    <button type="button" class="category-btn" onclick="addType('Home Service')">Home Service</button>
+                    <button type="button" class="category-btn" onclick="addType('Shop Service')">Shop Service</button>
+                </div>
+                <div id="typeBox" class="mb-2"></div>
+
+                <!-- Shop Address Block -->
+                <div id="shopAddressBlock" class="mt-3 p-3 border rounded shadow-sm bg-white" style="display:none;">
+                    <label class="fw-bold mb-2">Shop Address</label>
+                    <div class="input-group mb-2">
+                        <input type="text" asp-for="ShopAddressInput" value="@Model.ShopAddressInput" id="shopAddressInput" name="ShopAddressInput" class="form-control" placeholder="Enter your shop address...">
+                        <button type="button" class="btn btn-primary" onclick="searchAddress('Shop Service')">Search</button>
+                    </div>
+                    <button type="button" class="btn btn-success current-location-btn mb-2" onclick="useCurrentLocation('Shop Service')">Use Current Location</button>
+
+                    <div id="mapShop" class="mb-2"></div>
+                    <input type="hidden" asp-for="ShopLat" id="shopLat" name="ShopLat" />
+                    <input type="hidden" asp-for="ShopLng" id="shopLng" name="ShopLng" />
+
+                    <!-- Saved location values are read by JavaScript without Razor expressions inside JS. -->
+                    <input type="hidden" id="savedShopAddress" value="@savedShopAddress" />
+                    <input type="hidden" id="savedShopLat" value="@savedShopLat" />
+                    <input type="hidden" id="savedShopLng" value="@savedShopLng" />
+                </div>
+
+                <!-- Home Address Block -->
+                <div id="homeAddressBlock" class="mt-3 p-3 border rounded shadow-sm bg-white" style="display:none;">
+                    <label class="fw-bold mb-2">Home Address</label>
+                    <div class="input-group mb-2">
+                        <input type="text" asp-for="HomeAddressInput" value="@Model.HomeAddressInput" id="homeAddressInput" name="HomeAddressInput" class="form-control" placeholder="Enter your home address...">
+                        <button type="button" class="btn btn-primary" onclick="searchAddress('Home Service')">Search</button>
+                    </div>
+                    <button type="button" class="btn btn-success current-location-btn mb-2" onclick="useCurrentLocation('Home Service')">Use Current Location</button>
+
+                    <div id="mapHome" class="mb-2"></div>
+                    <input type="hidden" asp-for="HomeLat" id="homeLat" name="HomeLat" />
+                    <input type="hidden" asp-for="HomeLng" id="homeLng" name="HomeLng" />
+
+                    <!-- Saved location values are read by JavaScript without Razor expressions inside JS. -->
+                    <input type="hidden" id="savedHomeAddress" value="@savedHomeAddress" />
+                    <input type="hidden" id="savedHomeLat" value="@savedHomeLat" />
+                    <input type="hidden" id="savedHomeLng" value="@savedHomeLng" />
+                </div>
+            </div>
+
+            <div class="form-group mb-3">
+                <label class="form-label">Available Days</label>
+                <div id="availableDaysGroup" class="d-flex flex-wrap gap-2">
+                    @foreach (var day in new[] { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" })
+                    {
+                        <label class="btn btn-outline-warning btn-sm text-dark">
+                            <input type="checkbox" name="chkDays" value="@day" class="me-1" @(Model.AvailableDays?.Split(',').Select(x => x.Trim()).Contains(day) == true ? "checked" : "")>
+                            @day
+                        </label>
+                    }
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 form-group mb-3">
+                    <label class="form-label">Start Time</label>
+                    <input type="time" asp-for="StartTime" value="@Model.StartTime" name="StartTime" class="form-control" />
+                </div>
+                <div class="col-md-6 form-group mb-3">
+                    <label class="form-label">End Time</label>
+                    <input type="time" asp-for="EndTime" value="@Model.EndTime" name="EndTime" class="form-control" />
+                </div>
+            </div>
+
+            <div class="agreement-box">
+                <input type="checkbox" id="registerAgreeCheck" onchange="toggleSubmitButton()">
+                <label for="registerAgreeCheck">I agree to the Terms & Conditions.</label>
+            </div>
+
+            <button type="submit" id="submitBtn" class="btn-register" disabled>
+                @(isReRegistration ? "Submit Updated Registration" : "Submit for Approval")
+            </button>
+
+        </form>
+
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        /* ServiceGo message popup: replaces the browser alert (no "localhost says"). */
+        function sgAlert(message, onClose) {
+            var text = String(message == null ? "" : message).trim();
+            var type = "info", title = "Please note";
+            var icons = {
+                info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7.5" r="0.6" fill="currentColor"/><path d="M12 11.5v6"/></svg>',
+                success: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+                error: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>'
+            };
+
+            if (/^\[error\]\s*/i.test(text)) {
+                text = text.replace(/^\[error\]\s*/i, "");
+                type = "error"; title = "Something went wrong";
+            }
+            else if (/failed|unable|error|could not|not supported|must be less/i.test(text)) {
+                type = "error"; title = "Something went wrong";
+            }
+
+            var overlay = document.createElement("div");
+            overlay.className = "sg-alert-overlay";
+
+            var box = document.createElement("div");
+            box.className = "sg-alert-box " + type;
+            box.setAttribute("role", "alertdialog");
+            box.setAttribute("aria-modal", "true");
+
+            var iconEl = document.createElement("div");
+            iconEl.className = "sg-alert-icon";
+            iconEl.innerHTML = icons[type] || icons.info;
+
+            var titleEl = document.createElement("h5");
+            titleEl.className = "sg-alert-title";
+            titleEl.textContent = title;
+
+            var textEl = document.createElement("p");
+            textEl.className = "sg-alert-text";
+            textEl.textContent = text;
+
+            var btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "sg-alert-btn";
+            btn.textContent = "OK";
+
+            box.appendChild(iconEl);
+            box.appendChild(titleEl);
+            box.appendChild(textEl);
+            box.appendChild(btn);
+            overlay.appendChild(box);
+            document.body.appendChild(overlay);
+
+            var closed = false;
+            function close() {
+                if (closed) return;
+                closed = true;
+                document.removeEventListener("keydown", onKey);
+                overlay.remove();
+                if (typeof onClose === "function") onClose();
+            }
+            function onKey(e) { if (e.key === "Escape" || e.key === "Enter") close(); }
+
+            btn.addEventListener("click", close);
+            overlay.addEventListener("click", function (e) { if (e.target === overlay) close(); });
+            document.addEventListener("keydown", onKey);
+            btn.focus();
+        }
+
+        window.alert = function (message) { sgAlert(message); };
+    </script>
+
+    <!-- Google maps API -->
+    <script defer src="https://maps.googleapis.com/maps/api/js?key=@Uri.EscapeDataString(Configuration["GoogleMaps:ApiKey"] ?? "")&libraries=places&callback=googleMapsLoaded&v=weekly"></script>
+
+    <script>
+
+        /* Registration Help Modal */
+        function openRegistrationHelp() {
+            const modalElement = document.getElementById('registrationHelpModal');
+            if (!modalElement || typeof bootstrap === 'undefined') return;
+            bootstrap.Modal.getOrCreateInstance(modalElement).show();
+        }
+
+        function toggleSupportFaq(id) {
+            const faq = document.getElementById(id);
+            if (!faq) return;
+            faq.style.display = faq.style.display === 'block' ? 'none' : 'block';
+        }
+
+        /* Google Maps & State Variables */
+        let googleMapsReady = false;
+        let googleGeocoder = null;
+        let addressAutocompletes = {};
+
+        let services = [];
+        let types = [];
+
+        let mapShop = null;
+        let mapHome = null;
+
+        let shopMarker = null;
+        let homeMarker = null;
+        let addressHelpType = null;
+
+        window.gm_authFailure = function () {
+            googleMapsReady = false;
+            console.error("Google Maps authentication failed. Please check API Key & enabled APIs.");
+        };
+
+        function googleMapsLoaded() {
+            googleMapsReady = true;
+            if (typeof google !== 'undefined' && google.maps) {
+                googleGeocoder = new google.maps.Geocoder();
+            }
+
+            initializeAddressAutocomplete();
+
+            if (document.readyState !== 'loading') {
+                renderTypes();
+            }
+        }
+
+        function initializeAddressAutocomplete() {
+            if (!googleMapsReady || !google.maps || !google.maps.places) return;
+
+            const fields = [
+                { id: "shopAddressInput", type: "Shop Service" },
+                { id: "homeAddressInput", type: "Home Service" }
+            ];
+
+            fields.forEach(item => {
+                const input = document.getElementById(item.id);
+                if (!input || addressAutocompletes[item.id]) return;
+
+                const autocomplete = new google.maps.places.Autocomplete(input, {
+                    componentRestrictions: { country: "pk" },
+                    fields: ["formatted_address", "geometry", "name"]
+                });
+
+                autocomplete.addListener("place_changed", function () {
+                    const place = autocomplete.getPlace();
+                    if (!place || !place.geometry || !place.geometry.location) return;
+
+                    input.value = place.formatted_address || place.name;
+                    setMapLocation(
+                        item.type,
+                        place.geometry.location.lat(),
+                        place.geometry.location.lng()
+                    );
+                });
+
+                addressAutocompletes[item.id] = autocomplete;
+            });
+        }
+
+        /* DOM Loaded Setup */
+        document.addEventListener("DOMContentLoaded", function () {
+            let savedServices = document.getElementById("hfSelectedServices");
+            let savedTypes = document.getElementById("hfSelectedServiceTypes");
+
+            if (savedServices && savedServices.value) {
+                services = savedServices.value.split(",").map(s => s.trim()).filter(Boolean);
+            }
+
+            if (savedTypes && savedTypes.value) {
+                types = savedTypes.value.split(",").map(t => t.trim()).filter(Boolean);
+            }
+
+
+            renderServices();
+            renderTypes();
+            initializeAddressAutocomplete();
+
+            setTimeout(function () {
+                if (googleMapsReady) {
+                    initializeAddressAutocomplete();
+                    renderTypes();
+                }
+            }, 500);
+
+            const savedShopAddress =
+                document.getElementById("savedShopAddress")?.value || "";
+
+            const savedHomeAddress =
+                document.getElementById("savedHomeAddress")?.value || "";
+
+            const savedShopLat =
+                document.getElementById("savedShopLat")?.value || "";
+
+            const savedShopLng =
+                document.getElementById("savedShopLng")?.value || "";
+
+            const savedHomeLat =
+                document.getElementById("savedHomeLat")?.value || "";
+
+            const savedHomeLng =
+                document.getElementById("savedHomeLng")?.value || "";
+
+            if (types.includes("Shop Service")) {
+                const shopAddress = document.getElementById("shopAddressInput");
+                const shopLat = document.getElementById("shopLat");
+                const shopLng = document.getElementById("shopLng");
+
+                if (shopAddress) shopAddress.value = savedShopAddress;
+                if (shopLat) shopLat.value = savedShopLat;
+                if (shopLng) shopLng.value = savedShopLng;
+            }
+
+            if (types.includes("Home Service")) {
+                const homeAddress = document.getElementById("homeAddressInput");
+                const homeLat = document.getElementById("homeLat");
+                const homeLng = document.getElementById("homeLng");
+
+                if (homeAddress) homeAddress.value = savedHomeAddress;
+                if (homeLat) homeLat.value = savedHomeLat;
+                if (homeLng) homeLng.value = savedHomeLng;
+            }
+        });
+
+        /* Submit Checkbox Toggle */
+        function toggleSubmitButton() {
+            let btn = document.getElementById("submitBtn");
+            let chk = document.getElementById("registerAgreeCheck");
+            if (btn && chk) {
+                btn.disabled = !chk.checked;
+            }
+        }
+
+        /* File Upload Preview */
+        function showPreview(input, containerId, selectId) {
+            if (input.files && input.files[0]) {
+                let reader = new FileReader();
+                reader.onload = function (e) {
+                    let container = document.getElementById(containerId);
+                    if (container) {
+                        container.innerHTML = `
+                            <div class="preview-wrapper">
+                                <img src="${e.target.result}" style="max-width:100px; max-height:100px; margin-top:5px;">
+                                <button type="button" class="btn btn-sm btn-danger ms-2" onclick="removePreview(this, '${input.id}', '${selectId}')">Remove</button>
+                            </div>
+                        `;
+                    }
+                    let uploadBox = input.closest('.upload-box');
+                    if (uploadBox) uploadBox.style.display = "block";
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function removePreview(btn, inputId, selectId) {
+            let inputEl = document.getElementById(inputId);
+            if (inputEl) inputEl.value = "";
+
+            let wrapper = btn.closest('.preview-wrapper');
+            if (wrapper) wrapper.remove();
+
+            let selectEl = document.getElementById(selectId);
+            if (selectEl) selectEl.value = "";
+
+            if (inputEl) {
+                let uploadBox = inputEl.closest('.upload-box');
+                if (uploadBox) uploadBox.style.display = "none";
+            }
+        }
+
+        function updateFileName(input, targetId) {
+            const target = document.getElementById(targetId);
+            if (!target) return;
+
+            if (input.files && input.files.length > 0) {
+                target.textContent = input.files[0].name;
+                target.classList.add("selected");
+            } else {
+                target.textContent = "No file chosen";
+                target.classList.remove("selected");
+            }
+        }
+
+        /* Services Functions */
+        function addService(val) {
+            if (!val) return;
+            if (services.length < 3 && !services.includes(val)) {
+                services.push(val);
+                renderServices();
+            } else if (services.includes(val)) {
+                alert("Service already added!");
+            } else {
+                alert("Max 3 services allowed.");
+            }
+        }
+
+        function removeService(i) {
+            services.splice(i, 1);
+            renderServices();
+        }
+
+        function renderServices() {
+            let serviceBox = document.getElementById("serviceBox");
+            if (!serviceBox) return;
+
+            serviceBox.innerHTML = services.map((s, i) => `
+                <div class="p-3 border mt-2 rounded-3 bg-light d-flex flex-column gap-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <strong>${s}</strong>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeService(${i})">Remove</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        /* Service Types Functions */
+        function addType(val) {
+            if (!val || types.includes(val)) return;
+            types.push(val);
+            renderTypes();
+        }
+
+        function removeType(i) {
+            types.splice(i, 1);
+            renderTypes();
+        }
+
+        /* Maps Initialization & Placement */
+        function initMap(type) {
+            if (!googleMapsReady || typeof google === 'undefined' || !google.maps) return;
+
+            if (!googleGeocoder) {
+                googleGeocoder = new google.maps.Geocoder();
+            }
+
+            const isShop = type === 'Shop Service';
+            const mapId = isShop ? 'mapShop' : 'mapHome';
+            const latId = isShop ? 'shopLat' : 'homeLat';
+            const lngId = isShop ? 'shopLng' : 'homeLng';
+
+            const mapElement = document.getElementById(mapId);
+            if (!mapElement) return;
+
+            const latInput = document.getElementById(latId);
+            const lngInput = document.getElementById(lngId);
+
+            const savedLat = parseFloat(latInput ? latInput.value : '');
+            const savedLng = parseFloat(lngInput ? lngInput.value : '');
+
+            const initialLat = Number.isFinite(savedLat) ? savedLat : 33.6844;
+            const initialLng = Number.isFinite(savedLng) ? savedLng : 73.0479;
+
+            const mapOptions = {
+                center: { lat: initialLat, lng: initialLng },
+                zoom: 13,
+                clickableIcons: false,
+                draggable: false,
+                streetViewControl: false,
+                mapTypeControl: false,
+                fullscreenControl: true
+            };
+
+            if (isShop && !mapShop) {
+                mapShop = new google.maps.Map(mapElement, mapOptions);
+                if (Number.isFinite(savedLat) && Number.isFinite(savedLng)) {
+                    shopMarker = new google.maps.Marker({
+                        position: { lat: savedLat, lng: savedLng },
+                        map: mapShop,
+                        draggable: false,
+                        title: "Shop Location"
+                    });
+                }
+            } else if (!isShop && !mapHome) {
+                mapHome = new google.maps.Map(mapElement, mapOptions);
+                if (Number.isFinite(savedLat) && Number.isFinite(savedLng)) {
+                    homeMarker = new google.maps.Marker({
+                        position: { lat: savedLat, lng: savedLng },
+                        map: mapHome,
+                        draggable: false,
+                        title: "Home Location"
+                    });
+                }
+            }
+
+            setTimeout(function () {
+                const mapObj = isShop ? mapShop : mapHome;
+                if (mapObj && google.maps.event) {
+                    google.maps.event.trigger(mapObj, 'resize');
+                    mapObj.setCenter({ lat: initialLat, lng: initialLng });
+                }
+            }, 300);
+        }
+
+        function setMapLocation(type, lat, lng) {
+            const isShop = type === 'Shop Service';
+            const latInput = document.getElementById(isShop ? 'shopLat' : 'homeLat');
+            const lngInput = document.getElementById(isShop ? 'shopLng' : 'homeLng');
+
+            if (latInput) latInput.value = lat;
+            if (lngInput) lngInput.value = lng;
+
+            initMap(type);
+            const mapObj = isShop ? mapShop : mapHome;
+            if (!mapObj) return;
+
+            const position = { lat: Number(lat), lng: Number(lng) };
+            mapObj.setCenter(position);
+            mapObj.setZoom(16);
+
+            if (isShop) {
+                if (shopMarker) shopMarker.setMap(null);
+                shopMarker = new google.maps.Marker({
+                    position: position,
+                    map: mapShop,
+                    draggable: false,
+                    title: "Shop Location"
+                });
+            } else {
+                if (homeMarker) homeMarker.setMap(null);
+                homeMarker = new google.maps.Marker({
+                    position: position,
+                    map: mapHome,
+                    draggable: false,
+                    title: "Home Location"
+                });
+            }
+        }
+
+        /* Prevent Enter from submitting the whole form on address inputs */
+        document.addEventListener("keydown", function (event) {
+            if (event.key !== "Enter") return;
+            const target = event.target;
+            if (!target) return;
+
+            if (target.id === "shopAddressInput") {
+                event.preventDefault();
+                searchAddress("Shop Service");
+            } else if (target.id === "homeAddressInput") {
+                event.preventDefault();
+                searchAddress("Home Service");
+            }
+        });
+
+        /* Search Address Function */
+        async function searchAddress(type) {
+            const isShop = type === 'Shop Service';
+            const addressField = document.getElementById(isShop ? "shopAddressInput" : "homeAddressInput");
+
+            if (!addressField || !addressField.value.trim()) {
+                if (addressField) addressField.focus();
+                alert("Please enter an address or landmark first.");
+                return false;
+            }
+
+            if (!googleMapsReady || typeof google === 'undefined' || !google.maps) {
+                alert("Google Maps is loading. Please try again in a moment.");
+                return false;
+            }
+
+            if (!googleGeocoder) {
+                googleGeocoder = new google.maps.Geocoder();
+            }
+
+            const query = addressField.value.trim();
+
+            googleGeocoder.geocode({ address: query, region: "PK" }, function (results, status) {
+                if (status === "OK" && results && results[0]) {
+                    const location = results[0].geometry.location;
+                    addressField.value = results[0].formatted_address;
+                    setMapLocation(type, location.lat(), location.lng());
+                } else {
+                    openAddressHelpModal(type, query);
+                }
+            });
+        }
+
+        function openAddressHelpModal(type, originalAddress = "") {
+            addressHelpType = type;
+            const modalElement = document.getElementById("addressHelpModal");
+            if (!modalElement || typeof bootstrap === "undefined") return;
+            bootstrap.Modal.getOrCreateInstance(modalElement).show();
+        }
+
+        /* Current Location Function */
+        function useCurrentLocation(type) {
+            if (!navigator.geolocation) {
+                alert("Current location is not supported by your browser.");
+                return;
+            }
+
+            if (!googleMapsReady) {
+                alert("Google Maps is loading. Please try again.");
+                return;
+            }
+
+            const isShop = type === 'Shop Service';
+            const addressField = document.getElementById(isShop ? "shopAddressInput" : "homeAddressInput");
+
+            navigator.geolocation.getCurrentPosition(
+                function (position) {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    setMapLocation(type, lat, lng);
+
+                    if (googleGeocoder) {
+                        googleGeocoder.geocode({ location: { lat: lat, lng: lng } }, function (results, status) {
+                            if (status === "OK" && results && results[0]) {
+                                if (addressField) addressField.value = results[0].formatted_address;
+                            } else {
+                                if (addressField) addressField.value = `Current Location (${lat.toFixed(5)}, ${lng.toFixed(5)})`;
+                            }
+                        });
+                    }
+                },
+                function (error) {
+                    alert("Unable to retrieve location. Please grant permission or search manually.");
+                },
+                { enableHighAccuracy: true, timeout: 15000 }
+            );
+        }
+
+        /* Render Types & Render Inputs */
+        function renderTypes() {
+            let typeBox = document.getElementById("typeBox");
+            if (typeBox) {
+                typeBox.innerHTML = types.map((t, i) => `
+                    <span class="badge bg-secondary p-2 m-1">
+                        ${t}
+                        <button type="button" class="btn btn-sm btn-light ms-2" onclick="removeType(${i})">Remove</button>
+                    </span>
+                `).join('');
+            }
+
+            let shopBlock = document.getElementById("shopAddressBlock");
+            if (shopBlock) {
+                if (types.includes("Shop Service")) {
+                    shopBlock.style.display = "block";
+                    if (googleMapsReady) initMap("Shop Service");
+                } else {
+                    shopBlock.style.display = "none";
+                    const shopAddress = document.getElementById("shopAddressInput");
+                    const shopLat = document.getElementById("shopLat");
+                    const shopLng = document.getElementById("shopLng");
+                    if (shopAddress) shopAddress.value = "";
+                    if (shopLat) shopLat.value = "";
+                    if (shopLng) shopLng.value = "";
+                }
+            }
+
+            let homeBlock = document.getElementById("homeAddressBlock");
+            if (homeBlock) {
+                if (types.includes("Home Service")) {
+                    homeBlock.style.display = "block";
+                    if (googleMapsReady) initMap("Home Service");
+                } else {
+                    homeBlock.style.display = "none";
+                    const homeAddress = document.getElementById("homeAddressInput");
+                    const homeLat = document.getElementById("homeLat");
+                    const homeLng = document.getElementById("homeLng");
+                    if (homeAddress) homeAddress.value = "";
+                    if (homeLat) homeLat.value = "";
+                    if (homeLng) homeLng.value = "";
+                }
+            }
+        }
+
+        /* Doc Selection Handlers */
+        function handleDocSelection(type) {
+            let selectId = type === 'identity' ? "identityDocSelect" : "verifyDocSelect";
+            let select = document.getElementById(selectId);
+            if (select && select.value) {
+                let box = document.getElementById("box-" + select.value);
+                if (box) box.style.display = "block";
+            }
+        }
+
+        function formatCNIC(input) {
+            let val = input.value.replace(/\D/g, '');
+            if (val.length > 5 && val.length <= 12) {
+                input.value = val.substring(0, 5) + '-' + val.substring(5);
+            } else if (val.length > 12) {
+                input.value = val.substring(0, 5) + '-' + val.substring(5, 12) + '-' + val.substring(12, 13);
+            }
+        }
+
+        function formatPhone(input) {
+            if (!input.value.startsWith('+92')) input.value = '+92';
+            input.value = input.value.replace(/[^0-9+]/g, '');
+            if (input.value.length > 13) input.value = input.value.substring(0, 13);
+        }
+
+        function validateVideo(input) {
+            if (input.files[0] && input.files[0].size > 50 * 1024 * 1024) {
+                alert("Video must be less than 50MB.");
+                input.value = "";
+            }
+        }
+
+        /* Form Validation & Submission */
+        let regForm = document.getElementById("registerForm");
+
+        /* Inline error helpers */
+        function clearClientErrors() {
+            document.querySelectorAll('.client-error').forEach(x => x.remove());
+            document.querySelectorAll('.sg-field-invalid').forEach(x => x.classList.remove('sg-field-invalid'));
+        }
+
+        /* Decide where an error should be shown (under which element). */
+        function resolveErrorTarget(element) {
+            if (!element) return null;
+
+            // File inputs live inside a hidden upload-box until a document type is chosen.
+            if (element.type === 'file') {
+                const box = element.closest('.upload-box');
+                if (box && box.style.display === 'none') box.style.display = 'block';
+                const row = element.closest('.file-upload') || element.parentElement;
+                return { mark: row, after: row };
+            }
+
+            const holder = element.closest('.input-group') || element;
+            return { mark: element, after: holder };
+        }
+
+        function showClientError(element, message) {
+            const target = resolveErrorTarget(element);
+            if (!target) return null;
+
+            // One message per field.
+            const next = target.after.nextElementSibling;
+            if (next && next.classList.contains('client-error')) next.remove();
+
+            const error = document.createElement('div');
+            error.className = 'client-error text-danger small';
+            error.setAttribute('role', 'alert');
+            error.textContent = message;
+
+            target.after.insertAdjacentElement('afterend', error);
+            target.mark.classList.add('sg-field-invalid');
+            return target.mark;
+        }
+
+        /* Fields coming back from the server -> page element. */
+        function serverFieldToElement(field) {
+            const map = {
+                Name: '#fullNameInput',
+                FatherName: '#fatherNameInput',
+                Email: 'input[name="Email"]',
+                CNIC: '#cnicInput',
+                PhoneNumber: '#phoneNumber',
+                City: '#cityInput',
+                LocalAddress: '#localAddressInput',
+                PermanentAddress: '#permanentAddressInput',
+                SelectedServices: '#serviceBox',
+                SelectedServiceTypes: '#typeBox',
+                AvailableDays: '#availableDaysGroup',
+                StartTime: 'input[name="StartTime"]',
+                EndTime: 'input[name="EndTime"]',
+                ShopAddressInput: '#shopAddressInput',
+                ShopLat: '#shopAddressInput',
+                ShopLng: '#shopAddressInput',
+                HomeAddressInput: '#homeAddressInput',
+                HomeLat: '#homeAddressInput',
+                HomeLng: '#homeAddressInput',
+                ProfileInput: '#ProfileInput',
+                CNICFrontInput: '#CNICFrontInput',
+                CNICBackInput: '#CNICBackInput',
+                ProviderVideo: '#ProviderVideo',
+                Certificate: '#verifyDocSelect',
+                Affidavit: '#verifyDocSelect'
+            };
+            const selector = map[field] || ('[name="' + field + '"]');
+            return document.querySelector(selector);
+        }
+
+        function scrollToField(mark) {
+            if (!mark) return;
+            mark.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            const focusable = mark.matches('input:not([type=file]),select,textarea')
+                ? mark
+                : mark.querySelector('input:not([type=file]),select,textarea');
+            if (focusable) { try { focusable.focus({ preventScroll: true }); } catch (e) { } }
+        }
+
+        /* Remove a field's error as soon as the user fixes it. */
+        function attachErrorAutoClear() {
+            const clearFor = function (el) {
+                const holder = el.closest('.input-group') || el.closest('.file-upload') || el;
+                const next = holder.nextElementSibling;
+                if (next && next.classList.contains('client-error')) next.remove();
+                el.classList.remove('sg-field-invalid');
+                const row = el.closest('.file-upload');
+                if (row) row.classList.remove('sg-field-invalid');
+            };
+            regForm.addEventListener('input', function (e) { clearFor(e.target); });
+            regForm.addEventListener('change', function (e) { clearFor(e.target); });
+        }
+
+        if (regForm) {
+            attachErrorAutoClear();
+
+            regForm.addEventListener("submit", async function (e) {
+                e.preventDefault();
+                clearClientErrors();
+
+                const first = (selector) => document.querySelector(selector);
+                const marks = [];
+                const fail = (element, message) => { const m = showClientError(element, message); if (m) marks.push(m); };
+
+                /* Text fields */
+                const requiredFields = [
+                    ['#fullNameInput', 'This field is required. Please enter your full name.'],
+                    ['#fatherNameInput', 'This field is required. Please enter your father name.'],
+                    ['input[name="Email"]', 'This field is required.'],
+                    ['#cnicInput', 'This field is required. Please enter your CNIC.'],
+                    ['#phoneNumber', 'This field is required. Please enter your phone number.'],
+                    ['#cityInput', 'This field is required. Please enter your city.'],
+                    ['#localAddressInput', 'This field is required. Please enter your local address.'],
+                    ['#permanentAddressInput', 'This field is required. Please enter your permanent address.']
+                ];
+
+                for (const [selector, message] of requiredFields) {
+                    const el = first(selector);
+                    if (el && !String(el.value || '').trim()) fail(el, message);
+                }
+
+                const cnicEl = first('#cnicInput');
+                if (cnicEl && cnicEl.value.trim() && !/^\d{5}-\d{7}-\d{1}$/.test(cnicEl.value.trim())) {
+                    fail(cnicEl, 'Please enter CNIC in XXXXX-XXXXXXX-X format.');
+                }
+
+                /* Documents */
+                const fileRequired = (id, message) => {
+                    const el = document.getElementById(id);
+                    if (!el || !el.files || el.files.length === 0) fail(el, message);
+                };
+                fileRequired('CNICFrontInput', 'This field is required. Please upload your CNIC Front.');
+                fileRequired('CNICBackInput', 'This field is required. Please upload your CNIC Back.');
+                fileRequired('ProfileInput', 'This field is required. Please upload your profile picture.');
+
+                const certEl = document.getElementById('Certificate');
+                const affEl = document.getElementById('Affidavit');
+                const hasCert = certEl && certEl.files && certEl.files.length > 0;
+                const hasAff = affEl && affEl.files && affEl.files.length > 0;
+                if (!hasCert && !hasAff) {
+                    fail(document.getElementById('verifyDocSelect'),
+                        'This field is required. Please select Certificate or Affidavit and upload it.');
+                }
+
+                const videoEl = document.getElementById('ProviderVideo');
+                if (!videoEl || !videoEl.files || videoEl.files.length === 0) {
+                    fail(videoEl, 'This field is required. Please upload your work video.');
+                }
+
+                /* Services / types */
+                if (!services || services.length === 0) {
+                    fail(document.getElementById('serviceBox'), 'This field is required. Please select at least one service.');
+                }
+
+                if (!types || types.length === 0) {
+                    fail(document.getElementById('typeBox'), 'This field is required. Please select at least one service type.');
+                }
+
+                if (types && types.includes('Shop Service')) {
+                    const shopAddr = document.getElementById('shopAddressInput');
+                    const shopLat = document.getElementById('shopLat');
+                    const shopLng = document.getElementById('shopLng');
+                    if (!shopAddr || !shopAddr.value.trim()) {
+                        fail(shopAddr, 'This field is required. Please enter your shop address.');
+                    } else if (!shopLat || !shopLng || !shopLat.value || !shopLng.value) {
+                        fail(shopAddr, 'Please search your shop address or use your current location.');
+                    }
+                }
+
+                if (types && types.includes('Home Service')) {
+                    const homeAddr = document.getElementById('homeAddressInput');
+                    const homeLat = document.getElementById('homeLat');
+                    const homeLng = document.getElementById('homeLng');
+                    if (!homeAddr || !homeAddr.value.trim()) {
+                        fail(homeAddr, 'This field is required. Please enter your home address.');
+                    } else if (!homeLat || !homeLng || !homeLat.value || !homeLng.value) {
+                        fail(homeAddr, 'Please search your home address or use your current location.');
+                    }
+                }
+
+                /* Days / time */
+                const dayInputs = Array.from(document.querySelectorAll('input[name="chkDays"]:checked'));
+                if (!dayInputs.length) {
+                    fail(document.getElementById('availableDaysGroup'), 'This field is required. Please select at least one available day.');
+                }
+
+                const start = first('input[name="StartTime"]');
+                const end = first('input[name="EndTime"]');
+                if (!start || !start.value) fail(start, 'This field is required. Please select start time.');
+                if (!end || !end.value) fail(end, 'This field is required. Please select end time.');
+
+                /* Show every problem under its own field, then take the user to the first one. */
+                if (marks.length) {
+                    marks.sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top);
+                    scrollToField(marks[0]);
+                    return;
+                }
+
+                /* Fill Form Hidden Fields */
+                document.getElementById('hfSelectedServices').value = services.join(', ');
+                document.getElementById('hfSelectedServiceTypes').value = types.join(', ');
+                document.getElementById('hiddenAvailableDays').value = dayInputs.map(x => x.value).join(', ');
+
+                const formData = new FormData(regForm);
+
+                try {
+                    const response = await fetch(regForm.action, {
+                        method: 'POST',
+                        body: formData,
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+
+                    const text = await response.text();
+                    let data = null;
+                    try { data = JSON.parse(text); } catch (parseErr) { data = null; }
+
+                    if (!data) {
+                        sgAlert('[error] Registration could not be completed (server error ' + response.status + '). Please make sure the video is under 50MB and try again.');
+                        return;
+                    }
+
+                    if (data.success) {
+                        const pendingUrl =
+                            document.getElementById("registrationPendingUrl")?.value || "/";
+
+                        window.location.href = data.redirectUrl || pendingUrl;
+                        return;
+                    }
+
+                    /* Field errors from the server -> shown under the exact field (no popup). */
+                    if (Array.isArray(data.details) && data.details.length) {
+                        const serverMarks = [];
+                        data.details.forEach(function (d) {
+                            const field = d.field || d.Field;
+                            const msgs = d.errors || d.Errors || [];
+                            const el = serverFieldToElement(field);
+                            if (el && msgs.length) {
+                                const m = showClientError(el, msgs[0]);
+                                if (m) serverMarks.push(m);
+                            }
+                        });
+
+                        if (serverMarks.length) {
+                            serverMarks.sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top);
+                            scrollToField(serverMarks[0]);
+                            return;
+                        }
+                    }
+
+                    /* Message without field list: still try to place it under the right field. */
+                    const msg = data.message || 'Registration failed. Please try again.';
+                    const lower = msg.toLowerCase();
+                    let msgEl = null;
+                    if (lower.includes('email')) msgEl = first('input[name="Email"]');
+                    else if (lower.includes('cnic')) msgEl = first('#cnicInput');
+
+                    if (msgEl) {
+                        scrollToField(showClientError(msgEl, msg));
+                        return;
+                    }
+
+                    sgAlert('[error] ' + msg);
+                } catch (error) {
+                    sgAlert('[error] Network problem. Please check your connection and try again.');
+                }
+            });
+        }
+    </script>
+
+    <script id="sg-profile-photo-check">
+        /* Profile photo validation: passport-size / close face photo only (runs in the browser) */
+        (function () {
+            var MIN_SIDE = 300;          // px - image must not be tiny
+            var MIN_FACE_H = 0.30;       // face height must be >= 30% of photo height (close-up)
+            var MAX_FACE_H = 0.95;
+            var FACE_SCORE = 0.5;
+            var libPromise = null;
+
+            function loadScript(src) {
+                return new Promise(function (res, rej) {
+                    var t = document.createElement("script");
+                    t.src = src; t.onload = res; t.onerror = rej;
+                    document.head.appendChild(t);
+                });
+            }
+
+            function loadFaceApi() {
+                if (libPromise) return libPromise;
+                var base = "https://cdn.jsdelivr.net/npm/@@vladmandic/face-api@@1.7.12";
+                libPromise = loadScript(base + "/dist/face-api.js")
+                    .then(function () { return faceapi.nets.tinyFaceDetector.loadFromUri(base + "/model/"); })
+                    .then(function () { return true; })
+                    .catch(function () { libPromise = null; return false; });
+                return libPromise;
+            }
+
+            window.sgLoadFaceApi = loadFaceApi;   // shared with the document upload checks below
+
+            function readImage(file) {
+                return new Promise(function (res, rej) {
+                    var url = URL.createObjectURL(file);
+                    var img = new Image();
+                    img.onload = function () { res({ img: img, url: url }); };
+                    img.onerror = function () { URL.revokeObjectURL(url); rej(); };
+                    img.src = url;
+                });
+            }
+
+            /* returns an error message, or "" when the photo is fine */
+            async function checkPhoto(file) {
+                var loaded;
+                try { loaded = await readImage(file); }
+                catch (e) { return "This file could not be read as an image. Please upload a JPG or PNG photo."; }
+
+                try {
+                    var img = loaded.img;
+                    var W = img.naturalWidth, H = img.naturalHeight;
+
+                    if (Math.min(W, H) < MIN_SIDE) {
+                        return "Photo is too small / low quality. Please upload a clear passport-size photo (at least " + MIN_SIDE + "px).";
+                    }
+                    if (W > H * 1.6) {
+                        return "Please upload a passport-size (portrait / close-up) photo. Wide or landscape pictures are not accepted.";
+                    }
+
+                    var ok = await loadFaceApi();
+                    if (!ok) return "";   // detector could not load (offline/blocked): do not block registration
+
+                    var faces = await faceapi.detectAllFaces(
+                        img, new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: FACE_SCORE })
+                    );
+
+                    if (!faces.length) {
+                        return "No face found. Please upload a clear, front-facing passport-size photo of your face.";
+                    }
+                    if (faces.length > 1) {
+                        return "More than one face found. Only your own face should be in the photo.";
+                    }
+
+                    var b = faces[0].box;
+                    var fh = b.height / H;
+                    if (fh < MIN_FACE_H) {
+                        return "Photo is too far away. Please upload a close-up passport-size photo where your face fills most of the picture.";
+                    }
+                    if (fh > MAX_FACE_H) {
+                        return "Photo is too zoomed in. Please keep your full face and shoulders visible (passport-size).";
+                    }
+
+                    var cx = (b.x + b.width / 2) / W;
+                    var cy = (b.y + b.height / 2) / H;
+                    if (cx < 0.25 || cx > 0.75 || cy < 0.15 || cy > 0.65) {
+                        return "Your face should be in the centre of the photo. Please upload a centred passport-size photo.";
+                    }
+
+                    var tol = 0.02;
+                    if (b.x < -tol * W || b.y < -tol * H || b.x + b.width > W * (1 + tol) || b.y + b.height > H * (1 + tol)) {
+                        return "Your face is cut off. Please upload a photo with your full face visible.";
+                    }
+                    return "";
+                } finally {
+                    URL.revokeObjectURL(loaded.url);
+                }
+            }
+
+            window.handleProfileChange = async function (input) {
+                var file = input.files && input.files[0];
+                var errBox = document.getElementById("profileChecking");
+                // remove old message for this field
+                var row = input.closest(".file-upload") || input.parentElement;
+                var nxt = row && row.nextElementSibling;
+                document.querySelectorAll("#box-profilePic .client-error").forEach(function (x) { x.remove(); });
+                if (row) row.classList.remove("sg-field-invalid");
+
+                if (!file) { updateFileName(input, "profileFileName"); return; }
+
+                if (errBox) errBox.style.display = "block";
+                var message = "";
+                try { message = await checkPhoto(file); } catch (e) { message = ""; }
+                if (errBox) errBox.style.display = "none";
+
+                if (message) {
+                    input.value = "";
+                    var prev = document.getElementById("profilePrev");
+                    if (prev) prev.innerHTML = "";
+                    updateFileName(input, "profileFileName");
+                    var div = document.createElement("div");
+                    div.className = "client-error text-danger small mt-1";
+                    div.setAttribute("role", "alert");
+                    div.textContent = message;
+                    var hint = document.getElementById("profileHint");
+                    (hint || row).insertAdjacentElement("afterend", div);
+                    if (row) row.classList.add("sg-field-invalid");
+                    return;
+                }
+
+                showPreview(input, "profilePrev", "identityDocSelect");
+                updateFileName(input, "profileFileName");
+            };
+        })();
+    </script>
+    <script id="sg-upload-checks">
+        /* Upload checks for CNIC front/back, Certificate, Affidavit and Work Video (runs in the browser).
+           Same idea as the profile photo check: bad files are stopped at upload time.
+           Nothing here decides if a document is genuine - that stays with the admin. */
+        (function () {
+            var CFG = {
+                cnic:  { minShort: 450, minLong: 700, minSharp: 30, minBright: 50, maxBright: 245, minContrast: 22 },
+                doc:   { minShort: 450, minLong: 700, minSharp: 20, minBright: 50, maxBright: 250, minContrast: 20 },
+                video: { minBytes: 200 * 1024, maxBytes: 50 * 1024 * 1024, minSeconds: 5, maxSeconds: 300 }
+            };
+            var SELFIE_FACE_H = 0.22;   // certificate/affidavit: a face taller than 22% of the photo = looks like a selfie
+            var CNIC_FRONT_MAX_FACE_H = 0.50;  // CNIC front: a face taller than 50% of the photo = a portrait, not a card
+            var CNIC_BACK_FACE_H = 0.15;       // CNIC back should have no face at all
+            var BLUR_RATIO = 0.27;      // sharp photos score about 0.45, clearly blurry ones below 0.25
+
+            function readImage(file) {
+                return new Promise(function (res, rej) {
+                    var url = URL.createObjectURL(file);
+                    var img = new Image();
+                    img.onload = function () { res({ img: img, url: url }); };
+                    img.onerror = function () { URL.revokeObjectURL(url); rej(); };
+                    img.src = url;
+                });
+            }
+
+            function grayAt(img, longSide) {
+                var W = img.naturalWidth, H = img.naturalHeight;
+                var scale = Math.min(1, longSide / Math.max(W, H));
+                var w = Math.max(8, Math.round(W * scale)), h = Math.max(8, Math.round(H * scale));
+                var c = document.createElement("canvas");
+                c.width = w; c.height = h;
+                var ctx = c.getContext("2d", { willReadFrequently: true });
+                ctx.drawImage(img, 0, 0, w, h);
+                var px = ctx.getImageData(0, 0, w, h).data;
+                var gray = new Float32Array(w * h);
+                for (var i = 0; i < w * h; i++) {
+                    gray[i] = 0.299 * px[i * 4] + 0.587 * px[i * 4 + 1] + 0.114 * px[i * 4 + 2];
+                }
+                return { gray: gray, w: w, h: h };
+            }
+
+            /* variance of the Laplacian: high = sharp edges, low = blurry / flat */
+            function lapVar(g) {
+                var w = g.w, h = g.h, gr = g.gray, lSum = 0, lSq = 0, n = 0;
+                for (var y = 1; y < h - 1; y++) {
+                    for (var x = 1; x < w - 1; x++) {
+                        var p = y * w + x;
+                        var lap = 4 * gr[p] - gr[p - 1] - gr[p + 1] - gr[p - w] - gr[p + w];
+                        lSum += lap; lSq += lap * lap; n++;
+                    }
+                }
+                var m = lSum / n;
+                return lSq / n - m * m;
+            }
+
+            /* brightness, contrast and sharpness.
+               Sharpness is measured at two sizes: a sharp photo loses a lot of detail when shrunk,
+               a blurry one does not, so the ratio works for any photo size / content. */
+            function analyze(img) {
+                var a = grayAt(img, 1200), gr = a.gray, n = gr.length, i, sum = 0;
+                for (i = 0; i < n; i++) sum += gr[i];
+                var mean = sum / n, varSum = 0;
+                for (i = 0; i < n; i++) { var d = gr[i] - mean; varSum += d * d; }
+                var v1 = lapVar(a);
+                var v2 = lapVar(grayAt(img, 600));
+                return { mean: mean, std: Math.sqrt(varSum / n), sharp: v1, ratio: v2 > 0 ? v1 / v2 : 1 };
+            }
+
+            async function detectFaces(source, inputSize, score) {
+                return faceapi.detectAllFaces(
+                    source, new faceapi.TinyFaceDetectorOptions({ inputSize: inputSize, scoreThreshold: score })
+                );
+            }
+
+            /* CNIC faces are small, so try the whole photo first, then the left and right halves */
+            async function cardHasFace(img) {
+                var faces = await detectFaces(img, 608, 0.3);
+                if (faces.length) return true;
+                var W = img.naturalWidth, H = img.naturalHeight, halves = [0, 0.5];
+                for (var k = 0; k < halves.length; k++) {
+                    var sx = W * halves[k], sw = W * 0.5;
+                    var s = Math.min(1, 1200 / Math.max(sw, H));
+                    var c = document.createElement("canvas");
+                    c.width = Math.round(sw * s); c.height = Math.round(H * s);
+                    c.getContext("2d").drawImage(img, sx, 0, sw, H, 0, 0, c.width, c.height);
+                    faces = await detectFaces(c, 608, 0.3);
+                    if (faces.length) return true;
+                }
+                return false;
+            }
+
+            /* returns an error message, or "" when the photo is fine */
+            async function checkImage(file, kind) {
+                var cfg = (kind === "cnicFront" || kind === "cnicBack") ? CFG.cnic : CFG.doc;
+                var label = kind === "cnicFront" ? "CNIC front" : kind === "cnicBack" ? "CNIC back"
+                          : kind === "certificate" ? "certificate" : "affidavit";
+
+                var loaded;
+                try { loaded = await readImage(file); }
+                catch (e) { return "This file could not be read as an image. Please upload a JPG or PNG photo."; }
+
+                try {
+                    var img = loaded.img;
+                    var W = img.naturalWidth, H = img.naturalHeight;
+
+                    if (Math.min(W, H) < cfg.minShort || Math.max(W, H) < cfg.minLong) {
+                        return "The " + label + " photo is too small / low quality. Please upload a clearer, larger photo.";
+                    }
+
+                    var a = analyze(img);
+                    if (a.mean < cfg.minBright) {
+                        return "The " + label + " photo is too dark. Please take it again in good light.";
+                    }
+                    if (a.mean > cfg.maxBright) {
+                        return "The " + label + " photo is too bright / washed out. Please take it again without glare.";
+                    }
+                    if (a.std < cfg.minContrast) {
+                        return "We could not see a " + (kind.indexOf("cnic") === 0 ? "card" : "document") +
+                               " in this photo. Please upload a clear photo of your " + label + ".";
+                    }
+                    if (a.sharp < cfg.minSharp || (a.sharp > 5 && a.ratio < BLUR_RATIO)) {
+                        return "The " + label + " photo is blurry. Please hold the camera steady and upload a sharp photo.";
+                    }
+
+                    {
+                        var ok = await window.sgLoadFaceApi();
+                        if (!ok) return "";   // detector could not load: do not block registration
+
+                        if (kind === "cnicFront") {
+                            var all = await detectFaces(img, 608, 0.3);
+                            if (!all.length && !(await cardHasFace(img))) {
+                                return "We could not find the face photo on your CNIC front. Please upload a clear photo of the front side of your CNIC.";
+                            }
+                            for (var j = 0; j < all.length; j++) {
+                                if (all[j].box.height / H > CNIC_FRONT_MAX_FACE_H) {
+                                    return "This looks like a portrait / selfie, not a CNIC. Please upload a photo of the CNIC card itself.";
+                                }
+                            }
+                        } else if (kind === "cnicBack") {
+                            var bf = await detectFaces(img, 416, 0.5);
+                            for (var b = 0; b < bf.length; b++) {
+                                if (bf[b].box.height / H >= CNIC_BACK_FACE_H) {
+                                    return "This looks like a photo of a person, not the back of a CNIC. Please upload the back side of your CNIC.";
+                                }
+                            }
+                        } else {
+                            var faces = await detectFaces(img, 416, 0.5);
+                            for (var i = 0; i < faces.length; i++) {
+                                if (faces[i].box.height / H >= SELFIE_FACE_H) {
+                                    return "This looks like a selfie / face photo, not a " + label + ". Please upload a photo of the document itself.";
+                                }
+                            }
+                        }
+                    }
+                    return "";
+                } finally {
+                    URL.revokeObjectURL(loaded.url);
+                }
+            }
+
+            /* ---------- small UI helpers ---------- */
+            function rowOf(input) { return input.closest(".file-upload") || input.parentElement; }
+
+            function clearMessages(input) {
+                var row = rowOf(input);
+                var holder = row && row.parentElement;
+                if (holder) holder.querySelectorAll(".sg-upload-msg").forEach(function (x) { x.remove(); });
+                if (row) row.classList.remove("sg-field-invalid");
+            }
+
+            function showChecking(input) {
+                var div = document.createElement("div");
+                div.className = "sg-upload-msg small text-primary mt-1";
+                div.textContent = "Checking file...";
+                rowOf(input).insertAdjacentElement("afterend", div);
+                return div;
+            }
+
+            function showError(input, message) {
+                var row = rowOf(input);
+                var div = document.createElement("div");
+                div.className = "sg-upload-msg client-error text-danger small mt-1";
+                div.setAttribute("role", "alert");
+                div.textContent = message;
+                row.insertAdjacentElement("afterend", div);
+                row.classList.add("sg-field-invalid");
+            }
+
+            function rejectFile(input, message, previewId, nameId) {
+                input.value = "";
+                if (previewId) { var p = document.getElementById(previewId); if (p) p.innerHTML = ""; }
+                if (nameId) updateFileName(input, nameId);
+                showError(input, message);
+            }
+
+            function sameFile(a, b) {
+                return a && b && a.name === b.name && a.size === b.size && a.lastModified === b.lastModified;
+            }
+
+            /* ---------- photo documents: CNIC front/back, certificate, affidavit ---------- */
+            var OTHER_CNIC = { cnicFront: "CNICBackInput", cnicBack: "CNICFrontInput" };
+
+            window.handleDocUpload = async function (input, kind, previewId, selectId, nameId) {
+                var file = input.files && input.files[0];
+                clearMessages(input);
+                if (!file) { updateFileName(input, nameId); return; }
+
+                var checking = showChecking(input);
+                var message = "";
+                try {
+                    var otherId = OTHER_CNIC[kind];
+                    var other = otherId && document.getElementById(otherId);
+                    if (other && other.files && sameFile(file, other.files[0])) {
+                        message = "CNIC front and back cannot be the same photo. Please upload each side separately.";
+                    } else {
+                        message = await checkImage(file, kind);
+                    }
+                } catch (e) { console.warn("Upload check failed, file allowed:", e); message = ""; }   // checker failed: do not block registration
+                checking.remove();
+
+                if (message) { rejectFile(input, message, previewId, nameId); return; }
+
+                showPreview(input, previewId, selectId);
+                updateFileName(input, nameId);
+            };
+
+            /* ---------- work video ---------- */
+            function readVideoMeta(file) {
+                return new Promise(function (res) {
+                    var url = URL.createObjectURL(file);
+                    var v = document.createElement("video");
+                    var done = false;
+                    function finish(r) {
+                        if (done) return;
+                        done = true;
+                        URL.revokeObjectURL(url);
+                        v.removeAttribute("src"); v.load();
+                        res(r);
+                    }
+                    v.preload = "metadata";
+                    v.muted = true;
+                    v.onloadedmetadata = function () { finish({ duration: v.duration, width: v.videoWidth }); };
+                    v.onerror = function () { finish(null); };
+                    setTimeout(function () { finish(null); }, 8000);
+                    v.src = url;
+                });
+            }
+
+            window.handleVideoUpload = async function (input) {
+                var file = input.files && input.files[0];
+                clearMessages(input);
+                if (!file) { updateFileName(input, "videoFileName"); return; }
+
+                var message = "";
+                var ext = (file.name.split(".").pop() || "").toLowerCase();
+
+                if (ext !== "mp4" && ext !== "avi") {
+                    message = "Please upload your video as an MP4 or AVI file.";
+                } else if (file.size > CFG.video.maxBytes) {
+                    message = "Video must be less than 50MB.";
+                } else if (file.size < CFG.video.minBytes) {
+                    message = "This video is too short or too small. Please upload a proper work video.";
+                } else {
+                    var checking = showChecking(input);
+                    var meta = null;
+                    try { meta = await readVideoMeta(file); } catch (e) { meta = null; }
+                    checking.remove();
+                    /* meta is null when the browser cannot read this codec: do not block, the server still checks the file */
+                    if (meta && isFinite(meta.duration)) {
+                        if (meta.duration < CFG.video.minSeconds) {
+                            message = "This video is too short. Please upload a video of at least " + CFG.video.minSeconds + " seconds.";
+                        } else if (meta.duration > CFG.video.maxSeconds) {
+                            message = "This video is longer than 5 minutes. Please upload a shorter video.";
+                        }
+                    }
+                }
+
+                if (message) { rejectFile(input, message, null, "videoFileName"); return; }
+                updateFileName(input, "videoFileName");
+            };
+        })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,2100 @@
+﻿@model ServiceGo.Models.ProviderHistoryViewModel
+
+@{
+    // Job History shows only Completed, Cancelled and Rejected bookings.
+    var jobHistoryItems = Model?.JobHistory?
+        .Where(j =>
+            string.Equals(j.Status?.Trim(), "Completed", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(j.Status?.Trim(), "Cancelled", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(j.Status?.Trim(), "Rejected", StringComparison.OrdinalIgnoreCase))
+        .ToList();
+    int jobHistoryCount = jobHistoryItems?.Count ?? 0;
+}
+@{
+    Layout = null;
+    var providerProfileImage = (ViewBag.ProviderProfileImage as string);
+    providerProfileImage = string.IsNullOrWhiteSpace(providerProfileImage)
+        ? Url.Content("~/images/Profile icon.png")
+        : Url.Content(providerProfileImage);
+
+    int providerUnreadCount = ViewBag.UnreadCount ?? 0;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ServiceGo - Provider History</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" />
+    <link rel="icon" href="@Url.Content("~/images/Logo.png")" type="image/x-icon" />
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            min-height: 100%;
+        }
+
+        body {
+            font-family: 'Poppins',Arial,sans-serif;
+            background: #f7f7f7;
+            color: #333;
+            overflow-x: hidden;
+        }
+
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 80px;
+            height: 100vh;
+            background: #d97600;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 1000;
+            transition: width .3s ease;
+        }
+
+            .sidebar:hover {
+                width: 240px;
+                box-shadow: 4px 0 20px rgba(217,118,0,.18);
+            }
+
+            .sidebar .logo {
+                width: 60px;
+                height: 60px;
+                margin: 20px 0;
+                object-fit: contain;
+                background: #fff;
+                border-radius: 10%;
+                cursor: pointer;
+            }
+
+
+        .provider-greeting {
+            color: #fff;
+            font-size: 15px;
+            font-weight: 700;
+            white-space: nowrap;
+            text-align: center;
+            margin: -6px 0 6px;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .sidebar:hover .provider-greeting {
+            opacity: 1;
+        }
+
+        @@media (max-width: 768px) {
+            .provider-greeting {
+                display: none;
+            }
+        }
+
+        .sidebar .nav {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+            .sidebar .nav a {
+                width: 90%;
+                min-height: 48px;
+                margin-bottom: 5px;
+                padding: 12px 20px;
+                display: flex;
+                align-items: center;
+                color: #fff;
+                text-decoration: none;
+                border-radius: 10px;
+                overflow: hidden;
+                transition: .2s ease;
+            }
+
+                .sidebar .nav a i {
+                    min-width: 25px;
+                    font-size: 1.35rem;
+                    margin-right: 15px;
+                }
+
+            .sidebar .nav span {
+                opacity: 0;
+                white-space: nowrap;
+                transition: opacity .2s ease;
+            }
+
+        .sidebar:hover .nav span {
+            opacity: 1;
+        }
+
+        .sidebar .nav a.active, .sidebar .nav a:hover {
+            background: #ffb74d;
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .main {
+            margin-left: 80px;
+            min-height: 100vh;
+            padding: 42px 42px 55px 52px;
+            transition: margin-left .3s ease;
+        }
+
+        .sidebar:hover ~ .main {
+            margin-left: 240px;
+        }
+
+        .page-container {
+            width: 100%;
+            max-width: 1120px;
+            margin: 0 auto;
+        }
+
+        .page-header {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+
+        .page-icon {
+            width: 58px;
+            height: 58px;
+            margin: 0 auto 12px;
+            border-radius: 17px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #fff3e0;
+            color: #d97600;
+            font-size: 25px;
+        }
+
+        .page-header h2 {
+            margin: 0;
+            font-size: 29px;
+            font-weight: 800;
+            color: #222;
+        }
+
+        .page-header p {
+            margin: 6px 0 0;
+            color: #777;
+            font-size: 13px;
+        }
+
+        .history-tabs {
+            display: grid;
+            grid-template-columns: repeat(2,1fr);
+            gap: 7px;
+            padding: 7px;
+            margin-bottom: 26px;
+            background: #fff;
+            border: 1px solid #eee;
+            border-radius: 16px;
+            box-shadow: 0 4px 18px rgba(0,0,0,.05);
+        }
+
+        .history-tab {
+            border: 0;
+            border-radius: 11px;
+            min-height: 58px;
+            background: transparent;
+            color: #666;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 9px;
+            transition: .2s ease;
+        }
+
+            .history-tab i {
+                color: #d97600;
+                font-size: 18px;
+            }
+
+            .history-tab small {
+                min-width: 25px;
+                padding: 3px 7px;
+                border-radius: 20px;
+                background: #f4f4f4;
+                color: #777;
+                font-size: 11px;
+            }
+
+            .history-tab.active {
+                background: #fff3e0;
+                color: #d97600;
+                box-shadow: inset 0 0 0 1px rgba(217,118,0,.12);
+            }
+
+                .history-tab.active small {
+                    background: #d97600;
+                    color: #fff;
+                }
+
+        .history-section {
+            display: none;
+        }
+
+            .history-section.active {
+                display: block;
+            }
+
+        .section-heading {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 14px;
+        }
+
+            .section-heading h4 {
+                margin: 0;
+                font-size: 19px;
+                font-weight: 800;
+            }
+
+            .section-heading p {
+                margin: 4px 0 0;
+                color: #888;
+                font-size: 12px;
+            }
+
+        .section-pill {
+            background: #fff3e0;
+            color: #d97600;
+            border-radius: 20px;
+            padding: 7px 12px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .history-card, .complaint-card {
+            background: #fff;
+            border: 1px solid #eee;
+            border-radius: 16px;
+            margin-bottom: 17px;
+            overflow: hidden;
+            box-shadow: 0 4px 16px rgba(0,0,0,.05);
+        }
+
+        .history-card {
+            border-left: 5px solid #d97600;
+        }
+
+        .history-card-top, .complaint-top {
+            padding: 17px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .service-title, .complaint-title {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            min-width: 0;
+        }
+
+        .service-icon, .complaint-icon {
+            width: 42px;
+            height: 42px;
+            flex: 0 0 42px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #fff3e0;
+            color: #d97600;
+            font-size: 18px;
+        }
+
+        .complaint-icon {
+            background: #fff1f1;
+            color: #d32f2f;
+        }
+
+        .service-title h5, .complaint-title h5 {
+            margin: 0;
+            font-size: 14px;
+            font-weight: 800;
+        }
+
+        .service-title p, .complaint-title span {
+            margin: 3px 0 0;
+            color: #999;
+            font-size: 10px;
+        }
+
+        .booking-ref {
+            color: #999;
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 30px;
+            font-size: 10px;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        .status-completed {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .status-accepted {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+
+        .status-cancelled {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .status-rejected {
+            background: #fce4ec;
+            color: #ad1457;
+        }
+
+        .status-expired {
+            background: #eee;
+            color: #616161;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(4,1fr);
+            gap: 1px;
+            background: #f0f0f0;
+        }
+
+        .info-box {
+            background: #fffaf5;
+            padding: 13px 15px;
+            min-width: 0;
+        }
+
+            .info-box label {
+                display: block;
+                margin-bottom: 4px;
+                color: #999;
+                font-size: 9px;
+                text-transform: uppercase;
+                letter-spacing: .5px;
+                font-weight: 700;
+            }
+
+            .info-box strong {
+                display: block;
+                color: #444;
+                font-size: 11px;
+                line-height: 1.45;
+                word-break: break-word;
+            }
+
+        .event-box {
+            padding: 14px 20px 17px;
+            border-top: 1px solid #eee;
+        }
+
+        .event-title {
+            font-size: 11px;
+            color: #d97600;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+
+        .event-line {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 18px;
+            color: #666;
+            font-size: 11px;
+        }
+
+            .event-line i {
+                color: #d97600;
+                margin-right: 4px;
+            }
+
+        .problem-box {
+            padding: 14px 20px 16px;
+            border-top: 1px solid #eee;
+        }
+
+            .problem-box label, .complaint-details label, .complaint-grid small {
+                display: block;
+                color: #999;
+                font-size: 9px;
+                text-transform: uppercase;
+                font-weight: 700;
+                margin-bottom: 4px;
+            }
+
+            .problem-box p, .complaint-details p {
+                margin: 0;
+                color: #555;
+                font-size: 11px;
+                line-height: 1.6;
+            }
+
+        .complaint-top {
+            padding: 17px 20px;
+        }
+
+        .complaint-status {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 10px;
+            font-weight: 800;
+        }
+
+        .complaint-pending {
+            background: #fff8e1;
+            color: #f57f17;
+        }
+
+        .complaint-resolved {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .complaint-rejected {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .complaint-details {
+            padding: 14px 20px 16px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .complaint-grid {
+            display: grid;
+            grid-template-columns: repeat(3,1fr);
+            gap: 1px;
+            background: #f0f0f0;
+        }
+
+            .complaint-grid > div {
+                background: #fffaf5;
+                padding: 13px 15px;
+                min-width: 0;
+            }
+
+            .complaint-grid strong {
+                display: block;
+                color: #444;
+                font-size: 11px;
+                word-break: break-word;
+            }
+
+        .empty-state {
+            background: #fff;
+            border: 1px solid #eee;
+            border-radius: 16px;
+            text-align: center;
+            padding: 55px 20px;
+            box-shadow: 0 4px 16px rgba(0,0,0,.04);
+        }
+
+            .empty-state i {
+                display: block;
+                font-size: 42px;
+                color: #e3a052;
+                margin-bottom: 12px;
+            }
+
+            .empty-state h5 {
+                margin: 0 0 5px;
+                font-weight: 800;
+                color: #333;
+            }
+
+            .empty-state p {
+                margin: 0;
+                color: #999;
+                font-size: 12px;
+            }
+
+        .mobile-top {
+            display: none;
+        }
+
+        @@media (max-width:768px) {
+            .sidebar {
+                display: none !important;
+            }
+
+            .mobile-top {
+                display: flex;
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 70px;
+                z-index: 1100;
+                background: #fff;
+                align-items: center;
+                justify-content: space-between;
+                padding: 0 20px;
+                box-shadow: 0 2px 10px rgba(0,0,0,.08);
+            }
+
+                .mobile-top .logo {
+                    width: 40px;
+                    height: 40px;
+                    object-fit: contain;
+                    cursor: pointer;
+                }
+
+                .mobile-top .profile-thumb {
+                    width: 40px;
+                    height: 40px;
+                    object-fit: cover;
+                    border-radius: 50%;
+                    border: 2px solid #d97600;
+                    cursor: pointer;
+                }
+
+                .mobile-top .dropdown-menu {
+                    width: 175px !important;
+                    min-width: 175px !important;
+                    padding: 0 !important;
+                    margin-top: 8px !important;
+                    border: 1px solid #d9d9d9 !important;
+                    border-radius: 8px !important;
+                    overflow: hidden !important;
+                    box-shadow: 0 5px 14px rgba(0,0,0,.18) !important;
+                }
+
+                .mobile-top .dropdown-item {
+                    min-height: 44px;
+                    padding: 9px 16px;
+                    font-size: 18px;
+                    line-height: 1.35;
+                    font-weight: 700;
+                    color: #292929;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+
+                    .mobile-top .dropdown-item i {
+                        font-size: 17px;
+                        min-width: 22px;
+                        color: #d97600;
+                    }
+
+                    .mobile-top .dropdown-item:hover {
+                        background: #fff3df;
+                        color: #d97600;
+                    }
+
+                    .mobile-top .dropdown-item.active {
+                        background: #f7e6c8;
+                        color: #d97600;
+                        font-weight: 700;
+                    }
+
+            .main {
+                margin-left: 0 !important;
+                padding: 88px 14px 28px !important;
+                width: 100%;
+            }
+
+            .page-header h2 {
+                font-size: 24px;
+            }
+
+            .page-header p {
+                font-size: 12px;
+            }
+
+            .history-tabs {
+                grid-template-columns: 1fr;
+            }
+
+            .history-tab {
+                min-height: 48px;
+            }
+
+            .section-heading {
+                align-items: flex-start;
+            }
+
+            .section-pill {
+                display: none;
+            }
+
+            .history-card-top, .complaint-top {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .booking-ref, .status-badge, .complaint-status {
+                align-self: flex-start;
+            }
+
+            .info-grid, .complaint-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .event-line {
+                flex-direction: column;
+                gap: 7px;
+            }
+        }
+
+        /*
+                                 * Mobile profile dropdown
+                                 * Same style as provider dashboard / history
+                                 */
+        @@media (max-width: 768px) {
+            .mobile-top .dropdown-menu, .mobile-dropdown-menu {
+                width: 175px !important;
+                min-width: 175px !important;
+                max-width: 175px !important;
+                padding: 0 !important;
+                margin-top: 8px !important;
+                border: 1px solid #d9d9d9 !important;
+                border-radius: 8px !important;
+                overflow: hidden !important;
+                background: #ffffff !important;
+                box-shadow: 0 5px 14px rgba(0,0,0,.18) !important;
+            }
+
+                .mobile-top .dropdown-menu .dropdown-item,
+                .mobile-dropdown-menu .dropdown-item {
+                    display: flex !important;
+                    align-items: center !important;
+                    min-height: 44px !important;
+                    padding: 9px 16px !important;
+                    margin: 0 !important;
+                    font-size: 18px !important;
+                    line-height: 1.35 !important;
+                    font-weight: 700 !important;
+                    color: #292929 !important;
+                    white-space: nowrap !important;
+                    border-radius: 0 !important;
+                }
+
+                    .mobile-top .dropdown-menu .dropdown-item i,
+                    .mobile-dropdown-menu .dropdown-item i {
+                        font-size: 17px !important;
+                        min-width: 22px !important;
+                        margin-right: 8px !important;
+                    }
+
+                    .mobile-top .dropdown-menu .dropdown-item:hover,
+                    .mobile-dropdown-menu .dropdown-item:hover {
+                        background: #fff3df !important;
+                        color: #d97600 !important;
+                    }
+
+                    .mobile-top .dropdown-menu .dropdown-item.active,
+                    .mobile-top .dropdown-menu .dropdown-item:active,
+                    .mobile-dropdown-menu .dropdown-item.active,
+                    .mobile-dropdown-menu .dropdown-item:active {
+                        background: #f7e6c8 !important;
+                        color: #d97600 !important;
+                        font-weight: 700 !important;
+                    }
+
+                .mobile-top .dropdown-menu .dropdown-divider,
+                .mobile-dropdown-menu .dropdown-divider {
+                    margin: 0 !important;
+                    border-top: 1px solid #dedede !important;
+                    opacity: 1 !important;
+                }
+
+                .mobile-top .dropdown-menu .text-danger,
+                .mobile-dropdown-menu .text-danger {
+                    color: #dc3545 !important;
+                }
+        }
+        /* ServiceGo provider navigation: identical on every provider page */
+        .sidebar .nav a.active,
+        .sidebar .nav a:hover {
+            background: #ffb74d !important;
+            color: #fff !important;
+        }
+
+            .sidebar .nav a.active i,
+            .sidebar .nav a:hover i {
+                color: #fff !important;
+            }
+
+        @@media (max-width: 768px) {
+            .mobile-top .dropdown-menu.mobile-dropdown-menu,
+            .mobile-top .dropdown-menu {
+                width: 205px !important;
+                min-width: 205px !important;
+                max-width: 205px !important;
+                padding: 8px !important;
+                margin-top: 8px !important;
+                border: 1px solid #eee !important;
+                border-radius: 14px !important;
+                background: #fff !important;
+                box-shadow: 0 6px 18px rgba(0,0,0,.15) !important;
+            }
+
+                .mobile-top .dropdown-menu.mobile-dropdown-menu .dropdown-item,
+                .mobile-top .dropdown-menu .dropdown-item {
+                    display: flex !important;
+                    align-items: center !important;
+                    min-height: 42px !important;
+                    padding: 9px 12px !important;
+                    margin: 0 !important;
+                    gap: 10px !important;
+                    border-radius: 9px !important;
+                    font-size: 16px !important;
+                    font-weight: 600 !important;
+                    line-height: 1.2 !important;
+                    color: #292929 !important;
+                }
+
+                    .mobile-top .dropdown-menu .dropdown-item i {
+                        width: 22px !important;
+                        min-width: 22px !important;
+                        margin-right: 0 !important;
+                        color: #d97600 !important;
+                        font-size: 17px !important;
+                    }
+
+                    .mobile-top .dropdown-menu .dropdown-item:hover,
+                    .mobile-top .dropdown-menu .dropdown-item.active {
+                        background: #fff3df !important;
+                        color: #d97600 !important;
+                    }
+
+                        .mobile-top .dropdown-menu .dropdown-item:hover i,
+                        .mobile-top .dropdown-menu .dropdown-item.active i {
+                            color: #d97600 !important;
+                        }
+
+                    .mobile-top .dropdown-menu .dropdown-item.text-danger,
+                    .mobile-top .dropdown-menu .dropdown-item.text-danger:hover {
+                        color: #dc3545 !important;
+                    }
+
+                        .mobile-top .dropdown-menu .dropdown-item.text-danger i {
+                            color: #dc3545 !important;
+                        }
+        }
+
+        /* Compact history cards: layout-safe presentation override only. */
+        .history-card {
+            margin-bottom: 10px !important;
+            border-radius: 10px !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,.04) !important;
+        }
+
+        .history-card-top {
+            padding: 10px 14px !important;
+            border-bottom: 0 !important;
+        }
+
+        .service-title {
+            gap: 8px !important;
+        }
+
+        .service-icon {
+            width: 34px !important;
+            height: 34px !important;
+            flex-basis: 34px !important;
+            border-radius: 9px !important;
+            font-size: 15px !important;
+        }
+
+        .service-title h5 {
+            font-size: 13px !important;
+        }
+
+        .service-title p {
+            font-size: 10px !important;
+            margin-top: 2px !important;
+        }
+
+        .status-badge {
+            padding: 5px 9px !important;
+            font-size: 10px !important;
+        }
+
+        .booking-ref {
+            font-size: 9px !important;
+            margin-top: 3px !important;
+        }
+
+        .history-summary {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px 16px;
+            padding: 0 14px 10px;
+            color: #777;
+            font-size: 10px;
+        }
+
+            .history-summary span {
+                white-space: nowrap;
+            }
+
+            .history-summary i {
+                color: #d97600;
+                margin-right: 3px;
+            }
+
+        .history-cancelled-by {
+            color: #c62828;
+            font-weight: 700;
+        }
+
+        @@media (max-width:768px) {
+            .history-card-top {
+                padding: 9px 11px !important;
+                gap: 8px !important;
+            }
+
+            .history-summary {
+                padding: 0 11px 9px;
+                gap: 5px 10px;
+                font-size: 9px;
+            }
+
+            .service-icon {
+                width: 30px !important;
+                height: 30px !important;
+                flex-basis: 30px !important;
+            }
+
+            .service-title h5 {
+                font-size: 12px !important;
+            }
+
+            .status-badge {
+                padding: 4px 7px !important;
+                font-size: 9px !important;
+            }
+        }
+
+        .sidebar-unread-badge {
+            margin-left: auto;
+            background: #fff;
+            color: #d97600;
+            font-weight: 700;
+            font-size: 11px;
+            line-height: 1;
+            padding: 4px 7px;
+            border-radius: 12px;
+        }
+
+        .provider-mobile-unread-badge {
+            margin-left: auto;
+            background: #d97600;
+            color: #fff;
+            font-size: 10px;
+            line-height: 1;
+            padding: 4px 7px;
+            border-radius: 12px;
+        }
+
+        .complaint-card {
+            min-width: 0;
+        }
+
+        @@media (max-width: 768px) {
+            .complaint-card {
+                margin-bottom: 10px !important;
+                border-radius: 10px !important;
+            }
+
+                .complaint-card .complaint-top {
+                    flex-direction: row !important;
+                    align-items: center !important;
+                    padding: 10px 12px !important;
+                    gap: 8px !important;
+                }
+
+                .complaint-card .complaint-title {
+                    min-width: 0 !important;
+                    gap: 7px !important;
+                }
+
+                .complaint-card .complaint-icon {
+                    width: 30px !important;
+                    height: 30px !important;
+                    flex-basis: 30px !important;
+                    border-radius: 8px !important;
+                    font-size: 13px !important;
+                }
+
+                .complaint-card .complaint-title h5 {
+                    font-size: 12px !important;
+                }
+
+                .complaint-card .complaint-title span {
+                    font-size: 9px !important;
+                }
+
+                .complaint-card .complaint-status {
+                    font-size: 9px !important;
+                    padding: 4px 7px !important;
+                    flex: 0 0 auto;
+                }
+
+                .complaint-card .complaint-details {
+                    padding: 9px 12px !important;
+                }
+
+                    .complaint-card .complaint-details label {
+                        font-size: 10px !important;
+                    }
+
+                    .complaint-card .complaint-details p {
+                        font-size: 11px !important;
+                        line-height: 1.35 !important;
+                        margin-bottom: 0 !important;
+                    }
+
+                .complaint-card .complaint-grid {
+                    display: grid !important;
+                    grid-template-columns: 1fr !important;
+                    gap: 7px !important;
+                    padding: 9px 12px 11px !important;
+                }
+
+                    .complaint-card .complaint-grid > div {
+                        display: flex !important;
+                        align-items: center !important;
+                        justify-content: space-between !important;
+                        gap: 10px !important;
+                        padding: 6px 0 !important;
+                        border-bottom: 1px solid #f0f0f0 !important;
+                    }
+
+                        .complaint-card .complaint-grid > div:last-child {
+                            border-bottom: 0 !important;
+                        }
+
+                    .complaint-card .complaint-grid small {
+                        font-size: 9px !important;
+                        color: #999 !important;
+                        margin: 0 !important;
+                    }
+
+                    .complaint-card .complaint-grid strong {
+                        font-size: 10px !important;
+                        text-align: right !important;
+                        overflow-wrap: anywhere !important;
+                    }
+        }
+    </style>
+
+    <style>
+        /* PROVIDER MOBILE CONSISTENCY FINAL — mobile only; desktop/sidebar untouched. */
+        @@media (max-width: 768px) {
+            .mobile-top,
+            .mobile-top-header {
+                height: 70px !important;
+                min-height: 70px !important;
+                padding: 0 15px !important;
+            }
+
+                .mobile-top .logo,
+                .mobile-top-header > img:first-child {
+                    width: 40px !important;
+                    height: 40px !important;
+                    object-fit: contain !important;
+                }
+
+                .mobile-top .profile-thumb,
+                .mobile-top-header .profile-thumb {
+                    width: 40px !important;
+                    height: 40px !important;
+                    object-fit: cover !important;
+                    border-radius: 50% !important;
+                    border: 2px solid #d97600 !important;
+                }
+
+                .mobile-top .dropdown-menu,
+                .mobile-dropdown-menu {
+                    width: 205px !important;
+                    min-width: 205px !important;
+                    max-width: 205px !important;
+                    padding: 8px !important;
+                    margin-top: 8px !important;
+                    border: 1px solid #eee !important;
+                    border-radius: 14px !important;
+                    overflow: hidden !important;
+                    box-shadow: 0 14px 35px rgba(0,0,0,.14) !important;
+                    background: #fff !important;
+                }
+
+                    .mobile-top .dropdown-menu .dropdown-item,
+                    .mobile-dropdown-menu .dropdown-item {
+                        min-height: 42px !important;
+                        display: flex !important;
+                        align-items: center !important;
+                        gap: 10px !important;
+                        padding: 9px 12px !important;
+                        margin: 0 !important;
+                        border-radius: 10px !important;
+                        font-size: 16px !important;
+                        line-height: 1.35 !important;
+                        font-weight: 600 !important;
+                        white-space: nowrap !important;
+                        color: #333 !important;
+                    }
+
+                        .mobile-top .dropdown-menu .dropdown-item i,
+                        .mobile-dropdown-menu .dropdown-item i {
+                            width: 20px !important;
+                            min-width: 20px !important;
+                            text-align: center !important;
+                            margin: 0 !important;
+                            color: #d97600 !important;
+                            font-size: 17px !important;
+                        }
+
+                        .mobile-top .dropdown-menu .dropdown-item:hover,
+                        .mobile-dropdown-menu .dropdown-item:hover,
+                        .mobile-top .dropdown-menu .dropdown-item.active,
+                        .mobile-dropdown-menu .dropdown-item.active {
+                            background: #fff3df !important;
+                            color: #d97600 !important;
+                        }
+
+                    .mobile-top .dropdown-menu .dropdown-divider,
+                    .mobile-dropdown-menu .dropdown-divider {
+                        margin: 4px 0 !important;
+                    }
+
+                    .mobile-top .dropdown-menu .text-danger,
+                    .mobile-dropdown-menu .text-danger,
+                    .mobile-top .dropdown-menu .text-danger i,
+                    .mobile-dropdown-menu .text-danger i {
+                        color: #dc3545 !important;
+                    }
+
+            .main {
+                width: 100% !important;
+                margin-left: 0 !important;
+                max-width: 100% !important;
+                padding-left: 12px !important;
+                padding-right: 12px !important;
+            }
+
+                .main > *, .page-container, .job-card, .wallet-card, .profile-card,
+                .notification-card, .notif-card {
+                    max-width: 100% !important;
+                }
+
+            .row {
+                --bs-gutter-x: 0.75rem;
+            }
+        }
+    </style>
+
+
+    <style id="servicego-caret-fix">
+        /* Keep the text caret only where the user can actually type. */
+        body, body * {
+            caret-color: transparent !important;
+        }
+
+        input, textarea, select, [contenteditable="true"], [contenteditable=""] {
+            caret-color: auto !important;
+        }
+
+            input[type="button"], input[type="submit"], input[type="reset"], input[type="checkbox"], input[type="radio"], input[type="file"], select {
+                caret-color: transparent !important;
+            }
+    </style>
+
+    <style id="servicego-unified-provider-navigation">
+        /* ServiceGo unified provider navigation — visual/layout only */
+        .sidebar .nav a {
+            background: transparent !important;
+            color: #fff !important;
+        }
+
+            .sidebar .nav a.active {
+                background-color: #ffb74d !important;
+                color: #fff !important;
+                font-weight: 600 !important;
+            }
+
+                .sidebar .nav a.active i {
+                    color: #fff !important;
+                }
+
+            .sidebar .nav a:hover:not(.active) {
+                background: transparent !important;
+                color: #fff !important;
+            }
+
+        @@media (max-width: 768px) {
+            .mobile-top {
+                height: 70px !important;
+                min-height: 70px !important;
+                padding: 0 15px !important;
+            }
+
+                .mobile-top .logo {
+                    width: 40px !important;
+                    height: 40px !important;
+                    object-fit: contain !important;
+                }
+
+                .mobile-top .profile-thumb {
+                    width: 40px !important;
+                    height: 40px !important;
+                    object-fit: cover !important;
+                    border-radius: 50% !important;
+                    border: 2px solid #d97600 !important;
+                    cursor: pointer !important;
+                }
+
+                .mobile-top .dropdown-menu.mobile-dropdown-menu {
+                    width: 205px !important;
+                    min-width: 205px !important;
+                    max-width: 205px !important;
+                    padding: 8px !important;
+                    margin-top: 8px !important;
+                    border: 1px solid #eee !important;
+                    border-radius: 14px !important;
+                    background: #fff !important;
+                    box-shadow: 0 14px 35px rgba(0,0,0,.14) !important;
+                    overflow: hidden !important;
+                }
+
+                    .mobile-top .dropdown-menu.mobile-dropdown-menu .dropdown-item {
+                        display: flex !important;
+                        align-items: center !important;
+                        min-height: 42px !important;
+                        padding: 9px 12px !important;
+                        margin: 0 !important;
+                        gap: 10px !important;
+                        border-radius: 10px !important;
+                        font-size: 16px !important;
+                        line-height: 1.35 !important;
+                        font-weight: 600 !important;
+                        white-space: nowrap !important;
+                        color: #333 !important;
+                    }
+
+                        .mobile-top .dropdown-menu.mobile-dropdown-menu .dropdown-item i {
+                            width: 20px !important;
+                            min-width: 20px !important;
+                            margin: 0 !important;
+                            text-align: center !important;
+                            color: #d97600 !important;
+                            font-size: 17px !important;
+                        }
+
+                        .mobile-top .dropdown-menu.mobile-dropdown-menu .dropdown-item.active {
+                            background: #fff3df !important;
+                            color: #d97600 !important;
+                            font-weight: 700 !important;
+                        }
+
+                            .mobile-top .dropdown-menu.mobile-dropdown-menu .dropdown-item.active i {
+                                color: #d97600 !important;
+                            }
+
+                        .mobile-top .dropdown-menu.mobile-dropdown-menu .dropdown-item.text-danger,
+                        .mobile-top .dropdown-menu.mobile-dropdown-menu .dropdown-item.text-danger i {
+                            color: #dc3545 !important;
+                        }
+
+                    .mobile-top .dropdown-menu.mobile-dropdown-menu .dropdown-divider {
+                        margin: 4px 0 !important;
+                        border-top: 1px solid #dedede !important;
+                        opacity: 1 !important;
+                    }
+        }
+
+        body, body * {
+            caret-color: transparent !important;
+        }
+
+        input, textarea, select, [contenteditable="true"], [contenteditable=""] {
+            caret-color: auto !important;
+        }
+
+            input[type="button"], input[type="submit"], input[type="reset"],
+            input[type="checkbox"], input[type="radio"], input[type="file"], select {
+                caret-color: transparent !important;
+            }
+
+
+        /*
+                                 * Provider complaint history — clean single-card layout
+                                 * Existing page shell and other history cards are untouched.
+                                 */
+        #complaintHistory .complaint-history-card {
+            overflow: hidden;
+        }
+
+        #complaintHistory .complaint-info-list {
+            padding: 0;
+            background: #fff;
+        }
+
+        #complaintHistory .complaint-info-row {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 24px;
+            padding: 13px 20px;
+            border-top: 1px solid #f0f0f0;
+        }
+
+            #complaintHistory .complaint-info-row > span {
+                flex: 0 0 145px;
+                color: #8a8a8a;
+                font-size: 11px;
+                font-weight: 700;
+            }
+
+            #complaintHistory .complaint-info-row > strong {
+                flex: 1;
+                min-width: 0;
+                color: #333;
+                font-size: 12px;
+                font-weight: 600;
+                line-height: 1.55;
+                text-align: left;
+                overflow-wrap: anywhere;
+                white-space: normal;
+            }
+
+        #complaintHistory .complaint-details-row > strong {
+            font-weight: 500;
+            color: #555;
+        }
+
+        @@media (max-width: 768px) {
+            #complaintHistory .complaint-info-row {
+                gap: 12px;
+                padding: 10px 12px;
+            }
+
+                #complaintHistory .complaint-info-row > span {
+                    flex: 0 0 105px;
+                    font-size: 10px;
+                }
+
+                #complaintHistory .complaint-info-row > strong {
+                    font-size: 11px;
+                    line-height: 1.45;
+                }
+        }
+    </style>
+
+    <style>
+        /*
+                                 * Complaint history — compact horizontal card
+                                 * Keep the existing page/sidebar/cards intact.
+                                 * Information stays side-by-side instead of stacking.
+                                 */
+        #complaintHistory .complaint-history-card {
+            width: 100%;
+            overflow: hidden;
+        }
+
+        #complaintHistory .complaint-info-list {
+            display: grid !important;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 0 !important;
+            padding: 0 !important;
+            background: #fff;
+        }
+
+        #complaintHistory .complaint-info-row {
+            min-width: 0;
+            min-height: 68px;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            justify-content: center !important;
+            gap: 5px !important;
+            padding: 12px 18px !important;
+            border-top: 1px solid #f0f0f0 !important;
+            border-right: 1px solid #f0f0f0 !important;
+        }
+
+            #complaintHistory .complaint-info-row:nth-child(4n) {
+                border-right: 0 !important;
+            }
+
+            #complaintHistory .complaint-info-row > span {
+                flex: none !important;
+                width: 100%;
+                color: #999 !important;
+                font-size: 10px !important;
+                font-weight: 600 !important;
+                text-transform: uppercase;
+                letter-spacing: .35px;
+                line-height: 1.2 !important;
+            }
+
+            #complaintHistory .complaint-info-row > strong {
+                flex: none !important;
+                width: 100%;
+                min-width: 0;
+                color: #333 !important;
+                font-size: 12px !important;
+                font-weight: 600 !important;
+                line-height: 1.35 !important;
+                text-align: left !important;
+                overflow-wrap: anywhere;
+                white-space: normal;
+            }
+
+        #complaintHistory .complaint-details-row > strong {
+            color: #555 !important;
+            font-weight: 500 !important;
+        }
+
+        @@media (max-width: 1100px) {
+            #complaintHistory .complaint-info-list {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+
+            #complaintHistory .complaint-info-row:nth-child(4n) {
+                border-right: 1px solid #f0f0f0 !important;
+            }
+
+            #complaintHistory .complaint-info-row:nth-child(3n) {
+                border-right: 0 !important;
+            }
+        }
+
+        @@media (max-width: 768px) {
+            #complaintHistory .complaint-info-list {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            #complaintHistory .complaint-info-row {
+                min-height: 62px;
+                padding: 10px 12px !important;
+                gap: 4px !important;
+            }
+
+                #complaintHistory .complaint-info-row:nth-child(3n),
+                #complaintHistory .complaint-info-row:nth-child(4n) {
+                    border-right: 1px solid #f0f0f0 !important;
+                }
+
+                #complaintHistory .complaint-info-row:nth-child(2n) {
+                    border-right: 0 !important;
+                }
+
+                #complaintHistory .complaint-info-row > span {
+                    font-size: 9px !important;
+                }
+
+                #complaintHistory .complaint-info-row > strong {
+                    font-size: 10.5px !important;
+                    line-height: 1.3 !important;
+                }
+        }
+
+        @@media (max-width: 420px) {
+            #complaintHistory .complaint-info-row {
+                min-height: 58px;
+                padding: 9px 10px !important;
+            }
+
+                #complaintHistory .complaint-info-row > span {
+                    font-size: 8px !important;
+                }
+
+                #complaintHistory .complaint-info-row > strong {
+                    font-size: 10px !important;
+                }
+        }
+
+        /*
+                                 * Provider mobile greeting
+                                 * Same greeting as the Provider Dashboard.
+                                 */
+        .mobile-provider-area {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-end !important;
+            gap: 10px !important;
+        }
+
+        .mobile-provider-greeting {
+            color: #d97600 !important;
+            font-size: 15px !important;
+            font-weight: 700 !important;
+            white-space: nowrap !important;
+            line-height: 1 !important;
+        }
+
+        @@media (max-width: 768px) {
+            .mobile-provider-area {
+                display: flex !important;
+                align-items: center !important;
+            }
+
+            .mobile-provider-greeting {
+                display: inline-flex !important;
+                align-items: center !important;
+            }
+        }
+
+        @@media (min-width: 769px) {
+            .mobile-provider-area {
+                display: none !important;
+            }
+        }</style>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        function showProviderAlert(message, icon = "error", title = "") {
+            if (window.Swal) {
+                return Swal.fire({
+                    icon: icon,
+                    title: title || (icon === "success" ? "Done" : "Notice"),
+                    text: String(message || ""),
+                    confirmButtonText: "OK",
+                    confirmButtonColor: "#d97600",
+                    buttonsStyling: true,
+                    customClass: { popup: "servicego-swal-popup" }
+                });
+            }
+            return Promise.resolve();
+        }
+    </script>
+
+    <style id="sg-popup-theme">
+        /* Compact, soft popups (SweetAlert2) */
+        body .swal2-container {
+            padding: 12px;
+        }
+
+            body .swal2-container .swal2-popup {
+                width: min(340px, calc(100vw - 32px));
+                padding: 22px 20px 18px !important;
+                border-radius: 20px !important;
+                box-shadow: 0 18px 50px rgba(33, 37, 41, .20) !important;
+                font-family: inherit !important;
+            }
+
+        .swal2-icon {
+            zoom: .72;
+            margin: .2em auto .7em !important;
+        }
+
+        .swal2-title {
+            font-size: 1.12rem !important;
+            font-weight: 700 !important;
+            color: #212529 !important;
+            padding: 0 !important;
+            margin: 0 0 .3rem !important;
+        }
+
+        .swal2-html-container {
+            font-size: .9rem !important;
+            line-height: 1.5 !important;
+            color: #6c757d !important;
+            margin: .2rem 0 0 !important;
+            padding: 0 .2em !important;
+        }
+
+        .swal2-actions {
+            margin-top: 1.1rem !important;
+            gap: 8px;
+        }
+
+        .swal2-styled {
+            border-radius: 12px !important;
+            padding: .55rem 1.2rem !important;
+            min-width: 92px;
+            font-size: .9rem !important;
+            font-weight: 600 !important;
+            box-shadow: none !important;
+        }
+
+            .swal2-styled.swal2-confirm {
+                background-color: #d97600 !important;
+            }
+
+            .swal2-styled.swal2-cancel {
+                background-color: #e9ecef !important;
+                color: #495057 !important;
+            }
+
+            .swal2-styled:focus {
+                box-shadow: 0 0 0 3px rgba(217, 118, 0, .25) !important;
+            }
+
+        .swal2-popup.swal2-show {
+            animation: sgPopIn .22s ease-out !important;
+        }
+
+        .swal2-popup.swal2-hide {
+            animation: sgPopOut .15s ease-in !important;
+        }
+
+        @@keyframes sgPopIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px) scale(.96);
+            }
+
+            to {
+                opacity: 1;
+                transform: none;
+            }
+        }
+
+        @@keyframes sgPopOut {
+            from {
+                opacity: 1;
+                transform: none;
+            }
+
+            to {
+                opacity: 0;
+                transform: translateY(6px) scale(.97);
+            }
+        }
+
+        /* Bootstrap modals: smaller, rounded, smooth */
+        .modal-content {
+            border: 0 !important;
+            border-radius: 18px !important;
+            box-shadow: 0 18px 50px rgba(33, 37, 41, .20) !important;
+            overflow: hidden;
+        }
+
+        .modal-header {
+            padding: .85rem 1.1rem;
+        }
+
+        .modal-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+        }
+
+        .modal-body {
+            padding: 1rem 1.1rem;
+        }
+
+        .modal-footer {
+            padding: .7rem 1.1rem;
+            gap: 6px;
+        }
+
+        .modal-backdrop.show {
+            opacity: .35;
+        }
+
+        .modal.fade .modal-dialog {
+            transform: translateY(14px) scale(.97);
+            transition: transform .22s ease-out;
+        }
+
+        .modal.show .modal-dialog {
+            transform: none;
+        }
+
+        @@media (min-width: 576px) {
+            .modal-dialog.modal-md {
+                --bs-modal-width: 440px;
+                max-width: 440px;
+            }
+
+            .modal-dialog.modal-lg {
+                --bs-modal-width: 620px;
+            }
+        }
+
+        .sg-rec-dot {
+            display: inline-block;
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: #dc3545;
+            margin-left: 4px;
+            vertical-align: middle;
+            animation: sgBlink 1s infinite;
+        }
+
+        @@keyframes sgBlink {
+            50% {
+                opacity: .25;
+            }
+        }
+    </style>
+
+    <style id="sg-provider-mobile-header">
+        /* Mobile header: "Hi Provider" first, then the profile photo centered inside an orange round ring */
+        @@media (max-width: 768px) {
+            .mobile-provider-area,
+            .mobile-top .dropdown,
+            .mobile-top-header .dropdown {
+                display: flex !important;
+                align-items: center !important;
+                gap: 10px !important;
+            }
+
+                .mobile-provider-area > .dropdown {
+                    gap: 0 !important;
+                }
+
+            .mobile-provider-greeting {
+                order: -1 !important;
+                display: inline-block !important;
+                margin: 0 !important;
+                color: #d97600 !important;
+                font-size: 15px !important;
+                font-weight: 700 !important;
+                line-height: 1 !important;
+                white-space: nowrap !important;
+            }
+
+            .mobile-top .profile-thumb,
+            .mobile-top-header .profile-thumb,
+            .mobile-top img.profile-thumb,
+            .mobile-profile-trigger {
+                box-sizing: border-box !important;
+                width: 44px !important;
+                height: 44px !important;
+                min-width: 44px !important;
+                min-height: 44px !important;
+                max-width: 44px !important;
+                max-height: 44px !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                border: 2px solid #d97600 !important;
+                border-radius: 50% !important;
+                object-fit: cover !important;
+                object-position: center !important;
+                aspect-ratio: 1 / 1 !important;
+                display: block !important;
+                background: #fff !important;
+                cursor: pointer;
+            }
+
+                .profile-thumb.dropdown-toggle::after,
+                .mobile-profile-trigger::after {
+                    display: none !important;
+                }
+        }
+    </style>
+
+    <style id="sg-history-focus">
+        /* Booking opened from a notification: highlighted briefly */
+        .history-card.sg-history-focus {
+            position: relative;
+            border-color: #f0a43c !important;
+            box-shadow: 0 0 0 3px rgba(240, 164, 60, .35), 0 14px 32px rgba(217, 118, 0, .18) !important;
+            animation: sgHistoryGlow 1.2s ease-in-out 3;
+        }
+
+        .sg-history-focus-tag {
+            position: absolute;
+            top: 8px;
+            right: 12px;
+            padding: 3px 10px;
+            border-radius: 999px;
+            background: #d97600;
+            color: #fff;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: .2px;
+            box-shadow: 0 4px 10px rgba(217, 118, 0, .3);
+            z-index: 2;
+        }
+
+        @@keyframes sgHistoryGlow {
+            0%, 100% {
+                box-shadow: 0 0 0 3px rgba(240, 164, 60, .35), 0 14px 32px rgba(217, 118, 0, .18);
+            }
+
+            50% {
+                box-shadow: 0 0 0 7px rgba(240, 164, 60, .20), 0 14px 32px rgba(217, 118, 0, .28);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="mobile-top">
+        <a href="@Url.Action("Index", "Home")" aria-label="ServiceGo Home">
+            <img src="@Url.Content("~/images/Logo.png")" class="logo" alt="ServiceGo" />
+        </a>
+        <div class="mobile-provider-area">
+            <span class="mobile-provider-greeting">Hi Provider</span>
+            <div class="dropdown">
+                <img src="@providerProfileImage" class="profile-thumb dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" alt="Profile" />
+                <ul class="dropdown-menu dropdown-menu-end mobile-dropdown-menu">
+                    <li>
+                        <a class="dropdown-item" href="@Url.Action("Dashboard", "Provider")"><i class="bi bi-house-door"></i>Dashboard</a><a class="dropdown-item" href="@Url.Action("Profile", "Provider")"><i class="bi bi-person"></i>Profile</a><a class="dropdown-item" href="@Url.Action("Messages", "Provider")"><i class="bi bi-chat-dots"></i>Messages</a><a class="dropdown-item active" href="@Url.Action("History", "Provider")"><i class="bi bi-clock-history"></i>History</a><a class="dropdown-item" href="@Url.Action("Notifications", "Provider")">
+                            <i class="bi bi-bell"></i>
+                            Notifications
+                            @if (providerUnreadCount > 0)
+                            {
+                                <span class="provider-mobile-unread-badge">@providerUnreadCount</span>
+                            }
+                        </a><a class="dropdown-item text-danger" href="@Url.Action("Logout", "Provider")"><i class="bi bi-box-arrow-right"></i>Logout</a>
+                    </li>
+                    <li><hr class="dropdown-divider" /></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="sidebar">
+        <a href="@Url.Action("Index", "Home")" aria-label="ServiceGo Home"><img src="@Url.Content("~/images/Logo.png")" class="logo" alt="ServiceGo" onclick="window.location.href='@Url.Action("Index", "Home")'" /></a>
+        <div class="provider-greeting">Hi Provider</div>
+        <div class="nav">
+            <a href="@Url.Action("Dashboard", "Provider")"><i class="bi bi-house-door"></i><span>Dashboard</span></a><a href="@Url.Action("Profile", "Provider")"><i class="bi bi-person"></i><span>Profile</span></a><a href="@Url.Action("Messages", "Provider")"><i class="bi bi-chat-dots"></i><span>Messages</span></a><a href="@Url.Action("History", "Provider")" class="active"><i class="bi bi-clock-history"></i><span>History</span></a><a href="@Url.Action("Notifications", "Provider")">
+                <i class="bi bi-bell"></i>
+                <span>Notifications</span>
+                @if (providerUnreadCount > 0)
+                {
+                    <span class="sidebar-unread-badge">@providerUnreadCount</span>
+                }
+            </a><a href="@Url.Action("Logout", "Provider")"><i class="bi bi-box-arrow-right"></i><span>Logout</span></a>
+        </div>
+    </div>
+    <main class="main">
+        <div class="page-container">
+            <div class="page-header"><div class="page-icon"><i class="bi bi-clock-history"></i></div><h2>History</h2></div>
+            <div class="history-tabs">
+                <button type="button" class="history-tab active" data-target="jobHistory"><i class="bi bi-briefcase"></i><span>Job History</span><small>@jobHistoryCount</small></button>
+                <button type="button" class="history-tab" data-target="complaintHistory"><i class="bi bi-exclamation-triangle"></i><span>Complaint History</span><small>@(Model.ComplaintHistory?.Count ?? 0)</small></button>
+            </div>
+            <section id="jobHistory" class="history-section active">
+                <div class="section-heading"><div><h4>Job History</h4></div><span class="section-pill"><i class="bi bi-briefcase"></i> @jobHistoryCount Jobs</span></div>
+                @if (jobHistoryItems != null && jobHistoryItems.Any())
+                {
+                    foreach (var item in jobHistoryItems)
+                    {
+                        var status = string.IsNullOrWhiteSpace(item.Status) ? "Unknown" : item.Status.Trim();
+                        var statusClass = status.Equals("Completed", StringComparison.OrdinalIgnoreCase) ? "status-completed" : status.Equals("Accepted", StringComparison.OrdinalIgnoreCase) ? "status-accepted" : status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase) ? "status-cancelled" : status.Equals("Rejected", StringComparison.OrdinalIgnoreCase) ? "status-rejected" : "status-expired";
+                        var statusIcon = status.Equals("Completed", StringComparison.OrdinalIgnoreCase) ? "bi-check-circle-fill" : status.Equals("Accepted", StringComparison.OrdinalIgnoreCase) ? "bi-check2-circle" : status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase) ? "bi-x-circle-fill" : status.Equals("Rejected", StringComparison.OrdinalIgnoreCase) ? "bi-slash-circle-fill" : "bi-clock-history";
+                        DateTime historyEventDate = item.BookingDate;
+                        if (status.Equals("Completed", StringComparison.OrdinalIgnoreCase) && item.CompletedAt.HasValue) { historyEventDate = item.CompletedAt.Value; }
+                        else if (status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase) && item.CancelledAt.HasValue) { historyEventDate = item.CancelledAt.Value; }
+                        else if (status.Equals("Rejected", StringComparison.OrdinalIgnoreCase) && item.RejectedAt.HasValue) { historyEventDate = item.RejectedAt.Value; }
+                        <article class="history-card" id="history-booking-@item.Id" data-booking-id="@item.Id">
+                            <div class="history-card-top">
+                                <div class="service-title">
+                                    <div class="service-icon"><i class="bi bi-tools"></i></div>
+                                    <div>
+                                        <h5>@(string.IsNullOrWhiteSpace(item.ServiceName) ? "Service" : item.ServiceName)</h5>
+                                    </div>
+                                </div>
+                                <div class="text-end"><span class="status-badge @statusClass"><i class="bi @statusIcon"></i> @status</span><div class="booking-ref">Booking: @item.BookingId</div></div>
+                            </div>
+                            <div class="history-summary">
+                                <span><i class="bi bi-calendar3"></i>@historyEventDate.ToString("dd MMM yyyy")</span>
+                                <span><i class="bi bi-clock"></i>@(string.IsNullOrWhiteSpace(item.BookingTime) ? "N/A" : item.BookingTime)</span>
+                                <span><i class="bi bi-tools"></i>@(string.IsNullOrWhiteSpace(item.ServiceType) ? "Service" : item.ServiceType)</span>
+                                @if (status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(item.CancelledBy))
+                                {
+                                    <span class="history-cancelled-by"><i class="bi bi-person-x"></i>Cancelled by @item.CancelledBy</span>
+                                }
+                                @if (item.HasRescheduleHistory && !string.IsNullOrWhiteSpace(item.RescheduledStatus))
+                                {
+                                    if (item.RescheduledStatus.Equals("Accepted", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        <span><i class="bi bi-calendar-check"></i>Reschedule Accepted</span>
+                                    }
+                                    else if (item.RescheduledStatus.Equals("Rejected", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        <span><i class="bi bi-calendar-x"></i>Reschedule Rejected</span>
+                                    }
+                                    else if (item.RescheduledStatus.Equals("Pending", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        <span><i class="bi bi-calendar-event"></i>Reschedule Pending</span>
+                                    }
+
+                                    if (!string.IsNullOrWhiteSpace(item.RescheduleRequestedBy))
+                                    {
+                                        <span><i class="bi bi-person"></i>Requested by @item.RescheduleRequestedBy</span>
+                                    }
+                                }
+                            </div>
+                        </article>
+                    }
+                }
+                else
+                {
+
+                    <div class="empty-state"><i class="bi bi-briefcase"></i><h5>No Job History Found</h5><p>Your completed, cancelled and rejected bookings will appear here.</p></div>
+                }
+            </section>
+            <section id="complaintHistory" class="history-section">
+
+                <div class="section-heading">
+                    <div>
+                        <h4>Complaint History</h4>
+                    </div>
+
+                    <span class="section-pill">
+                        <i class="bi bi-shield-exclamation"></i>
+                        @(Model.ComplaintHistory?.Count ?? 0) Complaints
+                    </span>
+                </div>
+
+                @if (Model.ComplaintHistory != null && Model.ComplaintHistory.Any())
+                {
+                    foreach (var complaint in Model.ComplaintHistory)
+                    {
+                        var complaintStatus = string.IsNullOrWhiteSpace(complaint.Status)
+                        ? "Pending"
+                        : complaint.Status.Trim();
+
+                        var complaintStatusClass = complaintStatus.Equals("Resolved", StringComparison.OrdinalIgnoreCase)
+                        ? "complaint-resolved"
+                        : complaintStatus.Equals("Rejected", StringComparison.OrdinalIgnoreCase)
+                        ? "complaint-rejected"
+                        : "complaint-pending";
+
+                        string historyIssue = string.Empty;
+
+                        if (!string.IsNullOrWhiteSpace(complaint.OtherIssue) &&
+                        !complaint.OtherIssue.Equals("Other", StringComparison.OrdinalIgnoreCase))
+                        {
+                            historyIssue = complaint.OtherIssue.Trim();
+                        }
+                        else if (!string.IsNullOrWhiteSpace(complaint.IssueCategory) &&
+                        !complaint.IssueCategory.Equals("General", StringComparison.OrdinalIgnoreCase) &&
+                        !complaint.IssueCategory.Equals("Other", StringComparison.OrdinalIgnoreCase))
+                        {
+                            historyIssue = complaint.IssueCategory.Trim();
+                        }
+                        else if (complaint.OtherIssue?.Equals("Other", StringComparison.OrdinalIgnoreCase) == true)
+                        {
+                            historyIssue = "Other";
+                        }
+
+                        <article class="complaint-card complaint-history-card">
+
+                            <div class="complaint-top">
+                                <div class="complaint-title">
+                                    <div class="complaint-icon">
+                                        <i class="bi bi-exclamation-triangle-fill"></i>
+                                    </div>
+                                    <div>
+                                        <h5>Complaint #@complaint.ComplaintId</h5>
+                                        <span>@complaint.CreatedAt.ToString("dd MMM yyyy, hh:mm tt")</span>
+                                    </div>
+                                </div>
+
+                                <span class="complaint-status @complaintStatusClass">
+                                    @complaintStatus
+                                </span>
+                            </div>
+
+                            <div class="complaint-info-list">
+
+                                <div class="complaint-info-row">
+                                    <span>Customer ID</span>
+                                    <strong>
+                                        @(string.IsNullOrWhiteSpace(complaint.CustomerId) ? "N/A" : complaint.CustomerId)
+                                    </strong>
+                                </div>
+
+                                <div class="complaint-info-row">
+                                    <span>Customer Name</span>
+                                    <strong>
+                                        @(string.IsNullOrWhiteSpace(complaint.CustomerName) ? "N/A" : complaint.CustomerName)
+                                    </strong>
+                                </div>
+
+                                @if (!string.IsNullOrWhiteSpace(historyIssue))
+                                {
+                                    <div class="complaint-info-row">
+                                        <span>Issue Category</span>
+                                        <strong>@historyIssue</strong>
+                                    </div>
+                                }
+
+                                @if (!string.IsNullOrWhiteSpace(complaint.ComplaintDetails))
+                                {
+                                    <div class="complaint-info-row complaint-details-row">
+                                        <span>Complaint Details</span>
+                                        <strong>@complaint.ComplaintDetails</strong>
+                                    </div>
+                                }
+
+                            </div>
+
+                        </article>
+                    }
+                }
+                else
+                {
+                    <div class="empty-state">
+                        <i class="bi bi-shield-check"></i>
+                        <h5>No Complaint History Found</h5>
+                        <p>Complaints submitted by you will appear here.</p>
+                    </div>
+                }
+
+            </section>
+        </div>
+    </main>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const tabs = document.querySelectorAll(".history-tab");
+            const sections = document.querySelectorAll(".history-section");
+            tabs.forEach(tab => tab.addEventListener("click", function () {
+                const target = document.getElementById(this.getAttribute("data-target"));
+                tabs.forEach(t => t.classList.remove("active")); sections.forEach(s => s.classList.remove("active")); this.classList.add("active"); if (target) target.classList.add("active");
+            }));
+        });
+    </script>
+
+    <script id="servicego-history-load-more">
+        document.addEventListener("DOMContentLoaded", function () {
+            const sections = [
+                {
+                    sectionId: "jobHistory",
+                    cardSelector: ".history-card",
+                    buttonId: "jobHistoryLoadMore"
+                },
+                {
+                    sectionId: "complaintHistory",
+                    cardSelector: ".complaint-card",
+                    buttonId: "complaintHistoryLoadMore"
+                }
+            ];
+
+            sections.forEach(function (config) {
+                setupProviderHistoryLoadMore(config);
+            });
+        });
+
+        function setupProviderHistoryLoadMore(config) {
+            const section = document.getElementById(config.sectionId);
+            if (!section) return;
+
+            const cards = Array.from(
+                section.querySelectorAll(config.cardSelector)
+            );
+
+            if (cards.length <= 15) {
+                cards.forEach(function (card) {
+                    card.hidden = false;
+                });
+                return;
+            }
+
+            const maxVisible = Math.min(cards.length, 30);
+            let visibleCount = 15;
+
+            const button = document.createElement("button");
+            button.type = "button";
+            button.id = config.buttonId;
+            button.className =
+                "btn btn-outline-warning d-block mx-auto mt-3 mb-4 px-4 py-2 fw-semibold";
+            button.textContent = "Load More";
+            button.setAttribute("aria-controls", config.sectionId);
+            button.setAttribute("aria-expanded", "false");
+
+            section.appendChild(button);
+
+            function update() {
+                cards.forEach(function (card, index) {
+                    card.hidden = index >= visibleCount;
+                });
+
+                if (visibleCount >= maxVisible) {
+                    button.textContent = "Show Less";
+                    button.setAttribute("aria-expanded", "true");
+                } else {
+                    button.textContent = "Load More";
+                    button.setAttribute("aria-expanded", "false");
+                }
+            }
+
+            button.addEventListener("click", function () {
+                if (visibleCount >= maxVisible) {
+                    visibleCount = 15;
+                } else {
+                    visibleCount = Math.min(
+                        visibleCount + 15,
+                        maxVisible
+                    );
+                }
+
+                update();
+            });
+
+            update();
+        }
+    </script>
+
+    <script id="servicego-history-focus">
+        // Scroll to and highlight the booking that was opened from a notification.
+        window.addEventListener("load", function () {
+            var params = new URLSearchParams(window.location.search);
+            var bookingId = params.get("bookingId");
+            if (!bookingId || !/^\d+$/.test(bookingId)) return;
+
+            // Wait briefly so the "Load More" script has finished hiding cards.
+            setTimeout(function () {
+                var card = document.getElementById("history-booking-" + bookingId);
+                if (!card) return;
+
+                // Make sure the Job History tab is open and the card is visible.
+                var section = card.closest(".history-section");
+                if (section && !section.classList.contains("active")) {
+                    var tab = document.querySelector('.history-tab[data-target="' + section.id + '"]');
+                    if (tab) tab.click();
+                }
+                card.hidden = false;
+
+                card.classList.add("sg-history-focus");
+
+                var tag = document.createElement("span");
+                tag.className = "sg-history-focus-tag";
+                tag.textContent = "From your notification";
+                card.appendChild(tag);
+
+                card.scrollIntoView({ behavior: "smooth", block: "center" });
+
+                // Remove the highlight after a few seconds.
+                setTimeout(function () {
+                    card.classList.remove("sg-history-focus");
+                    if (tag.parentNode) tag.parentNode.removeChild(tag);
+                }, 4500);
+
+                // A refresh should not highlight the card again.
+                if (window.history && window.history.replaceState) {
+                    params.delete("bookingId");
+                    var query = params.toString();
+                    window.history.replaceState(
+                        null, "",
+                        window.location.pathname + (query ? "?" + query : ""));
+                }
+            }, 250);
+        });
+    </script>
+</body>
+</html>

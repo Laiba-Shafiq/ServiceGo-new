@@ -1,0 +1,545 @@
+﻿@model ServiceGo.Models.CustomerSignup
+@{
+    Layout = null;
+    var verificationError = ViewBag.VerificationError as string ?? "";
+    var verificationEmail = ViewBag.VerificationEmail as string ?? "";
+    bool showVerificationPrompt = ViewBag.ShowVerificationPrompt == true;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Signup - ServiceGo</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="icon" href="~/images/Logo.png" type="image/x-icon">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --brand: #f0ad4e;
+            --brand-dark: #e39e3e;
+            --ink: #222;
+            --muted: #6b7280;
+            --danger: #dc3545;
+            --success: #198754;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 24px 12px;
+            background: linear-gradient(135deg, #f8f9fa, #fff5e8);
+            caret-color: transparent;
+        }
+
+        input, textarea, select, button {
+            caret-color: auto;
+        }
+
+        .signup-card {
+            background: #fff;
+            padding: 36px 40px;
+            border-radius: 22px;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: 0 14px 40px rgba(0,0,0,.10);
+            position: relative;
+        }
+
+        .logo {
+            width: 78px;
+            display: block;
+            margin: 0 auto 12px;
+            cursor: pointer;
+        }
+
+        h3 {
+            color: var(--brand);
+            font-weight: 700;
+            margin-bottom: 6px;
+            text-align: center;
+        }
+
+        .subtitle {
+            color: var(--muted);
+            font-size: .9rem;
+            text-align: center;
+            margin-bottom: 26px;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+            .form-group label {
+                display: block;
+                font-weight: 600;
+                color: var(--ink);
+                margin-bottom: 7px;
+            }
+
+        .input-wrap {
+            position: relative;
+        }
+
+            .input-wrap .form-control {
+                padding: 11px 48px 11px 12px;
+                border-radius: 11px;
+                border: 1px solid #d6d9dd;
+                box-shadow: none;
+            }
+
+                .input-wrap .form-control:focus {
+                    border-color: var(--brand);
+                    box-shadow: 0 0 0 .2rem rgba(240,173,78,.14);
+                }
+
+        .password-toggle {
+            position: absolute;
+            top: 50%;
+            right: 10px;
+            transform: translateY(-50%);
+            width: 34px;
+            height: 34px;
+            border: 0;
+            border-radius: 50%;
+            background: transparent;
+            color: #6b7280;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            padding: 0;
+        }
+
+            .password-toggle:hover {
+                background: #f7f7f7;
+                color: var(--brand-dark);
+            }
+
+            .password-toggle svg {
+                width: 19px;
+                height: 19px;
+            }
+
+        .field-error {
+            min-height: 19px;
+            margin-top: 5px;
+            color: var(--danger);
+            font-size: .78rem;
+            font-weight: 500;
+        }
+
+            .field-error:empty {
+                display: none;
+            }
+
+        .server-error {
+            color: var(--danger);
+            background: #fff5f5;
+            border: 1px solid #f3c2c2;
+            border-radius: 10px;
+            padding: 10px 12px;
+            margin-bottom: 16px;
+            font-size: .82rem;
+        }
+
+            .server-error:empty {
+                display: none;
+            }
+
+        .password-hint {
+            color: var(--muted);
+            font-size: .75rem;
+            margin-top: 5px;
+        }
+
+        .btn-signup {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 11px;
+            background: linear-gradient(180deg, var(--brand), var(--brand-dark));
+            color: #fff;
+            font-weight: 700;
+            margin-top: 8px;
+            cursor: pointer;
+            transition: .2s ease;
+        }
+
+            .btn-signup:hover {
+                transform: translateY(-1px);
+            }
+
+            .btn-signup:disabled {
+                opacity: .7;
+                cursor: wait;
+                transform: none;
+            }
+
+        .login-link {
+            text-align: center;
+            margin-top: 18px;
+            font-size: .9rem;
+            color: #555;
+        }
+
+            .login-link a {
+                color: #6f42c1;
+                font-weight: 600;
+                text-decoration: none;
+            }
+
+                .login-link a:hover {
+                    text-decoration: underline;
+                }
+
+        .success-note {
+            color: var(--success);
+            background: #f0fff7;
+            border: 1px solid #bfe8d1;
+            border-radius: 10px;
+            padding: 10px 12px;
+            margin-bottom: 16px;
+            font-size: .82rem;
+        }
+
+        .email-check-note {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 11px 13px;
+            margin: 0 0 18px;
+            border: 1px solid #cfe9d9;
+            border-radius: 10px;
+            background: #f3fff7;
+            color: #47745a;
+            font-size: .78rem;
+            line-height: 1.45;
+        }
+
+            .email-check-note strong {
+                display: block;
+                color: #3d8a5d;
+                font-size: .84rem;
+                margin-bottom: 2px;
+            }
+
+            .email-check-note span {
+                display: block;
+            }
+
+        .email-check-icon {
+            width: 24px;
+            height: 24px;
+            flex: 0 0 24px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            background: #d8f3e2;
+            color: #3c9a61;
+            font-weight: 800;
+            margin-top: 1px;
+        }
+
+        @@media (max-width: 576px) {
+            .signup-card {
+                padding: 28px 20px;
+                border-radius: 18px;
+            }
+        }
+
+        /* Keep exactly one password visibility icon. Hide browser-native reveal/clear icons. */
+        input[type="password"]::-ms-reveal,
+        input[type="password"]::-ms-clear {
+            display: none;
+            width: 0;
+            height: 0;
+        }
+
+        /* Bootstrap adds a validation icon inside invalid inputs; remove it so it never sits under the eye icon. */
+        .form-control.is-invalid,
+        .was-validated .form-control:invalid {
+            background-image: none !important;
+        }
+
+        .input-wrap .form-control.is-invalid,
+        .password-wrap .form-control.is-invalid {
+            background-image: none !important;
+        }
+
+        /* ServiceGo polished validation/caret styling */
+        body, body * {
+            caret-color: transparent;
+        }
+
+        input, textarea, select, [contenteditable="true"] {
+            caret-color: auto;
+        }
+
+            input:focus, textarea:focus, select:focus {
+                caret-color: var(--brand);
+            }
+
+        .field-error {
+            min-height: 18px;
+            margin-top: 6px;
+            padding-left: 2px;
+            color: #d56a9f !important;
+            font-size: .77rem;
+            font-weight: 600;
+            line-height: 1.35;
+        }
+
+            .field-error:empty {
+                display: none;
+            }
+
+        .server-error:empty {
+            display: none;
+        }
+
+        .server-error {
+            color: #c56a8f;
+            background: #fff7fa;
+            border: 1px solid #f3cddd;
+            border-radius: 10px;
+            padding: 9px 12px;
+            margin-bottom: 14px;
+            font-size: .8rem;
+        }
+
+        .logo-link {
+            display: block;
+            width: max-content;
+            margin: 0 auto 12px;
+            line-height: 0;
+        }
+
+            .logo-link .logo {
+                margin: 0;
+            }
+    </style>
+</head>
+<body>
+    <div class="signup-card">
+        <a href="@Url.Action("Index", "Home")" class="logo-link" aria-label="Go to ServiceGo Home"><img src="~/images/Logo.png" alt="ServiceGo Logo" class="logo"></a>
+
+        <h3>Customer Signup</h3>
+        <div class="subtitle">Create your account and verify your email to continue.</div>
+
+        @if (showVerificationPrompt)
+        {
+            <div class="email-check-note" role="status">
+                <div class="email-check-icon">✓</div>
+                <div>
+                    <strong>Please check your email</strong>
+                    <span>We sent a verification link to <b>@verificationEmail</b>. Open your email and click <b>Verify Email Address</b> to continue.</span>
+                </div>
+            </div>
+        }
+
+        <form asp-action="SignUp"
+              asp-controller="Home"
+              method="post"
+              id="signupForm"
+              novalidate>
+            @Html.AntiForgeryToken()
+
+            <div class="form-group">
+                <label for="Name">Full Name</label>
+                <input id="Name" name="Name" type="text" class="form-control"
+                       placeholder="Enter your full name"
+                       value="@Model?.Name"
+                       autocomplete="name">
+                <div id="NameError" class="field-error">
+                    @ViewData.ModelState["Name"]?.Errors.FirstOrDefault()?.ErrorMessage
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="Email">Email Address</label>
+                <input id="Email" name="Email" type="email" class="form-control"
+                       placeholder="Enter your email address"
+                       value="@Model?.Email"
+                       autocomplete="email">
+                <div id="EmailError" class="field-error">
+                    @ViewData.ModelState["Email"]?.Errors.FirstOrDefault()?.ErrorMessage
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="Password">Password</label>
+                <div class="input-wrap">
+                    <input id="Password" name="Password" type="password" class="form-control"
+                           placeholder="Create a password"
+                           autocomplete="new-password"
+                           minlength="6"
+                           required>
+                    <button type="button" class="password-toggle" data-target="Password"
+                            aria-label="Show password" title="Show password">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                    </button>
+                </div>
+                <div id="PasswordError" class="field-error">
+                    @ViewData.ModelState["Password"]?.Errors.FirstOrDefault()?.ErrorMessage
+                </div>
+                <div class="password-hint">Minimum 6 characters • uppercase • lowercase • number • symbol</div>
+            </div>
+
+            <div class="form-group">
+                <label for="ConfirmPassword">Confirm Password</label>
+                <div class="input-wrap">
+                    <input id="ConfirmPassword" name="ConfirmPassword" type="password" class="form-control"
+                           placeholder="Re-enter your password"
+                           autocomplete="new-password"
+                           minlength="6"
+                           required>
+                    <button type="button" class="password-toggle" data-target="ConfirmPassword"
+                            aria-label="Show password" title="Show password">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                    </button>
+                </div>
+                <div id="ConfirmPasswordError" class="field-error">
+                    @ViewData.ModelState["ConfirmPassword"]?.Errors.FirstOrDefault()?.ErrorMessage
+                </div>
+            </div>
+
+            <button type="submit" id="signupBtn" class="btn-signup">Sign Up</button>
+        </form>
+
+        <div class="login-link">
+            Already have an account?
+            <a href="@Url.Action("Login", "Home")">Login</a>
+        </div>
+    </div>
+
+    <script>
+        (() => {
+            const form = document.getElementById("signupForm");
+            const btn = document.getElementById("signupBtn");
+
+            const fields = {
+                Name: document.getElementById("Name"),
+                Email: document.getElementById("Email"),
+                Password: document.getElementById("Password"),
+                ConfirmPassword: document.getElementById("ConfirmPassword")
+            };
+
+            const errors = {
+                Name: document.getElementById("NameError"),
+                Email: document.getElementById("EmailError"),
+                Password: document.getElementById("PasswordError"),
+                ConfirmPassword: document.getElementById("ConfirmPasswordError")
+            };
+
+            function setError(key, message) {
+                if (errors[key]) errors[key].textContent = message || "";
+                if (fields[key]) fields[key].classList.toggle("is-invalid", !!message);
+            }
+
+            function clearError(key) {
+                setError(key, "");
+            }
+
+            function validate() {
+                let valid = true;
+
+                Object.keys(fields).forEach(clearError);
+
+                const name = fields.Name.value.trim();
+                const email = fields.Email.value.trim();
+                const password = fields.Password.value;
+                const confirm = fields.ConfirmPassword.value;
+
+                if (!name) {
+                    setError("Name", "Full Name is required.");
+                    valid = false;
+                }
+
+                if (!email) {
+                    setError("Email", "Email is required.");
+                    valid = false;
+                } else if (!/^[^\s@@]+@@[^\s@@]+\.[^\s@@]+$/.test(email)) {
+                    setError("Email", "Please enter a valid email address.");
+                    valid = false;
+                }
+
+                if (!password) {
+                    setError("Password", "Password is required.");
+                    valid = false;
+                } else if (!/^(?=.{6,}$)(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).+$/.test(password)) {
+                    setError("Password", "Use at least 6 characters with uppercase, lowercase, number and symbol.");
+                    valid = false;
+                }
+
+                if (!confirm) {
+                    setError("ConfirmPassword", "Please confirm your password.");
+                    valid = false;
+                } else if (password !== confirm) {
+                    setError("ConfirmPassword", "Passwords do not match.");
+                    valid = false;
+                }
+
+                return valid;
+            }
+
+            form.addEventListener("submit", function (event) {
+                if (!validate()) {
+                    event.preventDefault();
+                    const firstInvalid = form.querySelector(".is-invalid");
+                    firstInvalid?.focus();
+                    return;
+                }
+
+                btn.disabled = true;
+                btn.textContent = "Sending verification email...";
+            });
+
+            Object.entries(fields).forEach(([key, input]) => {
+                input.addEventListener("input", () => {
+                    if (key === "ConfirmPassword") {
+                        if (input.value && input.value === fields.Password.value) clearError(key);
+                    } else if (input.value.trim()) {
+                        clearError(key);
+                    }
+
+                    if (key === "Password" && fields.ConfirmPassword.value) {
+                        if (fields.Password.value !== fields.ConfirmPassword.value) {
+                            setError("ConfirmPassword", "Passwords do not match.");
+                        } else {
+                            clearError("ConfirmPassword");
+                        }
+                    }
+                });
+            });
+
+            document.querySelectorAll(".password-toggle").forEach(button => {
+                button.addEventListener("click", () => {
+                    const input = document.getElementById(button.dataset.target);
+                    if (!input) return;
+
+                    const showing = input.type === "text";
+                    input.type = showing ? "password" : "text";
+
+                    button.setAttribute("aria-label", showing ? "Show password" : "Hide password");
+                    button.setAttribute("title", showing ? "Show password" : "Hide password");
+                });
+            });
+        })();
+    </script>
+</body>
+</html>

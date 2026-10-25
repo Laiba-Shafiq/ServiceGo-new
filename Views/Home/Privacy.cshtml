@@ -1,0 +1,174 @@
+﻿@{
+    Layout = null;
+    ViewBag.Title = "Privacy Policy";
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ServiceGo - Privacy Policy</title>
+
+    <!-- Google Fonts & Bootstrap 5 -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" />
+    <link rel="icon" href="@Url.Content("~/images/Logo.png")" type="image/x-icon" />
+
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f8f9fa;
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .policy-container {
+            background: #fff;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            padding: 45px;
+            margin-top: 20px;
+            margin-bottom: 50px;
+        }
+
+        .brand-logo {
+            height: 55px;
+            object-fit: contain;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+            .brand-logo:hover {
+                transform: scale(1.05);
+            }
+
+        h2 {
+            color: #d97600;
+            font-weight: 700;
+            font-size: 1.8rem;
+        }
+
+        h5 {
+            color: #b86400;
+            font-weight: 600;
+            margin-top: 30px;
+            margin-bottom: 12px;
+            font-size: 1.1rem;
+            border-left: 3px solid #f0ad4e;
+            padding-left: 10px;
+        }
+
+        .btn-back {
+            background-color: #d97600 !important;
+            color: #fff !important;
+            font-weight: 500;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 20px;
+            transition: 0.2s;
+        }
+
+            .btn-back:hover {
+                background-color: #b86400 !important;
+                transform: translateY(-1px);
+            }
+
+        ul {
+            padding-left: 20px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        /* Keep the text caret visible only where typing is possible. */
+        body {
+            caret-color: transparent;
+        }
+
+        input,
+        textarea,
+        select,
+        [contenteditable="true"] {
+            caret-color: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container mt-4">
+        <div class="row justify-content-center">
+            <div class="col-lg-9 col-md-11">
+
+                <!-- Header Navigation Area -->
+                <div class="d-flex justify-content-between align-items-center px-2 mb-2">
+                    <!-- Clickable Logo leading to Index.cshtml -->
+                    <a href="@Url.Action("Index", "Home")">
+                        <img src="@Url.Content("~/images/Logo.png")" alt="ServiceGo Logo" class="brand-logo">
+                    </a>
+
+                    <!-- Back to Home navigation instead of closing tab -->
+                    <a href="@Url.Action("Index", "Home")" class="btn btn-sm btn-back shadow-sm">
+                        <i class="bi bi-house-door me-1"></i> Back to Home
+                    </a>
+                </div>
+
+                <!-- Main Content Box -->
+                <div class="policy-container">
+                    <div class="text-center border-bottom pb-3 mb-4">
+                        <h2>Privacy Policy</h2>
+                        <p class="text-muted mb-1">Last Updated: October 2026</p>
+                    </div>
+
+                    <p class="lead" style="font-size: 1rem; color: #555;">Welcome to <strong>ServiceGo</strong>. Your privacy is important to us. This Privacy Policy explains what personal information we collect, how we use it, and who can see it when you use our platform as a Customer or a Service Provider.</p>
+
+                    <h5>1. Information We Collect</h5>
+                    <p>When you register and use ServiceGo, we collect the information needed to provide the service, including:</p>
+                    <ul>
+                        <li><strong>Customers:</strong> Full name, email address, phone number, city, permanent address and map location, and profile photo.</li>
+                        <li><strong>Service Providers:</strong> Full name, email address, phone number, city, CNIC number with CNIC front and back images, profile photo, skills, category, years of experience, certificate, affidavit, a verification video, and home or shop address and location.</li>
+                        <li><strong>Booking &amp; Activity Data:</strong> Booking details (service, date, time, location, problem description and photo), chat text and voice messages, ratings, complaints, and notifications.</li>
+                        <li><strong>Wallet Data (Providers):</strong> Wallet balance, and payment receipt images uploaded when adding money to the wallet.</li>
+                    </ul>
+
+                    <h5>2. How We Use Your Information</h5>
+                    <p>We use your information only to run and protect the platform:</p>
+                    <ul>
+                        <li>To show and match Customers with suitable Service Providers using the service type and location.</li>
+                        <li>To create and manage bookings, chat, notifications, and ratings.</li>
+                        <li>To let the Admin review and approve Service Provider profiles using the documents they submit.</li>
+                        <li>To review wallet top-up receipts and manage the provider wallet.</li>
+                        <li>To handle complaints, send warnings, and block accounts when needed.</li>
+                    </ul>
+
+                    <h5>3. Data Security &amp; Protection</h5>
+                    <p>ServiceGo uses reasonable security measures to protect your profile, account status, and identity records from unauthorized access. Provider verification documents (CNIC, certificate, affidavit and verification video) are used for verification by the Admin and are not shown to Customers. We do not sell or rent your personal information to any third-party marketing company. No online system can be completely secure, so please keep your login details private.</p>
+
+                    <h5>4. Information Sharing between Parties</h5>
+                    <ul>
+                        <li><strong>Customer to Provider:</strong> When you send a booking request, the Provider you chose can see your name, contact details, and the booking location and address, so the service can be carried out.</li>
+                        <li><strong>Provider to Customer:</strong> Customers can see the Provider's name, rating, and the details needed for the booking.</li>
+                        <li><strong>Provider's Home Location:</strong> A Provider's home address and home location are kept private and are never shown to Customers. Only the shop address of a Provider who offers Shop Service is shown.</li>
+                    </ul>
+                    <p>This information is shared only so both sides can connect and complete the booking; service payments are settled directly between them.</p>
+
+                    <h5>5. Your Profile Information</h5>
+                    <p>You can update your contact details and location from your profile at any time. For Service Providers, documents that have already been verified (such as CNIC and certificate) cannot be changed from the profile after approval.</p>
+
+                    <h5>6. Contact Us</h5>
+                    <p>If you have any questions or security concerns about this Privacy Policy, you can submit them through our <strong>Complaints Management System</strong> inside your dashboard.</p>
+
+                    <h5>7. Changes to this Policy</h5>
+                    <p>We may update this Privacy Policy from time to time. The date at the top shows when it was last updated, and continued use of ServiceGo means you accept the updated policy.</p>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

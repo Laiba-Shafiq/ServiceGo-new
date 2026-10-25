@@ -1,0 +1,2330 @@
+﻿@model List<ServiceGo.Models.Message>
+
+@using System
+@using System.Linq
+@using System.Text.Json
+@using System.Collections.Generic
+@{
+    Layout = null;
+
+    var chatsList = ViewBag.Chats as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
+    var activeProviderId = ViewBag.ActiveProviderId as string ?? string.Empty;
+    var activeProviderName = ViewBag.ActiveProviderName as string ?? "Select a chat";
+
+    var customerUnreadCount = ViewBag.UnreadNotificationCount as int? ?? 0;
+
+    var customerProfileImage = ViewBag.CustomerProfileImage as string ?? string.Empty;
+    var profileImageUrl = string.IsNullOrWhiteSpace(customerProfileImage)
+        ? Url.Content("~/images/Profile icon.png")
+        : Url.Content(customerProfileImage);
+
+    var activeProviderProfileImage = Convert.ToString(ViewBag.ActiveProviderProfileImage) ?? string.Empty;
+    var activeProviderProfileImageUrl = string.IsNullOrWhiteSpace(activeProviderProfileImage)
+        ? Url.Content("~/images/Profile icon.png")
+        : Url.Content(activeProviderProfileImage);
+
+    var customerChats = new List<object>();
+
+    foreach (var c in chatsList)
+    {
+        var providerId = Convert.ToString(c.ProviderId) ?? string.Empty;
+        var providerName = Convert.ToString(c.ProviderName) ?? "Provider";
+        var providerImage = Convert.ToString(c.ProviderProfileImage);
+
+        var providerImageUrl = string.IsNullOrWhiteSpace(providerImage)
+            ? Url.Content("~/images/Profile icon.png")
+            : (providerImage.StartsWith("~")
+                ? Url.Content(providerImage)
+                : providerImage.StartsWith("/")
+                    ? providerImage
+                    : Url.Content("~/" + providerImage.TrimStart('/')));
+
+        var messages = new List<object>();
+
+        // The controller supplies Messages for every provider chat,
+        // exactly like the working Provider Messages page.
+        // For compatibility, the active chat can still fall back to Model.
+        try
+        {
+            var chatMessagesProperty = c.GetType().GetProperty("Messages");
+            var chatMessagesValue = chatMessagesProperty?.GetValue(c) as System.Collections.IEnumerable;
+
+            if (chatMessagesValue != null)
+            {
+                foreach (var rawMessage in chatMessagesValue)
+                {
+                    var messageType = rawMessage.GetType();
+                    messages.Add(new
+                    {
+                        id = Convert.ToString(messageType.GetProperty("id")?.GetValue(rawMessage)) ?? string.Empty,
+                        type = Convert.ToString(messageType.GetProperty("type")?.GetValue(rawMessage)) ?? "received",
+                        text = Convert.ToString(messageType.GetProperty("text")?.GetValue(rawMessage)) ?? string.Empty,
+                        time = Convert.ToString(messageType.GetProperty("time")?.GetValue(rawMessage)) ?? string.Empty
+                    });
+                }
+            }
+        }
+        catch
+        {
+            // Keep the page alive if an older controller build has no Messages property.
+        }
+
+        if (messages.Count == 0 &&
+            string.Equals(activeProviderId, providerId, StringComparison.OrdinalIgnoreCase))
+        {
+            foreach (var m in Model ?? Enumerable.Empty<ServiceGo.Models.Message>())
+            {
+                messages.Add(new
+                {
+                    id = m.MessageId,
+                    type = m.IsFromCustomer ? "sent" : "received",
+                    text = m.TextContent ?? string.Empty,
+                    time = m.Timestamp.ToString("hh:mm tt")
+                });
+            }
+        }
+
+        customerChats.Add(new
+        {
+            providerId,
+            name = providerName,
+            img = providerImageUrl,
+            messages
+        });
+    }
+
+    var customerMessagesConfig = new
+    {
+        chats = customerChats,
+        activeId = activeProviderId,
+        activeName = activeProviderName,
+        activeProviderProfileImageUrl,
+        defaultProfileImageUrl = Url.Content("~/images/Profile icon.png"),
+        messagesUrl = Url.Action("Messages", "Customer"),
+        sendMessageUrl = Url.Action("SendMessage", "Customer"),
+        sendAudioMessageUrl = Url.Action("SendAudioMessage", "Customer"),
+        deleteMessageUrl = Url.Action("DeleteMessage", "Customer"),
+        deleteChatUrl = Url.Action("DeleteChat", "Customer")
+    };
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ServiceGo - Customer Messages</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" />
+    <link rel="icon" href="@Url.Content("~/images/Logo.png")" type="image/x-icon" />
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <link rel="stylesheet" href="/css/servicego-customer-messages.css" />
+
+
+    <style>
+        /*
+                 * Servicego customer messages
+                 * All custom CSS is kept inside this page
+                 */
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            min-height: 100%;
+        }
+
+        body {
+            background: #f2f2f2;
+            font-family: 'Poppins', sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* Desktop sidebar */
+
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 80px;
+            min-width: 80px;
+            height: 100vh;
+            background-color: #d97600 !important;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: width 0.3s ease, box-shadow 0.3s ease;
+            z-index: 1040;
+        }
+
+            .sidebar:hover,
+            .sidebar:focus-within {
+                width: 240px;
+                box-shadow: 4px 0 25px rgba(240, 173, 78, 0.3);
+            }
+
+            .sidebar img.logo {
+                width: 55px;
+                height: 55px;
+                margin: 20px 0;
+                border-radius: 12px;
+                background: #fff;
+                cursor: pointer;
+                object-fit: contain;
+                border: 2px solid #fff;
+            }
+
+            .sidebar .nav {
+                width: 100%;
+                margin-top: 10px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+
+                .sidebar .nav a {
+                    display: flex;
+                    align-items: center;
+                    width: 90%;
+                    padding: 12px 20px;
+                    margin-bottom: 6px;
+                    border-radius: 10px;
+                    color: #fff;
+                    text-decoration: none;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    background: transparent !important;
+                    gap: 0;
+                }
+
+                    .sidebar .nav a i {
+                        font-size: 1.4rem;
+                        margin-right: 15px;
+                        min-width: 25px;
+                        text-align: center;
+                    }
+
+                    .sidebar .nav a.active {
+                        background-color: #ffb74d !important;
+                        color: #fff !important;
+                        font-weight: 600;
+                    }
+
+                    .sidebar .nav a:hover:not(.active) {
+                        background: transparent !important;
+                    }
+
+                .sidebar .nav span {
+                    opacity: 0;
+                    transition: opacity 0.2s ease;
+                }
+
+            .sidebar:hover .nav span,
+            .sidebar:focus-within .nav span {
+                opacity: 1;
+            }
+
+        /* Main layout */
+
+        .main {
+            position: relative;
+            margin-left: 80px;
+            width: calc(100% - 80px);
+            height: 100vh;
+            box-sizing: border-box;
+            transition: margin-left 0.3s ease, width 0.3s ease;
+            display: flex;
+        }
+
+        .sidebar:hover ~ .main,
+        .sidebar:focus-within ~ .main {
+            margin-left: 240px;
+            width: calc(100% - 240px);
+        }
+
+        /* Mobile top header */
+
+        .mobile-top-header,
+        .mobile-top {
+            display: none;
+        }
+
+        .mobile-logo {
+            width: 45px;
+            height: 45px;
+            min-width: 45px;
+            min-height: 45px;
+            object-fit: contain;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .mobile-profile-dropdown {
+            position: relative;
+        }
+
+        .mobile-profile-btn {
+            width: 48px;
+            height: 48px;
+            min-width: 48px;
+            min-height: 48px;
+            padding: 0 !important;
+            border: 2px solid #f0a43c !important;
+            border-radius: 50% !important;
+            background: #fff !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: none !important;
+        }
+
+            .mobile-profile-btn::after {
+                display: none !important;
+            }
+
+            .mobile-profile-btn .profile-thumb,
+            .profile-thumb,
+            .mobile-profile-trigger {
+                width: 44px;
+                height: 44px;
+                min-width: 44px;
+                min-height: 44px;
+                border-radius: 50%;
+                object-fit: cover;
+                display: block;
+                border: 0;
+                background: #fff;
+            }
+
+        .mobile-profile-trigger {
+            border: 2px solid #f0a43c;
+        }
+
+        /* Mobile profile dropdown */
+
+        .mobile-profile-menu,
+        .mobile-dropdown-menu,
+        .customer-mobile-menu,
+        .mobile-top .dropdown-menu,
+        .mobile-top-header .dropdown-menu {
+            width: 192px !important;
+            min-width: 192px !important;
+            max-width: 192px !important;
+            margin-top: 8px !important;
+            padding: 6px 0 !important;
+            border: 1px solid #ddd !important;
+            border-radius: 9px !important;
+            background: #fff !important;
+            box-shadow: 0 5px 16px rgba(0, 0, 0, .18) !important;
+            overflow: hidden !important;
+            box-sizing: border-box !important;
+            z-index: 3020 !important;
+        }
+
+            .mobile-profile-menu .dropdown-item,
+            .mobile-dropdown-menu .dropdown-item,
+            .customer-mobile-menu .dropdown-item,
+            .mobile-top .dropdown-menu .dropdown-item,
+            .mobile-top-header .dropdown-menu .dropdown-item {
+                width: 100% !important;
+                min-height: 48px !important;
+                height: 48px !important;
+                padding: 10px 16px !important;
+                margin: 0 !important;
+                display: flex !important;
+                align-items: center !important;
+                gap: 12px !important;
+                border-radius: 0 !important;
+                font-size: 16px !important;
+                line-height: 1.2 !important;
+                font-weight: 700 !important;
+                white-space: nowrap !important;
+                color: #2f2f2f !important;
+                background: #fff !important;
+                box-sizing: border-box !important;
+            }
+
+                .mobile-profile-menu .dropdown-item i,
+                .mobile-dropdown-menu .dropdown-item i,
+                .customer-mobile-menu .dropdown-item i,
+                .mobile-top .dropdown-menu .dropdown-item i,
+                .mobile-top-header .dropdown-menu .dropdown-item i {
+                    width: 20px !important;
+                    min-width: 20px !important;
+                    margin: 0 !important;
+                    text-align: center !important;
+                    font-size: 18px !important;
+                    color: #444 !important;
+                }
+
+                .mobile-profile-menu .dropdown-item:hover,
+                .mobile-dropdown-menu .dropdown-item:hover,
+                .customer-mobile-menu .dropdown-item:hover,
+                .mobile-top .dropdown-menu .dropdown-item:hover,
+                .mobile-top-header .dropdown-menu .dropdown-item:hover,
+                .mobile-profile-menu .dropdown-item.active,
+                .mobile-dropdown-menu .dropdown-item.active,
+                .customer-mobile-menu .dropdown-item.active,
+                .mobile-top .dropdown-menu .dropdown-item.active,
+                .mobile-top-header .dropdown-menu .dropdown-item.active {
+                    background: #fff3e0 !important;
+                    color: #d97600 !important;
+                }
+
+                    .mobile-profile-menu .dropdown-item:hover i,
+                    .mobile-dropdown-menu .dropdown-item:hover i,
+                    .customer-mobile-menu .dropdown-item:hover i,
+                    .mobile-top .dropdown-menu .dropdown-item:hover i,
+                    .mobile-top-header .dropdown-menu .dropdown-item:hover i,
+                    .mobile-profile-menu .dropdown-item.active i,
+                    .mobile-dropdown-menu .dropdown-item.active i,
+                    .customer-mobile-menu .dropdown-item.active i,
+                    .mobile-top .dropdown-menu .dropdown-item.active i,
+                    .mobile-top-header .dropdown-menu .dropdown-item.active i {
+                        color: #d97600 !important;
+                    }
+
+            .mobile-profile-menu .dropdown-divider,
+            .mobile-dropdown-menu .dropdown-divider,
+            .customer-mobile-menu .dropdown-divider,
+            .mobile-top .dropdown-menu .dropdown-divider,
+            .mobile-top-header .dropdown-menu .dropdown-divider {
+                margin: 0 !important;
+                border-top: 1px solid #ddd !important;
+                opacity: 1 !important;
+            }
+
+            .mobile-profile-menu .logout-item,
+            .mobile-dropdown-menu .text-danger,
+            .customer-mobile-menu .logout-item,
+            .mobile-top .dropdown-menu .text-danger,
+            .mobile-top-header .dropdown-menu .text-danger,
+            .mobile-profile-menu .logout-item i,
+            .mobile-dropdown-menu .text-danger i,
+            .customer-mobile-menu .logout-item i,
+            .mobile-top .dropdown-menu .text-danger i,
+            .mobile-top-header .dropdown-menu .text-danger i {
+                color: #dc3545 !important;
+                font-weight: 800 !important;
+            }
+
+                .mobile-profile-menu .logout-item:hover,
+                .customer-mobile-menu .logout-item:hover {
+                    background: #fff1f1 !important;
+                }
+
+        /* Chat list */
+
+        .sidebar-notification-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 20px;
+            height: 20px;
+            padding: 0 6px;
+            margin-left: auto;
+            border-radius: 10px;
+            background: #fff;
+            color: #d97600;
+            font-size: .68rem;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .chat-list {
+            width: 280px;
+            min-width: 280px;
+            height: 100%;
+            background: #fff;
+            border-right: 1px solid #ddd;
+            overflow-y: auto;
+        }
+
+        .chat-item {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            padding: 15px 20px;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            background: #fff;
+            transition: background 0.2s ease;
+        }
+
+            .chat-item:hover {
+                background: #fff8ef;
+            }
+
+            .chat-item.active {
+                background-color: #fff3e0 !important;
+                border-left: 4px solid #f0ad4e !important;
+            }
+
+        /* Chat window */
+
+        .chat-window {
+            flex: 1;
+            min-width: 0;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            background: #fff;
+        }
+
+        .chat-header {
+            min-height: 65px;
+            padding: 15px;
+            background: #fff;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            font-weight: 700;
+            color: #000;
+        }
+
+        .messages {
+            flex: 1;
+            min-height: 0;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f8f8f8;
+        }
+
+        /* Message bubbles */
+
+        .message-bubble {
+            position: relative;
+            max-width: 75%;
+            word-wrap: break-word;
+            padding-top: 22px !important;
+            padding-right: 25px !important;
+        }
+
+        .message.sent {
+            margin-left: auto;
+            background: #d0e7ff;
+            color: #333;
+            border-radius: 15px;
+            border-bottom-right-radius: 0;
+        }
+
+        .message.received {
+            margin-right: auto;
+            background: #e3e3e3;
+            color: #333;
+            border-radius: 15px;
+            border-bottom-left-radius: 0;
+        }
+
+        .message-options {
+            position: absolute;
+            top: 4px;
+            right: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            z-index: 10;
+        }
+
+        .msg-time {
+            font-size: 10px;
+            color: #666;
+            margin-top: 4px;
+            text-align: right;
+        }
+
+        /* Chat input */
+
+        .chat-input {
+            width: 100%;
+            padding: 10px 14px;
+            display: flex;
+            gap: 10px;
+            background: #fff;
+            border-top: 1px solid #ddd;
+        }
+
+            .chat-input input {
+                flex: 1;
+                min-width: 0;
+                border-radius: 12px;
+                border: 1px solid #ddd;
+                padding: 12px;
+                font-size: 1rem;
+                outline: none;
+            }
+
+                .chat-input input:focus {
+                    border-color: #f0ad4e;
+                    box-shadow: 0 0 0 2px rgba(240, 173, 78, 0.15);
+                }
+
+        #sendBtn,
+        #voiceBtn {
+            width: 46px;
+            height: 46px;
+            flex-shrink: 0;
+            border: none;
+            padding: 0;
+            border-radius: 12px;
+            background: #f0ad4e;
+            color: #fff;
+            font-weight: 600;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+            #sendBtn:hover,
+            #voiceBtn:hover {
+                background: #e68900;
+            }
+
+        #cancelVoiceBtn {
+            flex-shrink: 0;
+        }
+
+        #chatInput:disabled {
+            opacity: 0.7;
+        }
+
+        .send-disabled {
+            opacity: 0.6 !important;
+            pointer-events: none;
+        }
+
+        /* Audio */
+
+        audio {
+            margin-top: 5px;
+            width: 100%;
+            max-width: 200px;
+            border-radius: 8px;
+        }
+
+        /* Back button */
+
+        .back-btn {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 20px;
+            color: #000;
+            margin-right: 10px;
+            padding: 5px;
+            cursor: pointer;
+        }
+
+        /* Caret fix */
+
+        html,
+        body,
+        body * {
+            caret-color: transparent !important;
+        }
+
+        input,
+        textarea,
+        [contenteditable="true"],
+        [contenteditable=""] {
+            caret-color: auto !important;
+        }
+
+        /* Mobile */
+
+        @@media (max-width: 768px) {
+            .sidebar {
+                display: none !important;
+            }
+
+            .mobile-top,
+            .mobile-top-header {
+                height: 70px !important;
+                min-height: 70px !important;
+                padding: 0 15px !important;
+                background: #fff !important;
+                position: fixed !important;
+                top: 0;
+                left: 0;
+                right: 0;
+                display: flex !important;
+                align-items: center;
+                justify-content: space-between;
+                z-index: 3000 !important;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, .08);
+            }
+
+                .mobile-top > .dropdown,
+                .mobile-top-header > .dropdown,
+                .mobile-profile-dropdown {
+                    position: relative !important;
+                    z-index: 3010 !important;
+                }
+
+            .main {
+                margin-left: 0 !important;
+                margin-top: 70px !important;
+                width: 100% !important;
+                height: calc(100vh - 70px) !important;
+                max-width: 100% !important;
+                padding: 0 !important;
+                display: flex !important;
+                background: #fff !important;
+                overflow: hidden !important;
+            }
+
+            .chat-list {
+                width: 100% !important;
+                max-width: 100% !important;
+                min-width: 0 !important;
+                height: 100% !important;
+                border-right: none !important;
+                display: block !important;
+                background: #fff !important;
+                overflow-y: auto !important;
+            }
+
+            .chat-item {
+                width: 100% !important;
+                padding: 15px 20px !important;
+                margin: 0 !important;
+                display: flex !important;
+                align-items: center !important;
+                border-bottom: 1px solid #f0f0f0 !important;
+            }
+
+            .chat-window {
+                position: absolute !important;
+                top: 0 !important;
+                left: 0 !important;
+                width: 100% !important;
+                height: 100% !important;
+                min-width: 100% !important;
+                display: none !important;
+                background: #fff !important;
+                z-index: 100 !important;
+            }
+
+            .main.chat-open .chat-list {
+                display: none !important;
+            }
+
+            .main.chat-open .chat-window {
+                display: flex !important;
+                flex-direction: column !important;
+            }
+
+            .back-btn {
+                display: inline-block !important;
+            }
+
+            .chat-header {
+                min-height: 55px !important;
+                padding: 13px 12px !important;
+                flex-shrink: 0;
+            }
+
+            .messages {
+                padding: 15px !important;
+            }
+
+            .message-bubble {
+                max-width: 82% !important;
+            }
+
+            .chat-input {
+                padding: 10px !important;
+                flex-shrink: 0;
+            }
+
+                .chat-input input {
+                    min-width: 0 !important;
+                    padding: 11px !important;
+                }
+
+            #sendBtn,
+            #voiceBtn {
+                width: 44px !important;
+                height: 44px !important;
+                min-width: 44px !important;
+            }
+
+            img,
+            video,
+            iframe {
+                max-width: 100%;
+            }
+        }
+
+        /* Small mobile */
+
+        @@media (max-width: 420px) {
+            .mobile-top, .mobile-top-header {
+                padding-left: 10px !important;
+                padding-right: 10px !important;
+            }
+
+                .mobile-logo,
+                .mobile-top .mobile-logo {
+                    width: 42px !important;
+                    height: 42px !important;
+                    min-width: 42px !important;
+                    min-height: 42px !important;
+                }
+
+            .mobile-profile-btn {
+                width: 46px !important;
+                height: 46px !important;
+                min-width: 46px !important;
+                min-height: 46px !important;
+            }
+
+                .mobile-profile-btn .profile-thumb,
+                .profile-thumb,
+                .mobile-profile-trigger {
+                    width: 42px !important;
+                    height: 42px !important;
+                    min-width: 42px !important;
+                    min-height: 42px !important;
+                }
+
+            .chat-item {
+                padding-left: 12px !important;
+                padding-right: 12px !important;
+            }
+
+            .messages {
+                padding: 10px !important;
+            }
+
+            .message-bubble {
+                max-width: 88% !important;
+            }
+
+            .chat-input {
+                padding-left: 8px !important;
+                padding-right: 8px !important;
+                gap: 6px !important;
+            }
+
+            #sendBtn,
+            #voiceBtn {
+                width: 42px !important;
+                height: 42px !important;
+                min-width: 42px !important;
+            }
+
+            .mobile-profile-menu,
+            .mobile-dropdown-menu,
+            .customer-mobile-menu,
+            .mobile-top .dropdown-menu,
+            .mobile-top-header .dropdown-menu {
+                width: 192px !important;
+                min-width: 192px !important;
+                max-width: 192px !important;
+            }
+        }
+
+        /* Desktop: mobile header must remain hidden */
+        @@media (min-width: 769px) {
+            .mobile-top, .mobile-top-header {
+                display: none !important;
+            }
+        }
+
+        /* Recording controls */
+        .cancel-voice-btn {
+            display: none;
+            font-size: 18px;
+        }
+
+        .recording-status {
+            display: none;
+            font-size: 12px;
+            font-weight: 600;
+        }
+    </style>
+    <style id="customer-greeting-fix">
+        .sidebar-greeting {
+            color: #fff;
+            opacity: 0;
+            visibility: hidden;
+            width: 0;
+            min-height: 0;
+            height: 0;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+            font-weight: 700;
+            font-size: .88rem;
+            line-height: 1.2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            white-space: nowrap;
+        }
+
+            .sidebar-greeting img {
+                width: 30px;
+                height: 30px;
+                border-radius: 50%;
+                object-fit: cover;
+                margin-right: 8px;
+                border: 2px solid rgba(255,255,255,.9);
+            }
+
+        .sidebar:hover .sidebar-greeting,
+        .sidebar:focus-within .sidebar-greeting {
+            opacity: 1;
+            visibility: visible;
+            width: auto;
+            min-height: 28px;
+            height: auto;
+            overflow: visible;
+            margin: 0 0 8px;
+        }
+
+        .mobile-customer-greeting {
+            color: #333;
+            font-size: 15px;
+            font-weight: 700;
+            white-space: nowrap;
+            margin-right: 8px;
+        }
+
+        @@media (min-width: 769px) {
+            .mobile-customer-greeting {
+                display: none;
+            }
+        }</style>
+
+    <style>
+        .chat-input {
+            display: none;
+        }
+
+        .chat-options {
+            margin-left: auto;
+            flex-shrink: 0;
+        }
+
+            .chat-options .dropdown-menu {
+                min-width: 145px;
+                border-color: #f6c98b;
+            }
+
+            .chat-options .dropdown-item:focus,
+            .chat-options .dropdown-item:active,
+            .chat-options .dropdown-toggle:focus {
+                outline: none !important;
+                box-shadow: none !important;
+            }
+
+            .chat-options .dropdown-item:hover,
+            .chat-options .dropdown-item:focus {
+                background: #fff3e0 !important;
+                color: #d97600 !important;
+            }
+    </style>
+
+
+    <style id="sg-popup-theme">
+        /* Compact, soft popups (SweetAlert2) */
+        .swal2-container {
+            padding: 12px !important;
+        }
+
+        .swal2-popup {
+            width: min(340px, calc(100vw - 32px)) !important;
+            padding: 22px 20px 18px !important;
+            border-radius: 20px !important;
+            box-shadow: 0 18px 50px rgba(33, 37, 41, .20) !important;
+            font-family: inherit !important;
+        }
+
+        .swal2-icon {
+            zoom: .72;
+            margin: .2em auto .7em !important;
+        }
+
+        .swal2-title {
+            font-size: 1.12rem !important;
+            font-weight: 700 !important;
+            color: #212529 !important;
+            padding: 0 !important;
+            margin: 0 0 .3rem !important;
+        }
+
+        .swal2-html-container {
+            font-size: .9rem !important;
+            line-height: 1.5 !important;
+            color: #6c757d !important;
+            margin: .2rem 0 0 !important;
+            padding: 0 .2em !important;
+        }
+
+        .swal2-actions {
+            margin-top: 1.1rem !important;
+            gap: 8px;
+        }
+
+        .swal2-styled {
+            border-radius: 12px !important;
+            padding: .55rem 1.2rem !important;
+            min-width: 92px;
+            font-size: .9rem !important;
+            font-weight: 600 !important;
+            box-shadow: none !important;
+        }
+
+            .swal2-styled.swal2-confirm {
+                background-color: #d97600 !important;
+            }
+
+            .swal2-styled.swal2-cancel {
+                background-color: #e9ecef !important;
+                color: #495057 !important;
+            }
+
+            .swal2-styled:focus {
+                box-shadow: 0 0 0 3px rgba(217, 118, 0, .25) !important;
+            }
+
+        .swal2-popup.swal2-show {
+            animation: sgPopIn .22s ease-out !important;
+        }
+
+        .swal2-popup.swal2-hide {
+            animation: sgPopOut .15s ease-in !important;
+        }
+
+        @@keyframes sgPopIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px) scale(.96);
+            }
+
+            to {
+                opacity: 1;
+                transform: none;
+            }
+        }
+
+        @@keyframes sgPopOut {
+            from {
+                opacity: 1;
+                transform: none;
+            }
+
+            to {
+                opacity: 0;
+                transform: translateY(6px) scale(.97);
+            }
+        }
+
+        /* Bootstrap modals: smaller, rounded, smooth */
+        .modal-content {
+            border: 0 !important;
+            border-radius: 18px !important;
+            box-shadow: 0 18px 50px rgba(33, 37, 41, .20) !important;
+            overflow: hidden;
+        }
+
+        .modal-header {
+            padding: .85rem 1.1rem;
+        }
+
+        .modal-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+        }
+
+        .modal-body {
+            padding: 1rem 1.1rem;
+        }
+
+        .modal-footer {
+            padding: .7rem 1.1rem;
+            gap: 6px;
+        }
+
+        .modal-backdrop.show {
+            opacity: .35;
+        }
+
+        .modal.fade .modal-dialog {
+            transform: translateY(14px) scale(.97);
+            transition: transform .22s ease-out;
+        }
+
+        .modal.show .modal-dialog {
+            transform: none;
+        }
+
+        @@media (min-width: 576px) {
+            .modal-dialog.modal-md {
+                --bs-modal-width: 440px;
+                max-width: 440px;
+            }
+
+            .modal-dialog.modal-lg {
+                --bs-modal-width: 620px;
+            }
+        }
+
+        .sg-rec-dot {
+            display: inline-block;
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: #dc3545;
+            margin-left: 4px;
+            vertical-align: middle;
+            animation: sgBlink 1s infinite;
+        }
+
+        @@keyframes sgBlink {
+            50% {
+                opacity: .25;
+            }
+        }
+    </style>
+
+    <style id="sg-mobile-header">
+        /* Mobile header: "Hi Customer" first, then the profile photo with an orange ring (same as Dashboard) */
+        @@media (max-width: 768px) {
+            .mobile-top .dropdown,
+            .mobile-top-header .dropdown {
+                display: flex !important;
+                align-items: center !important;
+                gap: 10px !important;
+            }
+
+            .mobile-customer-label,
+            .mobile-greeting-text,
+            .mobile-customer-greeting {
+                order: -1 !important;
+                display: inline-block !important;
+                margin: 0 !important;
+                color: #212529 !important;
+                font-size: .9rem !important;
+                font-weight: 700 !important;
+                line-height: 1 !important;
+                white-space: nowrap !important;
+            }
+
+            .mobile-top .profile-thumb,
+            .mobile-top-header .profile-thumb,
+            .mobile-profile-trigger,
+            .mobile-profile-image {
+                width: 44px !important;
+                height: 44px !important;
+                min-width: 44px !important;
+                min-height: 44px !important;
+                padding: 0 !important;
+                border-radius: 50% !important;
+                object-fit: cover !important;
+                display: block !important;
+                border: 2px solid #f0a43c !important;
+                background: #fff !important;
+                box-sizing: content-box !important;
+                cursor: pointer;
+            }
+
+            .mobile-profile-btn {
+                width: auto !important;
+                height: auto !important;
+                min-width: 0 !important;
+                min-height: 0 !important;
+                padding: 0 !important;
+                border: 0 !important;
+                border-radius: 50% !important;
+                background: transparent !important;
+                box-shadow: none !important;
+                display: flex !important;
+            }
+        }
+    </style>
+
+</head>
+<body>
+
+    @Html.AntiForgeryToken()
+
+    <!-- Mobile Top Header -->
+    <div class="mobile-top-header">
+        <img src="@Url.Content("~/images/Logo.png")"
+             class="mobile-logo"
+             alt="ServiceGo"
+             onclick="window.location.href='@Url.Action("Index", "Home")'">
+
+        <div class="dropdown mobile-profile-dropdown">
+            <span class="mobile-customer-greeting">Hi Customer</span>
+
+            <button type="button"
+                    class="mobile-profile-btn dropdown-toggle"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false"
+                    aria-label="Open customer menu">
+                <img src="@profileImageUrl" onerror="this.onerror=null;this.src='@Url.Content("~/images/Profile icon.png")';"
+                     class="profile-thumb"
+                     id="mobileCustomerProfileImage"
+                     alt="Profile">
+            </button>
+
+            <!-- Customer mobile menu -->
+            <ul class="dropdown-menu dropdown-menu-end customer-mobile-menu shadow">
+                <li>
+                    <a class="dropdown-item"
+                       href="@Url.Action("CusDashboard", "Customer")">
+                        <i class="bi bi-house-door"></i><span>Dashboard</span>
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item"
+                       href="@Url.Action("History", "Customer")">
+                        <i class="bi bi-clock-history"></i><span>History</span>
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item active"
+                       href="@Url.Action("Messages", "Customer")">
+                        <i class="bi bi-chat-dots"></i><span>Messages</span>
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item d-flex align-items-center"
+                       href="@Url.Action("Notifications", "Customer")">
+                        <i class="bi bi-bell"></i><span>Notifications</span>
+                        @if (customerUnreadCount > 0)
+                        {
+                            <span class="badge rounded-pill text-bg-warning ms-auto">@customerUnreadCount</span>
+                        }
+                    </a>
+                </li>
+                <li><hr class="dropdown-divider" /></li>
+                <li>
+                    <a class="dropdown-item logout-item"
+                       href="@Url.Action("Logout", "Customer")">
+                        <i class="bi bi-box-arrow-right"></i><span>Logout</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Sidebar for Desktop -->
+    <div class="sidebar" id="sidebar">
+        <img src="@Url.Content("~/images/Logo.png")"
+             class="logo"
+             onclick="location.href='@Url.Action("Index", "Home")'">
+
+        <div class="sidebar-greeting" aria-label="Customer">
+            <img src="@profileImageUrl" alt="Profile">
+            <span>Hi Customer</span>
+        </div>
+
+        <div class="nav">
+            <a href="@Url.Action("CusDashboard", "Customer")">
+                <i class="bi bi-house-door"></i>
+                <span>Dashboard</span>
+            </a>
+
+            <a href="@Url.Action("History", "Customer")">
+                <i class="bi bi-clock-history"></i>
+                <span>History</span>
+            </a>
+
+            <a href="@Url.Action("Messages", "Customer")" class="active">
+                <i class="bi bi-chat-dots"></i>
+                <span>Messages</span>
+            </a>
+
+            <a href="@Url.Action("Notifications", "Customer")">
+                <i class="bi bi-bell"></i>
+                <span>Notifications</span>
+                @if ((ViewBag.UnreadNotificationCount as int? ?? 0) > 0)
+                {
+                    <span class="sidebar-notification-badge">@(ViewBag.UnreadNotificationCount)</span>
+                }
+            </a>
+
+            <a href="@Url.Action("Logout", "Customer")">
+                <i class="bi bi-box-arrow-right"></i>
+                <span>Logout</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="main" id="mainArea">
+
+        <div class="chat-list" id="chatList"></div>
+
+        <div class="chat-window">
+
+            <div class="chat-header" id="chatHeader">
+                <button class="back-btn"
+                        type="button"
+                        onclick="closeChat()">
+                    <i class="bi bi-arrow-left"></i>
+                </button>
+
+                <span id="headerName">@activeProviderName</span>
+            </div>
+
+            <div class="messages" id="messages"></div>
+
+            <div class="chat-input align-items-center">
+                <input type="text"
+                       id="chatInput"
+                       placeholder="Type a message..."
+                       autocomplete="off" />
+
+                <button type="button"
+                        id="sendBtn"
+                        aria-label="Send message">
+                    <i class="bi bi-send-fill"></i>
+                </button>
+
+                <button type="button"
+                        id="voiceBtn"
+                        title="Click to record voice note">
+                    <i class="bi bi-mic-fill"></i>
+                </button>
+
+                <button type="button"
+                        id="cancelVoiceBtn"
+                        class="text-danger border-0 bg-transparent cancel-voice-btn"
+                        title="Cancel Recording">
+                    <i class="bi bi-x-circle-fill"></i>
+                </button>
+
+                <span id="recordingStatus"
+                      class="text-danger ms-2 recording-status">
+                    Recording... <span class="sg-rec-dot"></span>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" defer></script>
+    <script>
+        window.ServiceGoMessagesConfig = @Html.Raw(JsonSerializer.Serialize(customerMessagesConfig));
+    </script>
+    <script src="@Url.Content("~/js/servicego-customer-messages.js")" defer></script>
+
+    <script>
+        const config = window.ServiceGoMessagesConfig || {};
+        const rawChats = Array.isArray(config.chats) ? config.chats : [];
+
+        // Safety net: render each provider only once.
+        // Old messages may contain 1, PRO-1 or another stored ProviderId.
+        const chatMap = new Map();
+        rawChats.forEach(function (chat) {
+            let key = String(chat.providerId || '').trim().toLowerCase();
+            if (key.startsWith('pro-')) key = key.substring(4);
+            else if (key.startsWith('pro')) key = key.substring(3);
+            if (!key) return;
+
+            if (!chatMap.has(key)) {
+                chatMap.set(key, chat);
+            } else {
+                const existing = chatMap.get(key);
+                if ((!existing.name || existing.name === 'Provider') && chat.name) {
+                    existing.name = chat.name;
+                }
+                if ((!existing.img || existing.img === config.defaultProfileImageUrl) && chat.img) {
+                    existing.img = chat.img;
+                }
+            }
+        });
+
+        const chats = Array.from(chatMap.values());
+        const chatList = document.getElementById('chatList');
+                const messagesDiv = document.getElementById('messages');
+                const headerName = document.getElementById('headerName');
+                const input = document.getElementById('chatInput');
+                const mainArea = document.getElementById('mainArea');
+                const sendBtn = document.getElementById('sendBtn');
+
+                const urlParams = new URLSearchParams(window.location.search);
+                const urlProviderId = urlParams.get("providerId");
+                let currentProviderId = urlProviderId || config.activeId || "";
+                const resolvedName = config.activeName || "Select a chat";
+        const antiForgeryInput =
+                    document.querySelector('input[name="__RequestVerificationToken"]');
+
+                const antiForgeryToken =
+                    antiForgeryInput ? antiForgeryInput.value : '';
+
+                function renderChats() {
+                    chatList.innerHTML = '';
+
+                    if (!chats || chats.length === 0) {
+                        chatList.innerHTML =
+                            '<p class="text-muted p-3 text-center">No chats available yet.</p>';
+                        return;
+                    }
+
+                    chats.forEach((c, index) => {
+                        const div = document.createElement('div');
+                        div.className = 'chat-item';
+
+                        if (String(c.providerId).toLowerCase() === String(currentProviderId).toLowerCase()) {
+                            div.classList.add('active');
+                        }
+
+                        const img = document.createElement('img');
+                        img.src = c.img || config.defaultProfileImageUrl;
+
+                        img.onerror = function () {
+                            this.onerror = null;
+                            this.src = config.defaultProfileImageUrl;
+                        };
+                        img.className = 'rounded-circle me-3';
+                        img.width = 40;
+                        img.height = 40;
+                        img.loading = 'lazy';
+                        img.decoding = 'async';
+                        img.style.objectFit = 'cover';
+
+                        const textDiv = document.createElement('div');
+                        textDiv.style.flex = '1';
+                        textDiv.style.minWidth = '0';
+
+                        const h6 = document.createElement('h6');
+                        h6.className = 'mb-0';
+                        h6.textContent = c.name || '';
+
+                        textDiv.appendChild(h6);
+                        div.appendChild(img);
+                        div.appendChild(textDiv);
+
+                        const menuWrap = document.createElement('div');
+                        menuWrap.className = 'dropdown chat-options';
+                        menuWrap.innerHTML = `
+                            <button type="button"
+                                    class="btn btn-sm border-0 text-secondary"
+                                    data-bs-toggle="dropdown"
+                                    aria-expanded="false"
+                                    title="Chat options">
+                                <i class="bi bi-three-dots-vertical"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                <li>
+                                    <button type="button"
+                                            class="dropdown-item text-danger delete-chat-btn">
+                                        <i class="bi bi-trash3 me-2"></i>Delete Chat
+                                    </button>
+                                </li>
+                            </ul>
+                        `;
+
+                        menuWrap.querySelector('.delete-chat-btn').addEventListener('click', function (event) {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            deleteChat(c.providerId, div);
+                        });
+
+                        menuWrap.addEventListener('click', function (event) {
+                            event.stopPropagation();
+                        });
+
+                        div.appendChild(menuWrap);
+
+                        div.addEventListener('click', function () {
+                            openChatByIndex(index);
+                        });
+
+                        chatList.appendChild(div);
+                    });
+                }
+
+                async function deleteChat(providerId, chatElement) {
+                    if (!providerId) {
+                        return;
+                    }
+
+                    let confirmed = false;
+
+                    if (typeof Swal !== 'undefined') {
+                        const result = await Swal.fire({
+                            icon: 'question',
+                            title: 'Delete Chat?',
+                            text: 'This chat will be removed from your chat list.',
+                            showCancelButton: true,
+                            confirmButtonText: 'Delete Chat',
+                            cancelButtonText: 'Cancel',
+                            confirmButtonColor: '#d97600',
+                            cancelButtonColor: '#adb5bd',
+                            reverseButtons: true,
+                            width: '360px'
+                        });
+
+                        confirmed = result.isConfirmed;
+                    } else {
+                        console.error('SweetAlert2 is not loaded. Chat deletion was not confirmed.');
+                        return;
+                    }
+
+                    if (!confirmed) {
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch(config.deleteChatUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                                'RequestVerificationToken': antiForgeryToken
+                            },
+                            body: new URLSearchParams({
+                                providerId: String(providerId)
+                            }),
+                            credentials: 'same-origin'
+                        });
+
+                        const result = await response.json();
+
+                        if (!result || result.status !== 'success') {
+                            if (typeof Swal !== 'undefined') {
+                                await Swal.fire({
+                                    icon: 'error',
+                                    title: 'Unable to delete',
+                                    text: result?.message || 'Unable to delete this chat.',
+                                    confirmButtonColor: '#d97600',
+                                    width: '360px'
+                                });
+                            }
+                            return;
+                        }
+
+                        chatElement.remove();
+
+                        // Also clear the old messages from memory so a deleted chat
+                        // can never be shown again without a page reload.
+                        const deletedIndex = chats.findIndex(function (x) {
+                            return String(x.providerId) === String(providerId);
+                        });
+                        if (deletedIndex !== -1) {
+                            chats.splice(deletedIndex, 1);
+                        }
+                        renderChats();
+
+                        if (String(currentProviderId) === String(providerId)) {
+                            closeChat();
+                            headerName.innerText = 'Select a chat';
+                            messagesDiv.innerHTML = '';
+                            input.value = '';
+                            currentProviderId = '';
+                        }
+
+                        if (typeof Swal !== 'undefined') {
+                            await Swal.fire({
+                                icon: 'success',
+                                title: 'Chat Deleted',
+                                text: 'The chat was removed successfully.',
+                                confirmButtonColor: '#d97600',
+                                width: '340px',
+                                timer: 1300,
+                                showConfirmButton: false
+                            });
+                        }
+                    } catch (error) {
+                        console.error(error);
+
+                        if (typeof Swal !== 'undefined') {
+                            await Swal.fire({
+                                icon: 'error',
+                                title: 'Unable to delete',
+                                text: 'Something went wrong while deleting this chat.',
+                                confirmButtonColor: '#d97600',
+                                width: '360px'
+                            });
+                        }
+                    }
+                }
+
+
+                async function customerMessagePopup(message, icon = 'info', title = '') {
+                    if (typeof Swal !== 'undefined') {
+                        return Swal.fire({
+                            icon: icon,
+                            title: title || (icon === 'error' ? 'Something went wrong' : 'Notice'),
+                            text: message,
+                            confirmButtonColor: '#d97600',
+                            width: '360px'
+                        });
+                    }
+                    console.warn(message);
+                    return null;
+                }
+
+                function setComposerVisible(show) {
+                    const composer = document.querySelector('.chat-input');
+                    if (composer) {
+                        composer.style.display = show ? 'flex' : 'none';
+                    }
+                }
+
+                function openChatByIndex(i) {
+                    if (!chats[i]) {
+                        return;
+                    }
+
+                    // Important
+                    // When a chat is clicked, update the selected provider ID.
+                    // This is required by both Send Message and Voice Message.
+                    currentProviderId = String(chats[i].providerId || "");
+
+                    headerName.innerText =
+                        chats[i].name || resolvedName;
+
+                    // Composer is hidden only when no chat is selected.
+                    // Once the user opens a chat, show typing + send + voice controls.
+                    setComposerVisible(true);
+
+                    messagesDiv.innerHTML = '';
+
+                    if (Array.isArray(chats[i].messages)) {
+                        chats[i].messages.forEach(function (m) {
+                            appendMessageToDOM(
+                                m.id,
+                                m.type,
+                                m.text,
+                                m.time
+                            );
+                        });
+                    }
+
+                    scrollMessagesToBottom();
+                    mainArea.classList.add('chat-open');
+                }
+
+                function scrollMessagesToBottom() {
+                    setTimeout(function () {
+                        messagesDiv.scrollTop =
+                            messagesDiv.scrollHeight;
+                    }, 50);
+                }
+
+                function escapeHtml(value) {
+                    const div = document.createElement('div');
+                    div.textContent = value == null ? '' : String(value);
+                    return div.innerHTML;
+                }
+
+                function appendMessageToDOM(id, type, text, time) {
+                    const d = document.createElement('div');
+
+                    d.className =
+                        `message ${type} p-2 mb-2 rounded message-bubble`;
+
+                    d.setAttribute('data-msg-id', id);
+
+                    const safeId =
+                        String(id || '').replace(/'/g, "\\'");
+
+                    let contentHTML = '';
+                    const messageText =
+                        text == null ? '' : String(text);
+
+                    if (
+                        messageText.startsWith('/uploads/') ||
+                        messageText.includes('<audio')
+                    ) {
+                        let audioSrc = messageText;
+
+                        if (messageText.includes('<audio')) {
+                            const temp = document.createElement('div');
+                            temp.innerHTML = messageText;
+
+                            const audio = temp.querySelector('audio');
+
+                            if (audio && audio.src) {
+                                audioSrc = audio.src;
+                            }
+                        }
+
+                        contentHTML =
+                            `<audio controls
+                                src="${escapeHtml(audioSrc)}"
+                                style="height:35px; max-width:200px; display:block;">
+                            </audio>`;
+                    } else {
+                        contentHTML =
+                            `<span>${escapeHtml(messageText)}</span>`;
+                    }
+
+                    // WhatsApp style
+                    // message received from provider -> "Delete for Me" only
+                    // message sent by customer -> "Delete for Me" + "Delete for Everyone"
+                    const deleteForEveryoneItem = type === 'sent'
+                        ? `
+                                <li>
+                                    <a class="dropdown-item text-danger"
+                                       href="#"
+                                       onclick="event.preventDefault(); deleteMessage('${safeId}', 'everyone');">
+                                        Delete for Everyone
+                                    </a>
+                                </li>`
+                        : '';
+
+                    const deleteMenu = `
+                        <div class="dropdown message-options">
+                            <a href="#"
+                               data-bs-toggle="dropdown"
+                               class="text-dark"
+                               onclick="event.preventDefault();">
+                                <i class="bi bi-three-dots-vertical"></i>
+                            </a>
+
+                            <ul class="dropdown-menu dropdown-menu-end shadow"
+                                style="font-size:13px;">
+                                <li>
+                                    <a class="dropdown-item text-danger"
+                                       href="#"
+                                       onclick="event.preventDefault(); deleteMessage('${safeId}', 'me');">
+                                        Delete for Me
+                                    </a>
+                                </li>
+                                ${deleteForEveryoneItem}
+                            </ul>
+                        </div>
+                    `;
+
+                    d.innerHTML =
+                        `${deleteMenu}
+                         ${contentHTML}
+                         <div class="msg-time">${escapeHtml(time || '')}</div>`;
+
+                    messagesDiv.appendChild(d);
+                }
+
+                function closeChat() {
+                    mainArea.classList.remove('chat-open');
+                    setComposerVisible(false);
+                    currentProviderId = '';
+                    headerName.innerText = 'Select a chat';
+                    messagesDiv.innerHTML = '';
+                    input.value = '';
+                }
+
+                renderChats();
+
+                if (currentProviderId) {
+                    const index =
+                        chats.findIndex(function (c) {
+                            return String(c.providerId) ===
+                                   String(currentProviderId);
+                        });
+
+                    if (index !== -1) {
+                        openChatByIndex(index);
+                    } else {
+                        // Chat was deleted (or never started) but the user clicked
+                        // "Message" for this provider: open a fresh, empty chat with
+                        // the composer visible so the customer can type again.
+                        chats.push({
+                            providerId: String(currentProviderId),
+                            name: resolvedName,
+                            img: config.activeProviderProfileImageUrl || config.defaultProfileImageUrl,
+                            messages: []
+                        });
+                        renderChats();
+                        openChatByIndex(chats.length - 1);
+                    }
+                }
+
+                let isSendingMessage = false;
+
+                input.addEventListener('keydown', function (event) {
+                    if (event.key === 'Enter' && !event.shiftKey) {
+                        event.preventDefault();
+                        sendMessage();
+                    }
+                });
+
+                // Bind Send inside the same JS scope as sendMessage().
+                if (sendBtn) {
+                    sendBtn.addEventListener('click', sendMessage);
+                }
+
+                async function sendMessage() {
+                    const text = input.value.trim();
+
+                    if (!text) {
+                        return;
+                    }
+
+                    if (!currentProviderId) {
+                        customerMessagePopup('Please select a chat first.', 'info', 'Select a chat');
+                        return;
+                    }
+
+                    if (isSendingMessage) {
+                        return;
+                    }
+
+                    isSendingMessage = true;
+
+                    const originalButtonHTML =
+                        sendBtn.innerHTML;
+
+                    sendBtn.classList.add('send-disabled');
+
+                    sendBtn.innerHTML =
+                        '<i class="bi bi-hourglass-split"></i>';
+
+                    input.disabled = true;
+
+                    try {
+                        const formData = new FormData();
+
+                        formData.append(
+                            'providerId',
+                            String(currentProviderId)
+                        );
+
+                        formData.append(
+                            'messageText',
+                            text
+                        );
+
+                        if (antiForgeryToken) {
+                            formData.append(
+                                '__RequestVerificationToken',
+                                antiForgeryToken
+                            );
+                        }
+
+                        const response = await fetch(
+                            config.sendMessageUrl,
+                            {
+                                method: 'POST',
+                                body: formData,
+                                credentials: 'same-origin',
+                                headers: {
+                                    'RequestVerificationToken':
+                                        antiForgeryToken
+                                }
+                            }
+                        );
+
+                        const responseText =
+                            await response.text();
+
+                        let data = null;
+
+                        try {
+                            data =
+                                responseText
+                                    ? JSON.parse(responseText)
+                                    : null;
+                        } catch (jsonError) {
+                            console.error(
+                                'SendMessage returned non-JSON response:',
+                                responseText
+                            );
+
+                            throw new Error(
+                                'Server returned an invalid response. Please check the SendMessage action.'
+                            );
+                        }
+
+                        if (!response.ok) {
+                            throw new Error(
+                                data && data.message
+                                    ? data.message
+                                    : `Server error (${response.status})`
+                            );
+                        }
+
+                        if (
+                            data &&
+                            (
+                                data.status === 'success' ||
+                                data.success === true
+                            )
+                        ) {
+                            const returnedText =
+                                data.text != null
+                                    ? data.text
+                                    : text;
+
+                            const returnedTime =
+                                data.time || '';
+
+                            const returnedId =
+                                data.id ||
+                                ('temp-' + Date.now());
+
+                            appendMessageToDOM(
+                                returnedId,
+                                'sent',
+                                returnedText,
+                                returnedTime
+                            );
+
+                            input.value = '';
+                            scrollMessagesToBottom();
+                        } else {
+                            throw new Error(
+                                data && data.message
+                                    ? data.message
+                                    : 'Could not send message.'
+                            );
+                        }
+
+                    } catch (error) {
+                        console.error(
+                            'Message sending error:',
+                            error
+                        );
+
+                        customerMessagePopup(
+                            error.message ||
+                            'Message could not be sent. Please try again.',
+                            'error',
+                            'Message not sent'
+                        );
+
+                    } finally {
+                        isSendingMessage = false;
+                        input.disabled = false;
+
+                        sendBtn.classList.remove(
+                            'send-disabled'
+                        );
+
+                        sendBtn.innerHTML =
+                            originalButtonHTML;
+
+                        input.focus();
+                    }
+                }
+
+                let mediaRecorder = null;
+                let audioChunks = [];
+                let isCancelled = false;
+
+                const voiceBtn =
+                    document.getElementById('voiceBtn');
+
+                const cancelVoiceBtn =
+                    document.getElementById('cancelVoiceBtn');
+
+                const recordingStatus =
+                    document.getElementById('recordingStatus');
+
+                if (
+                    navigator.mediaDevices &&
+                    navigator.mediaDevices.getUserMedia
+                ) {
+                    voiceBtn.addEventListener(
+                        'click',
+                        async function (e) {
+                            e.preventDefault();
+
+                            if (!currentProviderId) {
+                                customerMessagePopup(
+                                    "Please select a chat first.",
+                                    'info',
+                                    'Select a chat'
+                                );
+                                return;
+                            }
+
+                            if (
+                                !mediaRecorder ||
+                                mediaRecorder.state === "inactive"
+                            ) {
+                                try {
+                                    const stream =
+                                        await navigator.mediaDevices.getUserMedia(
+                                            {
+                                                audio: true
+                                            }
+                                        );
+
+                                    let recorderOptions = {};
+
+                                    if (
+                                        typeof MediaRecorder !== 'undefined' &&
+                                        MediaRecorder.isTypeSupported &&
+                                        MediaRecorder.isTypeSupported(
+                                            'audio/webm;codecs=opus'
+                                        )
+                                    ) {
+                                        recorderOptions.mimeType =
+                                            'audio/webm;codecs=opus';
+                                    } else if (
+                                        typeof MediaRecorder !== 'undefined' &&
+                                        MediaRecorder.isTypeSupported &&
+                                        MediaRecorder.isTypeSupported(
+                                            'audio/webm'
+                                        )
+                                    ) {
+                                        recorderOptions.mimeType =
+                                            'audio/webm';
+                                    }
+
+                                    mediaRecorder =
+                                        new MediaRecorder(
+                                            stream,
+                                            recorderOptions
+                                        );
+
+                                    audioChunks = [];
+                                    isCancelled = false;
+
+                                    mediaRecorder.ondataavailable =
+                                        function (event) {
+                                            if (
+                                                event.data &&
+                                                event.data.size > 0
+                                            ) {
+                                                audioChunks.push(
+                                                    event.data
+                                                );
+                                            }
+                                        };
+
+                                    mediaRecorder.onstop =
+                                        async function () {
+                                            try {
+                                                if (!isCancelled) {
+                                                    const mimeType =
+                                                        mediaRecorder.mimeType ||
+                                                        'audio/webm';
+
+                                                    const audioBlob =
+                                                        new Blob(
+                                                            audioChunks,
+                                                            {
+                                                                type: mimeType
+                                                            }
+                                                        );
+
+                                                    if (
+                                                        audioBlob.size > 0
+                                                    ) {
+                                                        await sendAudioToServer(
+                                                            audioBlob
+                                                        );
+                                                    }
+                                                }
+                                            } finally {
+                                                stream
+                                                    .getTracks()
+                                                    .forEach(
+                                                        track =>
+                                                            track.stop()
+                                                    );
+
+                                                resetRecordingUI();
+                                            }
+                                        };
+
+                                    mediaRecorder.start();
+
+                                    voiceBtn.style.color =
+                                        '#dc3545';
+
+                                    recordingStatus.style.display =
+                                        'inline';
+
+                                    cancelVoiceBtn.style.display =
+                                        'inline-block';
+
+                                } catch (err) {
+                                    console.error(
+                                        "Microphone error:",
+                                        err
+                                    );
+
+                                    customerMessagePopup(
+                                        "Could not access microphone.",
+                                        'error',
+                                        'Microphone error'
+                                    );
+
+                                    resetRecordingUI();
+                                }
+
+                            } else if (
+                                mediaRecorder.state === "recording"
+                            ) {
+                                mediaRecorder.stop();
+                                resetRecordingUI();
+                            }
+                        }
+                    );
+
+                    cancelVoiceBtn.addEventListener(
+                        'click',
+                        function (e) {
+                            e.preventDefault();
+
+                            if (
+                                mediaRecorder &&
+                                mediaRecorder.state === "recording"
+                            ) {
+                                isCancelled = true;
+                                mediaRecorder.stop();
+                            }
+
+                            resetRecordingUI();
+                        }
+                    );
+
+                } else {
+                    voiceBtn.style.display = 'none';
+                }
+
+                function resetRecordingUI() {
+                    voiceBtn.style.color = '';
+                    recordingStatus.style.display = 'none';
+                    cancelVoiceBtn.style.display = 'none';
+                }
+
+                async function sendAudioToServer(blob) {
+                    if (!currentProviderId) {
+                        customerMessagePopup(
+                            "Please select a chat first.",
+                            'info',
+                            'Select a chat'
+                        );
+                        return;
+                    }
+
+                    try {
+                        const formData =
+                            new FormData();
+
+                        formData.append(
+                            "providerId",
+                            String(currentProviderId)
+                        );
+
+                        formData.append(
+                            "audioFile",
+                            blob,
+                            "voicenote.webm"
+                        );
+
+                        if (antiForgeryToken) {
+                            formData.append(
+                                '__RequestVerificationToken',
+                                antiForgeryToken
+                            );
+                        }
+
+                        const response =
+                            await fetch(
+                                config.sendAudioMessageUrl,
+                                {
+                                    method: 'POST',
+                                    body: formData,
+                                    credentials: 'same-origin',
+                                    headers: {
+                                        'RequestVerificationToken':
+                                            antiForgeryToken
+                                    }
+                                }
+                            );
+
+                        const responseText =
+                            await response.text();
+
+                        let data = null;
+
+                        try {
+                            data =
+                                responseText
+                                    ? JSON.parse(responseText)
+                                    : null;
+                        } catch (error) {
+                            throw new Error(
+                                'Server returned an invalid voice-message response.'
+                            );
+                        }
+
+                        if (
+                            !response.ok ||
+                            !data ||
+                            !(
+                                data.status === 'success' ||
+                                data.success === true
+                            )
+                        ) {
+                            throw new Error(
+                                data && data.message
+                                    ? data.message
+                                    : 'Could not send voice note.'
+                            );
+                        }
+
+                        appendMessageToDOM(
+                            data.id || ('audio-' + Date.now()),
+                            'sent',
+                            data.audioUrl || data.text || '',
+                            data.time || ''
+                        );
+
+                        scrollMessagesToBottom();
+
+                    } catch (error) {
+                        console.error(
+                            'Voice message error:',
+                            error
+                        );
+
+                        customerMessagePopup(
+                            error.message ||
+                            'Error sending voice note.',
+                            'error',
+                            'Voice message failed'
+                        );
+                    }
+                }
+
+                async function deleteMessage(
+                    msgId,
+                    deleteType
+                ) {
+                    if (
+                        !msgId ||
+                        msgId === 'undefined' ||
+                        msgId === 'null'
+                    ) {
+                        customerMessagePopup(
+                            "Invalid message.",
+                            'warning',
+                            'Invalid message'
+                        );
+                        return;
+                    }
+
+                    if (typeof Swal !== 'undefined') {
+                        const confirmResult = await Swal.fire({
+                            icon: 'question',
+                            title: 'Delete Message?',
+                            text: 'Are you sure you want to delete this message?',
+                            showCancelButton: true,
+                            confirmButtonText: 'Delete',
+                            cancelButtonText: 'Cancel',
+                            confirmButtonColor: '#d97600',
+                            cancelButtonColor: '#adb5bd',
+                            reverseButtons: true,
+                            width: '360px'
+                        });
+
+                        if (!confirmResult.isConfirmed) {
+                            return;
+                        }
+                    }
+
+                    try {
+                        const formData =
+                            new FormData();
+
+                        formData.append(
+                            'messageId',
+                            String(msgId)
+                        );
+
+                        formData.append(
+                            'deleteType',
+                            String(deleteType)
+                        );
+
+                        if (antiForgeryToken) {
+                            formData.append(
+                                '__RequestVerificationToken',
+                                antiForgeryToken
+                            );
+                        }
+
+                        const response =
+                            await fetch(
+                                config.deleteMessageUrl,
+                                {
+                                    method: 'POST',
+                                    body: formData,
+                                    credentials: 'same-origin',
+                                    headers: {
+                                        'RequestVerificationToken':
+                                            antiForgeryToken
+                                    }
+                                }
+                            );
+
+                        const responseText =
+                            await response.text();
+
+                        let data = null;
+
+                        try {
+                            data =
+                                responseText
+                                    ? JSON.parse(responseText)
+                                    : null;
+                        } catch (error) {
+                            throw new Error(
+                                'Invalid response from server.'
+                            );
+                        }
+
+                        if (
+                            response.ok &&
+                            data &&
+                            (
+                                data.status === 'success' ||
+                                data.success === true
+                            )
+                        ) {
+                            const selector =
+                                `[data-msg-id="${CSS.escape(String(msgId))}"]`;
+
+                            const el =
+                                document.querySelector(
+                                    selector
+                                );
+
+                            if (el) {
+                                el.remove();
+                            }
+
+                        } else {
+                            throw new Error(
+                                data && data.message
+                                    ? data.message
+                                    : "Could not delete message."
+                            );
+                        }
+
+                    } catch (err) {
+                        console.error(
+                            'Delete message error:',
+                            err
+                        );
+
+                        customerMessagePopup(
+                            err.message ||
+                            "Could not delete message.",
+                            'error',
+                            'Delete failed'
+                        );
+                    }
+                }
+    </script>
+</body>
+</html>

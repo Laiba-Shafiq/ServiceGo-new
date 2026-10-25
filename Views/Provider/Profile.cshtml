@@ -1,0 +1,2207 @@
+﻿@model ServiceGo.Models.ProviderProfile
+@{
+    Layout = null;
+    var providerProfileImage = (ViewBag.ProviderProfileImage as string);
+    if (string.IsNullOrWhiteSpace(providerProfileImage) && Model is ServiceGo.Models.ProviderProfile providerProfile)
+        providerProfileImage = providerProfile.ProfilePicPath;
+    providerProfileImage = string.IsNullOrWhiteSpace(providerProfileImage)
+        ? Url.Content("~/images/Profile icon.png")
+        : Url.Content(providerProfileImage);
+    ViewBag.Title = "Edit Provider Profile";
+    int providerUnreadCount = ViewBag.UnreadCount ?? 0;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ServiceGo - Edit Profile</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" />
+    <link rel="icon" href="@Url.Content("~/images/Logo.png")" type="image/x-icon" />
+
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f2f2f2;
+            margin: 0;
+            display: flex;
+            overflow-x: hidden;
+        }
+
+        /* Mobile header */
+        .mobile-top {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 60px;
+            background-color: #ffffff;
+            z-index: 101;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+            .mobile-top img.logo, .mobile-top img.profile-thumb {
+                height: 40px;
+                width: 40px;
+                border-radius: 5px;
+                object-fit: contain;
+                cursor: pointer;
+            }
+
+            .mobile-top img.profile-thumb {
+                border-radius: 50%;
+                border: 2px solid #d97600;
+            }
+
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 80px;
+            height: 100vh;
+            background-color: #d97600;
+            transition: width 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 100;
+        }
+
+            .sidebar:hover {
+                width: 240px;
+                box-shadow: 4px 0 25px rgba(240, 173, 78, 0.5);
+            }
+
+            .sidebar img.logo {
+                width: 60px;
+                height: 60px;
+                margin: 20px 0;
+                border-radius: 10%;
+                background: #fff;
+                cursor: pointer;
+                object-fit: contain;
+                border: 2px solid #fff;
+            }
+
+
+        .provider-greeting {
+            color: #fff;
+            font-size: 15px;
+            font-weight: 700;
+            white-space: nowrap;
+            text-align: center;
+            margin: -6px 0 6px;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .sidebar:hover .provider-greeting {
+            opacity: 1;
+        }
+
+        @@media (max-width: 768px) {
+            .provider-greeting {
+                display: none;
+            }
+        }
+
+        .sidebar .nav {
+            width: 100%;
+            margin-top: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+            .sidebar .nav a {
+                display: flex;
+                align-items: center;
+                color: #fff;
+                padding: 12px 20px;
+                text-decoration: none;
+                border-radius: 10px;
+                width: 90%;
+                margin-bottom: 5px;
+                transition: 0.2s;
+            }
+
+                .sidebar .nav a i {
+                    font-size: 1.4rem;
+                    margin-right: 15px;
+                }
+
+                .sidebar .nav a.active, .sidebar .nav a:hover {
+                    background-color: #ffb74d !important;
+                    color: #fff !important;
+                    font-weight: 600;
+                }
+
+            .sidebar .nav span {
+                opacity: 0;
+                white-space: nowrap;
+                transition: opacity 0.2s ease;
+            }
+
+        .sidebar:hover .nav span {
+            opacity: 1;
+        }
+
+        /* Main content area */
+        .main {
+            margin-left: 80px;
+            transition: margin-left 0.3s ease;
+            padding: 40px;
+            flex-grow: 1;
+            width: calc(100vw - 80px);
+        }
+
+        .sidebar:hover ~ .main {
+            margin-left: 240px;
+        }
+
+        h3 {
+            color: #d97600;
+            font-weight: 700;
+        }
+
+        .profile-container-card {
+            background: #fff;
+            border-radius: 15px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            padding: 30px;
+            margin-top: 10px;
+        }
+
+        .section-title {
+            color: #d97600;
+            font-weight: 600;
+            border-bottom: 2px solid #ffb74d;
+            padding-bottom: 5px;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .form-label {
+            font-weight: 600;
+            color: #444;
+            font-size: 0.9rem;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: #ffb74d !important;
+            box-shadow: 0 0 0 0.25rem rgba(255, 183, 77, 0.25) !important;
+        }
+
+        .avatar-container img:hover {
+            filter: brightness(.96);
+            transform: scale(1.015);
+        }
+
+        /* Available days: fixed seven choices only */
+        .available-days-picker {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 7px;
+            min-height: 42px;
+        }
+
+        .day-chip {
+            border: 1px solid #dedede;
+            background: #fff;
+            color: #555;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-family: inherit;
+            font-size: 0.82rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: .15s ease;
+        }
+
+            .day-chip:hover {
+                border-color: #ffb74d;
+                color: #d97600;
+                background: #fff9f0;
+            }
+
+            .day-chip.selected {
+                background: #d97600;
+                border-color: #d97600;
+                color: #fff;
+                font-weight: 600;
+            }
+
+        /* Avatar styling */
+        .avatar-container {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 15px auto;
+        }
+
+            .avatar-container img {
+                width: 100%;
+                height: 100%;
+                border-radius: 50%;
+                border: 4px solid #ffb74d;
+                object-fit: cover;
+                cursor: pointer;
+                transition: .2s ease;
+                cursor: pointer;
+            }
+
+        .avatar-edit-overlay {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            background-color: #d97600;
+            color: white;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border: 2px solid #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .btn-save-profile {
+            background-color: #d97600 !important;
+            color: #fff !important;
+            font-weight: 600;
+            border: none;
+            padding: 12px 40px;
+            border-radius: 8px;
+            transition: 0.2s;
+            width: 100%;
+            margin-top: 30px;
+            font-size: 1.1rem;
+        }
+
+            .btn-save-profile:hover {
+                background-color: #b86400 !important;
+            }
+
+        /* Home + shop current location */
+        .btn-current-location {
+            background-color: #d97600 !important;
+            color: #fff !important;
+            border: none !important;
+            font-weight: 600;
+            border-radius: 8px;
+            padding: 10px 18px;
+            min-height: 44px;
+            transition: 0.2s;
+        }
+
+            .btn-current-location:hover {
+                background-color: #b86400 !important;
+                color: #fff !important;
+            }
+
+            .btn-current-location:disabled {
+                opacity: 0.75;
+                cursor: wait;
+            }
+        /* Profile page heading — mobile safe */
+        .provider-profile-page-heading {
+            width: 100%;
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+        }
+
+        .provider-profile-heading-main {
+            min-width: 0;
+            width: 100%;
+        }
+
+            .provider-profile-heading-main h3 {
+                margin: 0;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                line-height: 1.25;
+                font-size: 28px;
+            }
+
+                .provider-profile-heading-main h3 span {
+                    min-width: 0;
+                }
+
+            .provider-profile-heading-main .small {
+                display: block;
+                margin-top: 7px;
+                line-height: 1.45;
+            }
+
+        .map-preview-box {
+            margin-top: 15px;
+            border: 2px solid #ffb74d;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        @@media (max-width: 768px) {
+            .sidebar {
+                display: none !important;
+            }
+
+            .mobile-top {
+                display: flex;
+            }
+
+            .main {
+                margin-left: 0 !important;
+                padding: 90px 15px 20px 15px !important;
+                width: 100vw !important;
+            }
+
+            .provider-profile-page-heading {
+                display: block !important;
+                margin-bottom: 20px !important;
+            }
+
+            .provider-profile-heading-main h3 {
+                font-size: 23px !important;
+                line-height: 1.22 !important;
+                align-items: flex-start !important;
+                gap: 6px !important;
+                white-space: normal !important;
+                overflow-wrap: anywhere !important;
+            }
+
+                .provider-profile-heading-main h3 i {
+                    flex: 0 0 auto !important;
+                    margin-right: 0 !important;
+                    margin-top: 2px !important;
+                }
+
+            .provider-profile-heading-main .small {
+                font-size: 12px !important;
+                margin-top: 6px !important;
+                line-height: 1.45 !important;
+            }
+
+            .btn-current-location {
+                width: 100%;
+            }
+        }
+
+        /*
+                 * Mobile profile dropdown
+                 * Same style as provider dashboard / history
+                 */
+        @@media (max-width: 768px) {
+            .mobile-top .dropdown-menu, .mobile-dropdown-menu {
+                width: 175px !important;
+                min-width: 175px !important;
+                max-width: 175px !important;
+                padding: 0 !important;
+                margin-top: 8px !important;
+                border: 1px solid #d9d9d9 !important;
+                border-radius: 8px !important;
+                overflow: hidden !important;
+                background: #ffffff !important;
+                box-shadow: 0 5px 14px rgba(0,0,0,.18) !important;
+            }
+
+                .mobile-top .dropdown-menu .dropdown-item,
+                .mobile-dropdown-menu .dropdown-item {
+                    display: flex !important;
+                    align-items: center !important;
+                    min-height: 44px !important;
+                    padding: 9px 16px !important;
+                    margin: 0 !important;
+                    font-size: 18px !important;
+                    line-height: 1.35 !important;
+                    font-weight: 700 !important;
+                    color: #292929 !important;
+                    white-space: nowrap !important;
+                    border-radius: 0 !important;
+                }
+
+                    .mobile-top .dropdown-menu .dropdown-item i,
+                    .mobile-dropdown-menu .dropdown-item i {
+                        font-size: 17px !important;
+                        min-width: 22px !important;
+                        margin-right: 8px !important;
+                    }
+
+                    .mobile-top .dropdown-menu .dropdown-item:hover,
+                    .mobile-dropdown-menu .dropdown-item:hover {
+                        background: #fff3df !important;
+                        color: #d97600 !important;
+                    }
+
+                    .mobile-top .dropdown-menu .dropdown-item.active,
+                    .mobile-top .dropdown-menu .dropdown-item:active,
+                    .mobile-dropdown-menu .dropdown-item.active,
+                    .mobile-dropdown-menu .dropdown-item:active {
+                        background: #f7e6c8 !important;
+                        color: #d97600 !important;
+                        font-weight: 700 !important;
+                    }
+
+                .mobile-top .dropdown-menu .dropdown-divider,
+                .mobile-dropdown-menu .dropdown-divider {
+                    margin: 0 !important;
+                    border-top: 1px solid #dedede !important;
+                    opacity: 1 !important;
+                }
+
+                .mobile-top .dropdown-menu .text-danger,
+                .mobile-dropdown-menu .text-danger {
+                    color: #dc3545 !important;
+                }
+        }
+
+        /* ServiceGo provider navigation: identical on every provider page */
+        .sidebar .nav a.active,
+        .sidebar .nav a:hover {
+            background: #ffb74d !important;
+            color: #fff !important;
+        }
+
+            .sidebar .nav a.active i,
+            .sidebar .nav a:hover i {
+                color: #fff !important;
+            }
+
+        @@media (max-width: 768px) {
+            .mobile-top .dropdown-menu.mobile-dropdown-menu,
+            .mobile-top .dropdown-menu {
+                width: 205px !important;
+                min-width: 205px !important;
+                max-width: 205px !important;
+                padding: 8px !important;
+                margin-top: 8px !important;
+                border: 1px solid #eee !important;
+                border-radius: 14px !important;
+                background: #fff !important;
+                box-shadow: 0 6px 18px rgba(0,0,0,.15) !important;
+            }
+
+                .mobile-top .dropdown-menu.mobile-dropdown-menu .dropdown-item,
+                .mobile-top .dropdown-menu .dropdown-item {
+                    display: flex !important;
+                    align-items: center !important;
+                    min-height: 42px !important;
+                    padding: 9px 12px !important;
+                    margin: 0 !important;
+                    gap: 10px !important;
+                    border-radius: 9px !important;
+                    font-size: 16px !important;
+                    font-weight: 600 !important;
+                    line-height: 1.2 !important;
+                    color: #292929 !important;
+                }
+
+                    .mobile-top .dropdown-menu .dropdown-item i {
+                        width: 22px !important;
+                        min-width: 22px !important;
+                        margin-right: 0 !important;
+                        color: #d97600 !important;
+                        font-size: 17px !important;
+                    }
+
+                    .mobile-top .dropdown-menu .dropdown-item:hover,
+                    .mobile-top .dropdown-menu .dropdown-item.active {
+                        background: #fff3df !important;
+                        color: #d97600 !important;
+                    }
+
+                        .mobile-top .dropdown-menu .dropdown-item:hover i,
+                        .mobile-top .dropdown-menu .dropdown-item.active i {
+                            color: #d97600 !important;
+                        }
+
+                    .mobile-top .dropdown-menu .dropdown-item.text-danger,
+                    .mobile-top .dropdown-menu .dropdown-item.text-danger:hover {
+                        color: #dc3545 !important;
+                    }
+
+                        .mobile-top .dropdown-menu .dropdown-item.text-danger i {
+                            color: #dc3545 !important;
+                        }
+        }
+    </style>
+
+    <style>
+        /* PROVIDER MOBILE CONSISTENCY FINAL — mobile only; desktop/sidebar untouched. */
+        @@media (max-width: 768px) {
+            .mobile-top,
+            .mobile-top-header {
+                height: 70px !important;
+                min-height: 70px !important;
+                padding: 0 15px !important;
+            }
+
+                .mobile-top .logo,
+                .mobile-top-header > img:first-child {
+                    width: 40px !important;
+                    height: 40px !important;
+                    object-fit: contain !important;
+                }
+
+                .mobile-top .profile-thumb,
+                .mobile-top-header .profile-thumb {
+                    width: 40px !important;
+                    height: 40px !important;
+                    object-fit: cover !important;
+                    border-radius: 50% !important;
+                    border: 2px solid #d97600 !important;
+                }
+
+                .mobile-top .dropdown-menu,
+                .mobile-dropdown-menu {
+                    width: 205px !important;
+                    min-width: 205px !important;
+                    max-width: 205px !important;
+                    padding: 8px !important;
+                    margin-top: 8px !important;
+                    border: 1px solid #eee !important;
+                    border-radius: 14px !important;
+                    overflow: hidden !important;
+                    box-shadow: 0 14px 35px rgba(0,0,0,.14) !important;
+                    background: #fff !important;
+                }
+
+                    .mobile-top .dropdown-menu .dropdown-item,
+                    .mobile-dropdown-menu .dropdown-item {
+                        min-height: 42px !important;
+                        display: flex !important;
+                        align-items: center !important;
+                        gap: 10px !important;
+                        padding: 9px 12px !important;
+                        margin: 0 !important;
+                        border-radius: 10px !important;
+                        font-size: 16px !important;
+                        line-height: 1.35 !important;
+                        font-weight: 600 !important;
+                        white-space: nowrap !important;
+                        color: #333 !important;
+                    }
+
+                        .mobile-top .dropdown-menu .dropdown-item i,
+                        .mobile-dropdown-menu .dropdown-item i {
+                            width: 20px !important;
+                            min-width: 20px !important;
+                            text-align: center !important;
+                            margin: 0 !important;
+                            color: #d97600 !important;
+                            font-size: 17px !important;
+                        }
+
+                        .mobile-top .dropdown-menu .dropdown-item:hover,
+                        .mobile-dropdown-menu .dropdown-item:hover,
+                        .mobile-top .dropdown-menu .dropdown-item.active,
+                        .mobile-dropdown-menu .dropdown-item.active {
+                            background: #fff3df !important;
+                            color: #d97600 !important;
+                        }
+
+                    .mobile-top .dropdown-menu .dropdown-divider,
+                    .mobile-dropdown-menu .dropdown-divider {
+                        margin: 4px 0 !important;
+                    }
+
+                    .mobile-top .dropdown-menu .text-danger,
+                    .mobile-dropdown-menu .text-danger,
+                    .mobile-top .dropdown-menu .text-danger i,
+                    .mobile-dropdown-menu .text-danger i {
+                        color: #dc3545 !important;
+                    }
+
+            .main {
+                width: 100% !important;
+                margin-left: 0 !important;
+                max-width: 100% !important;
+                padding-left: 12px !important;
+                padding-right: 12px !important;
+            }
+
+                .main > *, .page-container, .job-card, .wallet-card, .profile-card,
+                .notification-card, .notif-card {
+                    max-width: 100% !important;
+                }
+
+            .row {
+                --bs-gutter-x: 0.75rem;
+            }
+        }
+    </style>
+
+    <style id="servicego-caret-fix">
+        /* Keep the text caret only where the user can actually type. */
+        body, body * {
+            caret-color: transparent !important;
+        }
+
+        input, textarea, select, [contenteditable="true"], [contenteditable=""] {
+            caret-color: auto !important;
+        }
+
+            input[type="button"], input[type="submit"], input[type="reset"], input[type="checkbox"], input[type="radio"], input[type="file"], select {
+                caret-color: transparent !important;
+            }
+    </style>
+
+    <style id="servicego-unified-provider-navigation">
+        /* ServiceGo unified provider navigation — visual/layout only */
+        .sidebar .nav a {
+            position: relative;
+        }
+
+        .sidebar-unread-badge {
+            min-width: 22px;
+            height: 22px;
+            padding: 0 6px;
+            border-radius: 999px;
+            background: #fff;
+            color: #d97600;
+            border: 1px solid rgba(217,118,0,.18);
+            box-shadow: 0 2px 8px rgba(0,0,0,.16);
+            font-size: 11px;
+            font-weight: 800;
+            line-height: 20px;
+            text-align: center;
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 5;
+        }
+
+        .mobile-unread-badge {
+            min-width: 22px;
+            height: 22px;
+            padding: 0 6px;
+            border-radius: 999px;
+            background: #fff;
+            color: #d97600;
+            border: 1px solid rgba(217,118,0,.18);
+            box-shadow: 0 2px 8px rgba(0,0,0,.14);
+            font-size: 11px;
+            font-weight: 800;
+            line-height: 20px;
+            text-align: center;
+        }
+
+        .sidebar .nav a {
+            background: transparent !important;
+            color: #fff !important;
+        }
+
+            .sidebar .nav a.active {
+                background-color: #ffb74d !important;
+                color: #fff !important;
+                font-weight: 600 !important;
+            }
+
+                .sidebar .nav a.active i {
+                    color: #fff !important;
+                }
+
+            .sidebar .nav a:hover:not(.active) {
+                background: transparent !important;
+                color: #fff !important;
+            }
+
+        @@media (max-width: 768px) {
+            .mobile-top {
+                height: 70px !important;
+                min-height: 70px !important;
+                padding: 0 15px !important;
+            }
+
+                .mobile-top .logo {
+                    width: 40px !important;
+                    height: 40px !important;
+                    object-fit: contain !important;
+                }
+
+                .mobile-top .profile-thumb {
+                    width: 40px !important;
+                    height: 40px !important;
+                    object-fit: cover !important;
+                    border-radius: 50% !important;
+                    border: 2px solid #d97600 !important;
+                    cursor: pointer !important;
+                }
+
+                .mobile-top .dropdown-menu.mobile-dropdown-menu {
+                    width: 205px !important;
+                    min-width: 205px !important;
+                    max-width: 205px !important;
+                    padding: 8px !important;
+                    margin-top: 8px !important;
+                    border: 1px solid #eee !important;
+                    border-radius: 14px !important;
+                    background: #fff !important;
+                    box-shadow: 0 14px 35px rgba(0,0,0,.14) !important;
+                    overflow: hidden !important;
+                }
+
+                    .mobile-top .dropdown-menu.mobile-dropdown-menu .dropdown-item {
+                        display: flex !important;
+                        align-items: center !important;
+                        min-height: 42px !important;
+                        padding: 9px 12px !important;
+                        margin: 0 !important;
+                        gap: 10px !important;
+                        border-radius: 10px !important;
+                        font-size: 16px !important;
+                        line-height: 1.35 !important;
+                        font-weight: 600 !important;
+                        white-space: nowrap !important;
+                        color: #333 !important;
+                    }
+
+                        .mobile-top .dropdown-menu.mobile-dropdown-menu .dropdown-item i {
+                            width: 20px !important;
+                            min-width: 20px !important;
+                            margin: 0 !important;
+                            text-align: center !important;
+                            color: #d97600 !important;
+                            font-size: 17px !important;
+                        }
+
+                        .mobile-top .dropdown-menu.mobile-dropdown-menu .dropdown-item.active {
+                            background: #fff3df !important;
+                            color: #d97600 !important;
+                            font-weight: 700 !important;
+                        }
+
+                            .mobile-top .dropdown-menu.mobile-dropdown-menu .dropdown-item.active i {
+                                color: #d97600 !important;
+                            }
+
+                        .mobile-top .dropdown-menu.mobile-dropdown-menu .dropdown-item.text-danger,
+                        .mobile-top .dropdown-menu.mobile-dropdown-menu .dropdown-item.text-danger i {
+                            color: #dc3545 !important;
+                        }
+
+                    .mobile-top .dropdown-menu.mobile-dropdown-menu .dropdown-divider {
+                        margin: 4px 0 !important;
+                        border-top: 1px solid #dedede !important;
+                        opacity: 1 !important;
+                    }
+        }
+
+        body, body * {
+            caret-color: transparent !important;
+        }
+
+        input, textarea, select, [contenteditable="true"], [contenteditable=""] {
+            caret-color: auto !important;
+        }
+
+            input[type="button"], input[type="submit"], input[type="reset"],
+            input[type="checkbox"], input[type="radio"], input[type="file"], select {
+                caret-color: transparent !important;
+            }
+
+        /*
+                 * Provider mobile greeting
+                 * Same greeting as the Provider Dashboard.
+                 */
+        .mobile-provider-area {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-end !important;
+            gap: 10px !important;
+        }
+
+        .mobile-provider-greeting {
+            color: #d97600 !important;
+            font-size: 15px !important;
+            font-weight: 700 !important;
+            white-space: nowrap !important;
+            line-height: 1 !important;
+        }
+
+        @@media (max-width: 768px) {
+            .mobile-provider-area {
+                display: flex !important;
+                align-items: center !important;
+            }
+
+            .mobile-provider-greeting {
+                display: inline-flex !important;
+                align-items: center !important;
+            }
+        }
+
+        @@media (min-width: 769px) {
+            .mobile-provider-area {
+                display: none !important;
+            }
+        }</style>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        function showProviderAlert(message, icon = "error", title = "") {
+            if (window.Swal) {
+                return Swal.fire({
+                    icon: icon,
+                    title: title || (icon === "success" ? "Done" : "Notice"),
+                    text: String(message || ""),
+                    confirmButtonText: "OK",
+                    confirmButtonColor: "#d97600",
+                    buttonsStyling: true,
+                    customClass: { popup: "servicego-swal-popup" }
+                });
+            }
+            return Promise.resolve();
+        }
+    </script>
+
+    <style id="sg-popup-theme">
+        /* Compact, soft popups (SweetAlert2) */
+        body .swal2-container {
+            padding: 12px;
+        }
+
+            body .swal2-container .swal2-popup {
+                width: min(340px, calc(100vw - 32px));
+                padding: 22px 20px 18px !important;
+                border-radius: 20px !important;
+                box-shadow: 0 18px 50px rgba(33, 37, 41, .20) !important;
+                font-family: inherit !important;
+            }
+
+        .swal2-icon {
+            zoom: .72;
+            margin: .2em auto .7em !important;
+        }
+
+        .swal2-title {
+            font-size: 1.12rem !important;
+            font-weight: 700 !important;
+            color: #212529 !important;
+            padding: 0 !important;
+            margin: 0 0 .3rem !important;
+        }
+
+        .swal2-html-container {
+            font-size: .9rem !important;
+            line-height: 1.5 !important;
+            color: #6c757d !important;
+            margin: .2rem 0 0 !important;
+            padding: 0 .2em !important;
+        }
+
+        .swal2-actions {
+            margin-top: 1.1rem !important;
+            gap: 8px;
+        }
+
+        .swal2-styled {
+            border-radius: 12px !important;
+            padding: .55rem 1.2rem !important;
+            min-width: 92px;
+            font-size: .9rem !important;
+            font-weight: 600 !important;
+            box-shadow: none !important;
+        }
+
+            .swal2-styled.swal2-confirm {
+                background-color: #d97600 !important;
+            }
+
+            .swal2-styled.swal2-cancel {
+                background-color: #e9ecef !important;
+                color: #495057 !important;
+            }
+
+            .swal2-styled:focus {
+                box-shadow: 0 0 0 3px rgba(217, 118, 0, .25) !important;
+            }
+
+        .swal2-popup.swal2-show {
+            animation: sgPopIn .22s ease-out !important;
+        }
+
+        .swal2-popup.swal2-hide {
+            animation: sgPopOut .15s ease-in !important;
+        }
+
+        @@keyframes sgPopIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px) scale(.96);
+            }
+
+            to {
+                opacity: 1;
+                transform: none;
+            }
+        }
+
+        @@keyframes sgPopOut {
+            from {
+                opacity: 1;
+                transform: none;
+            }
+
+            to {
+                opacity: 0;
+                transform: translateY(6px) scale(.97);
+            }
+        }
+
+        /* Bootstrap modals: smaller, rounded, smooth */
+        .modal-content {
+            border: 0 !important;
+            border-radius: 18px !important;
+            box-shadow: 0 18px 50px rgba(33, 37, 41, .20) !important;
+            overflow: hidden;
+        }
+
+        .modal-header {
+            padding: .85rem 1.1rem;
+        }
+
+        .modal-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+        }
+
+        .modal-body {
+            padding: 1rem 1.1rem;
+        }
+
+        .modal-footer {
+            padding: .7rem 1.1rem;
+            gap: 6px;
+        }
+
+        .modal-backdrop.show {
+            opacity: .35;
+        }
+
+        .modal.fade .modal-dialog {
+            transform: translateY(14px) scale(.97);
+            transition: transform .22s ease-out;
+        }
+
+        .modal.show .modal-dialog {
+            transform: none;
+        }
+
+        @@media (min-width: 576px) {
+            .modal-dialog.modal-md {
+                --bs-modal-width: 440px;
+                max-width: 440px;
+            }
+
+            .modal-dialog.modal-lg {
+                --bs-modal-width: 620px;
+            }
+        }
+
+        .sg-rec-dot {
+            display: inline-block;
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: #dc3545;
+            margin-left: 4px;
+            vertical-align: middle;
+            animation: sgBlink 1s infinite;
+        }
+
+        @@keyframes sgBlink {
+            50% {
+                opacity: .25;
+            }
+        }
+    </style>
+
+    <style id="sg-provider-mobile-header">
+        /* Mobile header: "Hi Provider" first, then the profile photo centered inside an orange round ring */
+        @@media (max-width: 768px) {
+            .mobile-provider-area,
+            .mobile-top .dropdown,
+            .mobile-top-header .dropdown {
+                display: flex !important;
+                align-items: center !important;
+                gap: 10px !important;
+            }
+
+                .mobile-provider-area > .dropdown {
+                    gap: 0 !important;
+                }
+
+            .mobile-provider-greeting {
+                order: -1 !important;
+                display: inline-block !important;
+                margin: 0 !important;
+                color: #d97600 !important;
+                font-size: 15px !important;
+                font-weight: 700 !important;
+                line-height: 1 !important;
+                white-space: nowrap !important;
+            }
+
+            .mobile-top .profile-thumb,
+            .mobile-top-header .profile-thumb,
+            .mobile-top img.profile-thumb,
+            .mobile-profile-trigger {
+                box-sizing: border-box !important;
+                width: 44px !important;
+                height: 44px !important;
+                min-width: 44px !important;
+                min-height: 44px !important;
+                max-width: 44px !important;
+                max-height: 44px !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                border: 2px solid #d97600 !important;
+                border-radius: 50% !important;
+                object-fit: cover !important;
+                object-position: center !important;
+                aspect-ratio: 1 / 1 !important;
+                display: block !important;
+                background: #fff !important;
+                cursor: pointer;
+            }
+
+                .profile-thumb.dropdown-toggle::after,
+                .mobile-profile-trigger::after {
+                    display: none !important;
+                }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="mobile-top">
+        <a href="@Url.Action("Index", "Home")" aria-label="ServiceGo Home">
+            <img src="@Url.Content("~/images/Logo.png")" class="logo" alt="ServiceGo" />
+        </a>
+
+        <div class="mobile-provider-area">
+            <span class="mobile-provider-greeting">Hi Provider</span>
+            <div class="dropdown">
+                <img src="@providerProfileImage"
+                     class="profile-thumb dropdown-toggle"
+                     data-bs-toggle="dropdown"
+                     aria-expanded="false"
+                     alt="Profile" />
+
+                <ul class="dropdown-menu dropdown-menu-end mobile-dropdown-menu">
+                    <li>
+                        <a class="dropdown-item" href="@Url.Action("Dashboard", "Provider")">
+                            <i class="bi bi-house-door"></i>Dashboard
+                        </a>
+
+                        <a class="dropdown-item active" href="@Url.Action("Profile", "Provider")">
+                            <i class="bi bi-person"></i>Profile
+                        </a>
+
+                        <a class="dropdown-item" href="@Url.Action("Messages", "Provider")">
+                            <i class="bi bi-chat-dots"></i>Messages
+                        </a>
+
+                        <a class="dropdown-item" href="@Url.Action("History", "Provider")">
+                            <i class="bi bi-clock-history"></i>History
+                        </a>
+
+                        <a class="dropdown-item d-flex align-items-center" href="@Url.Action("Notifications", "Provider")">
+                            <i class="bi bi-bell me-2"></i><span>Notifications</span>
+                            <span class="mobile-unread-badge ms-auto">@providerUnreadCount</span>
+                        </a>
+
+                        <a class="dropdown-item text-danger" href="@Url.Action("Logout", "Provider")">
+                            <i class="bi bi-box-arrow-right"></i>Logout
+                        </a>
+                    </li>
+
+                    <li><hr class="dropdown-divider" /></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="sidebar">
+        <a href="@Url.Action("Index", "Home")" aria-label="ServiceGo Home">
+            <img src="@Url.Content("~/images/Logo.png")" class="logo" alt="ServiceGo" />
+        </a>
+        <div class="provider-greeting">Hi Provider</div>
+
+        <div class="nav">
+            <a href="@Url.Action("Dashboard", "Provider")">
+                <i class="bi bi-house-door"></i><span>Dashboard</span>
+            </a>
+
+            <a href="@Url.Action("Profile", "Provider")" class="active">
+                <i class="bi bi-person"></i><span>Profile</span>
+            </a>
+
+            <a href="@Url.Action("Messages", "Provider")">
+                <i class="bi bi-chat-dots"></i><span>Messages</span>
+            </a>
+
+            <a href="@Url.Action("History", "Provider")">
+                <i class="bi bi-clock-history"></i><span>History</span>
+            </a>
+
+            <a href="@Url.Action("Notifications", "Provider")">
+                <i class="bi bi-bell"></i><span>Notifications</span><span class="sidebar-unread-badge">@providerUnreadCount</span>
+            </a>
+
+            <a href="@Url.Action("Logout", "Provider")">
+                <i class="bi bi-box-arrow-right"></i><span>Logout</span>
+            </a>
+        </div>
+    </div>
+
+    <div class="main">
+
+        <div class="provider-profile-page-heading mb-4">
+            <div class="provider-profile-heading-main">
+                <h3>
+                    <i class="bi bi-person-fill-gear text-warning me-2"></i>
+                    <span>Edit &amp; Manage Profile</span>
+                </h3>
+
+                <span class="text-muted small">
+                    Update your provider details &amp; credentials
+                </span>
+            </div>
+        </div>
+
+        @using (Html.BeginForm("Profile", "Provider", FormMethod.Post, new { enctype = "multipart/form-data" }))
+        {
+            @Html.AntiForgeryToken()
+            @Html.HiddenFor(m => m.ProviderId)
+
+            <div class="profile-container-card bg-white shadow-sm rounded position-relative">
+
+                <!-- Profile Avatar Header -->
+                <div class="text-center mb-4 pb-3 border-bottom">
+
+                    <div class="avatar-container">
+
+                        <img src="@(string.IsNullOrEmpty(Model.ProfilePicPath)
+                                                                                                                                                                                                                                                                                                                                                           ? Url.Content("~/images/Profile icon.png")
+                                                                                                                                                                                                                                                                                                                                                           : Model.ProfilePicPath)"
+                         alt="Profile Picture"
+                         class="shadow-sm"
+                         id="profileImagePreview"
+                         style="cursor: pointer;" />
+
+                        <label for="ProfilePicFile"
+                               class="avatar-edit-overlay"
+                               title="Change Profile Picture">
+                            <i class="bi bi-pencil-fill"></i>
+                        </label>
+
+                        <input type="file"
+                               id="ProfilePicFile"
+                               name="ProfileInput"
+                               class="d-none"
+                               accept="image/*" />
+                    </div>
+
+                    <h4 class="fw-bold mt-2 mb-1">@Model.Name</h4>
+
+                    <span class="badge bg-secondary">
+                        Status: @Model.Status
+                    </span>
+                </div>
+
+                <!-- Personal Information Section -->
+                <div class="section-title">
+                    <span>
+                        <i class="bi bi-info-circle me-1"></i>
+                        Personal Information
+                    </span>
+
+                    <i class="bi bi-pencil-square text-muted"
+                       style="font-size: 1rem;"
+                       title="Editable section"></i>
+                </div>
+
+                <div class="row g-3 mb-4">
+
+                    <div class="col-md-6">
+                        <label class="form-label">Full Name</label>
+                        @Html.TextBoxFor(m => m.Name, new { @class = "form-control" })
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Father Name</label>
+                        @Html.TextBoxFor(m => m.FatherName, new { @class = "form-control" })
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Email Address</label>
+                        @Html.TextBoxFor(m => m.Email, new { @class = "form-control", @type = "email" })
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Phone Number</label>
+                        @Html.TextBoxFor(m => m.PhoneNumber, new { @class = "form-control" })
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">CNIC Number</label>
+                        @Html.TextBoxFor(m => m.CNIC, new { @class = "form-control" })
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">City</label>
+                        @Html.TextBoxFor(m => m.City, new { @class = "form-control" })
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label">Local Address</label>
+                        @Html.TextBoxFor(m => m.LocalAddress, new { @class = "form-control" })
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label">Permanent Address</label>
+                        @Html.TextBoxFor(m => m.PermanentAddress, new { @class = "form-control" })
+                    </div>
+
+                </div>
+
+                <!-- Professional & Shop Details Section -->
+                <div class="section-title">
+                    <span>
+                        <i class="bi bi-briefcase me-1"></i>
+                        Professional &amp; Shop Details
+                    </span>
+
+                    <i class="bi bi-pencil-square text-muted"
+                       style="font-size: 1rem;"
+                       title="Editable section"></i>
+                </div>
+
+                <div class="row g-3 mb-4">
+
+                    <div class="col-md-6">
+                        <label class="form-label">Selected Services</label>
+                        @Html.TextBoxFor(m => m.SelectedServices, new { @class = "form-control" })
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Service Type</label>
+                        @Html.TextBoxFor(m => m.SelectedServiceTypes, new { @class = "form-control" })
+                    </div>
+
+                </div>
+
+                <!-- Home location section -->
+                <div class="section-title">
+                    <span>
+                        <i class="bi bi-house-door me-1"></i>
+                        Home Location &amp; Map Pin
+                    </span>
+
+                    <i class="bi bi-pencil-square text-muted"
+                       style="font-size: 1rem;"
+                       title="Home Address"></i>
+                </div>
+
+                <div class="row g-3 mb-4">
+
+                    <div class="col-12">
+
+                        <label class="form-label">Home Address</label>
+
+                        @Html.TextBoxFor(
+                                        m => m.HomeAddressInput,
+                                        new { @class = "form-control" }
+                                        )
+
+                    <button type="button"
+                            id="homeCurrentLocationBtn"
+                            class="btn btn-current-location mt-2"
+                            onclick="useEditProfileCurrentLocation('home')">
+
+                        <i class="bi bi-geo-alt-fill me-1"></i>
+                        Use Current Location
+
+                    </button>
+
+                    <div class="location-status small text-muted mt-1"
+                         id="shopLocationStatus"></div>
+
+                    <div class="location-status small text-muted mt-1"
+                         id="homeLocationStatus"></div>
+
+                </div>
+
+                <div class="col-md-6 d-none">
+
+                    <label class="form-label">Home Latitude</label>
+
+                    @Html.TextBoxFor(
+                                        m => m.HomeLat,
+                                        new
+                                        {
+                                            @class = "form-control",
+                                            @id = "homeLatInput"
+                                        }
+                                        )
+
+                </div>
+
+                <div class="col-md-6 d-none">
+
+                    <label class="form-label">Home Longitude</label>
+
+                    @Html.TextBoxFor(
+                                        m => m.HomeLng,
+                                        new
+                                        {
+                                            @class = "form-control",
+                                            @id = "homeLngInput"
+                                        }
+                                        )
+
+                </div>
+
+                <div class="col-12">
+
+                    <div class="map-preview-box rounded overflow-hidden shadow-sm">
+
+                        <iframe id="homeGoogleMapIframe"
+                                height="180"
+                                style="border:0; width: 100%;"
+                                allowfullscreen=""
+                                loading="lazy"
+                                src="https://maps.google.com/maps?q=@(Model.HomeLat ?? 33.6844),@(Model.HomeLng ?? 73.0479)&z=15&output=embed">
+                        </iframe>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="section-title">
+
+                <span>
+                    <i class="bi bi-shop me-1"></i>
+                    Shop Location &amp; Map Pin
+                </span>
+
+                <i class="bi bi-pencil-square text-muted"
+                   style="font-size: 1rem;"
+                   title="Shop Address"></i>
+
+            </div>
+
+            <div class="row g-3 mb-4">
+
+                <div class="col-12">
+
+                    <label class="form-label">Shop Address</label>
+
+                    @Html.TextBoxFor(
+                                        m => m.ShopAddressInput,
+                                        new { @class = "form-control" }
+                                        )
+
+                    <button type="button"
+                            id="shopCurrentLocationBtn"
+                            class="btn btn-current-location mt-2"
+                            onclick="useEditProfileCurrentLocation('shop')">
+
+                        <i class="bi bi-geo-alt-fill me-1"></i>
+                        Use Current Location
+
+                    </button>
+
+                </div>
+
+                <div class="col-md-6 d-none">
+
+                    <label class="form-label">Shop Latitude</label>
+
+                    @Html.TextBoxFor(
+                                        m => m.ShopLat,
+                                        new
+                                        {
+                                            @class = "form-control",
+                                            @id = "shopLatInput"
+                                        }
+                                        )
+
+                </div>
+
+                <div class="col-md-6 d-none">
+
+                    <label class="form-label">Shop Longitude</label>
+
+                    @Html.TextBoxFor(
+                                        m => m.ShopLng,
+                                        new
+                                        {
+                                            @class = "form-control",
+                                            @id = "shopLngInput"
+                                        }
+                                        )
+
+                </div>
+
+                <div class="col-12">
+
+                    <div class="map-preview-box rounded overflow-hidden shadow-sm">
+
+                        <iframe id="shopGoogleMapIframe"
+                                height="180"
+                                style="border:0; width: 100%;"
+                                allowfullscreen=""
+                                loading="lazy"
+                                src="https://maps.google.com/maps?q=@(Model.ShopLat ?? 33.6138649),@(Model.ShopLng ?? 73.0651669)&z=15&output=embed">
+                        </iframe>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- Available days / time -->
+            <div class="row g-3 mb-4">
+
+                <div class="col-md-4">
+                    <label class="form-label">
+                        Available Days
+                    </label>
+
+                    <input type="hidden"
+                           id="AvailableDays"
+                           name="AvailableDays"
+                           value="@Model.AvailableDays" />
+
+                    <div class="available-days-picker" id="availableDaysPicker">
+                        <button type="button" class="day-chip" data-day="Monday">Mon</button>
+                        <button type="button" class="day-chip" data-day="Tuesday">Tue</button>
+                        <button type="button" class="day-chip" data-day="Wednesday">Wed</button>
+                        <button type="button" class="day-chip" data-day="Thursday">Thur</button>
+                        <button type="button" class="day-chip" data-day="Friday">Fri</button>
+                        <button type="button" class="day-chip" data-day="Saturday">Sat</button>
+                        <button type="button" class="day-chip" data-day="Sunday">Sun</button>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+
+                    <label class="form-label">
+                        Start Time
+                    </label>
+
+                    @Html.TextBoxFor(
+                                        m => m.StartTime,
+                                        new
+                                        {
+                                            @class = "form-control",
+                                            @type = "time"
+                                        }
+                                        )
+
+                </div>
+
+                <div class="col-md-4">
+
+                    <label class="form-label">
+                        End Time
+                    </label>
+
+                    @Html.TextBoxFor(
+                                        m => m.EndTime,
+                                        new
+                                        {
+                                            @class = "form-control",
+                                            @type = "time"
+                                        }
+                                        )
+
+                </div>
+
+            </div>
+
+
+            <!-- Documents & Portfolio Section -->
+            <div class="section-title">
+
+                <span>
+                    <i class="bi bi-file-earmark-text me-1"></i>
+                    Documents &amp; Portfolio
+                </span>
+
+                <i class="bi bi-pencil-square text-muted"
+                   style="font-size: 1rem;"
+                   title="Update documents"></i>
+
+            </div>
+
+            <div class="row g-3 text-center">
+
+                <!-- CNIC Front -->
+                <div class="col-md-4">
+
+                    <div class="border p-2 rounded bg-light position-relative">
+
+                        <span class="small text-muted d-block mb-1">
+                            CNIC Front
+                        </span>
+
+                        <img src="@(string.IsNullOrEmpty(Model.CNICFrontPath)
+                                                                                                                                                                                                                                                                                                                                                               ? "https://images.unsplash.com/photo-1554774853-aae0a22c8aa4?w=250"
+                                                                                                                                                                                                                                                                                                                                                               : Model.CNICFrontPath)"
+                             class="img-fluid rounded viewable-media shadow-sm"
+                             style="height: 110px; width: 100%; object-fit: cover; cursor: pointer;"
+                             data-type="image" />
+
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- CNIC Back -->
+                    <div class="col-md-4">
+
+                        <div class="border p-2 rounded bg-light position-relative">
+
+                            <span class="small text-muted d-block mb-1">
+                                CNIC Back
+                            </span>
+
+                            <img src="@(string.IsNullOrEmpty(Model.CNICBackPath)
+                                                                                                                                                                                                                                                                                                                                                               ? "https://images.unsplash.com/photo-1554774853-aae0a22c8aa4?w=250"
+                                                                                                                                                                                                                                                                                                                                                               : Model.CNICBackPath)"
+                             class="img-fluid rounded viewable-media shadow-sm"
+                             style="height: 110px; width: 100%; object-fit: cover; cursor: pointer;"
+                             data-type="image" />
+
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- Certificate -->
+                    <div class="col-md-4">
+
+                        <div class="border p-2 rounded bg-light position-relative">
+
+                            <span class="small text-muted d-block mb-1">
+                                Certificate
+                            </span>
+
+                            <img src="@(string.IsNullOrEmpty(Model.CertificatePath)
+                                                                                                                                                                                                                                                                                                                                                               ? "https://images.unsplash.com/photo-1589330694653-ded6df03f754?w=250"
+                                                                                                                                                                                                                                                                                                                                                               : Model.CertificatePath)"
+                             class="img-fluid rounded viewable-media shadow-sm"
+                             style="height: 110px; width: 100%; object-fit: cover; cursor: pointer;"
+                             data-type="image" />
+
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- Affidavit -->
+                    <div class="col-md-4">
+
+                        <div class="border p-2 rounded bg-light position-relative">
+
+                            <span class="small text-muted d-block mb-1">
+                                Affidavit
+                            </span>
+
+                            <img src="@(string.IsNullOrEmpty(Model.AffidavitPath)
+                                                                                                                                                                                                                                                                                                                                                               ? "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=250"
+                                                                                                                                                                                                                                                                                                                                                               : Model.AffidavitPath)"
+                             class="img-fluid rounded viewable-media shadow-sm"
+                             style="height: 110px; width: 100%; object-fit: cover; cursor: pointer;"
+                             data-type="image" />
+
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- Video -->
+                    <div class="col-md-4">
+
+                        <div class="border p-2 rounded bg-light position-relative">
+
+                            <span class="small text-muted d-block mb-1">
+                                Intro Video
+                            </span>
+
+                        @if (!string.IsNullOrEmpty(Model.VideoPath))
+                            {
+                                <video class="w-100 rounded viewable-media shadow-sm"
+                                       style="height: 110px; object-fit: cover; cursor: pointer;"
+                                       data-type="video">
+
+                                    <source src="@Model.VideoPath" type="video/mp4">
+
+                                </video>
+                            }
+                            else
+                            {
+                                <div class="text-muted small py-3">
+                                    No Video
+                                </div>
+                            }
+
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- Submit / Save Button -->
+                <button type="submit"
+                        class="btn btn-save-profile shadow-sm">
+
+                    <i class="bi bi-save me-2"></i>
+                    Save Changes
+
+                </button>
+
+            </div>
+        }
+
+    </div>
+
+
+    <!-- Media Viewer Modal with Zoom Effect -->
+    <div class="modal fade"
+         id="mediaViewerModal"
+         tabindex="-1"
+         aria-hidden="true">
+
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+
+            <div class="modal-content border-0 p-3">
+
+                <div class="modal-header border-0 pb-0">
+
+                    <h5 class="modal-title text-secondary fw-bold">
+                        Media Preview
+                    </h5>
+
+                    <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal"
+                            aria-label="Close">
+                    </button>
+
+                </div>
+
+                <div class="modal-body text-center">
+
+                    <div id="modalImageWrapper"
+                         class="zoom-wrapper">
+
+                        <img id="modalImage"
+                             src=""
+                             class="img-fluid rounded d-none"
+                             alt="Enlarged Document" />
+
+                    </div>
+
+                    <video id="modalVideo"
+                           controls
+                           class="w-100 rounded d-none"
+                           style="max-height: 70vh;">
+                    </video>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+
+        // Profile picture: click to change + live preview
+        document.addEventListener("DOMContentLoaded", function () {
+
+            var profileImage = document.getElementById("profileImagePreview");
+            var profileFile = document.getElementById("ProfilePicFile");
+
+            if (profileImage && profileFile) {
+
+                profileImage.addEventListener("click", function (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    profileFile.click();
+                });
+
+                profileFile.addEventListener("change", function () {
+                    var file = this.files && this.files[0];
+
+                    if (!file) return;
+
+                    if (!file.type || !file.type.startsWith("image/")) {
+                        showProviderAlert("Please select an image file.");
+                        this.value = "";
+                        return;
+                    }
+
+                    var reader = new FileReader();
+
+                    reader.onload = function (e) {
+                        profileImage.src = e.target.result;
+                    };
+
+                    reader.readAsDataURL(file);
+                });
+
+                // Keep the pencil button from triggering any media-viewer behavior.
+                var profileEdit = document.querySelector('label[for="ProfilePicFile"]');
+
+                if (profileEdit) {
+                    profileEdit.addEventListener("click", function (event) {
+                        event.stopPropagation();
+                    });
+                }
+            }
+
+
+            // Available days: only monday-sunday
+            var daysInput = document.getElementById("AvailableDays");
+            var dayButtons = Array.from(
+                document.querySelectorAll("#availableDaysPicker .day-chip")
+            );
+
+            if (daysInput && dayButtons.length) {
+
+                var normalizeDay = function (value) {
+                    return value.trim().toLowerCase();
+                };
+
+                var existingDays = (daysInput.value || "")
+                    .split(",")
+                    .map(normalizeDay)
+                    .filter(Boolean);
+
+                dayButtons.forEach(function (button) {
+                    if (existingDays.indexOf(normalizeDay(button.dataset.day)) !== -1) {
+                        button.classList.add("selected");
+                    }
+
+                    button.addEventListener("click", function () {
+                        button.classList.toggle("selected");
+
+                        var selectedDays = dayButtons
+                            .filter(function (item) {
+                                return item.classList.contains("selected");
+                            })
+                            .map(function (item) {
+                                return item.dataset.day;
+                            });
+
+                        daysInput.value = selectedDays.join(", ");
+                    });
+                });
+            }
+        });
+
+
+        // Media modal & zoom functionality
+
+        var mediaModal =
+            new bootstrap.Modal(
+                document.getElementById('mediaViewerModal')
+            );
+
+        var modalImg =
+            document.getElementById('modalImage');
+
+        var modalVid =
+            document.getElementById('modalVideo');
+
+        var imgWrapper =
+            document.getElementById('modalImageWrapper');
+
+
+        document
+            .querySelectorAll('.viewable-media')
+            .forEach(function (element) {
+
+                element.addEventListener('click', function () {
+
+                    var type =
+                        this.getAttribute('data-type');
+
+                    if (type === 'image') {
+
+                        modalImg.src = this.src;
+
+                        modalImg.classList.remove('d-none');
+
+                        imgWrapper.classList.remove('d-none');
+
+                        modalVid.classList.add('d-none');
+
+                        modalVid.pause();
+
+                    }
+                    else if (type === 'video') {
+
+                        var srcUrl =
+                            this.src ||
+                            (
+                                this.querySelector('source')
+                                    ? this.querySelector('source').src
+                                    : ''
+                            );
+
+                        if (!srcUrl)
+                            return;
+
+                        modalVid.src = srcUrl;
+
+                        modalVid.classList.remove('d-none');
+
+                        modalImg.classList.add('d-none');
+
+                        imgWrapper.classList.add('d-none');
+
+                        modalVid.load();
+
+                        modalVid.play();
+                    }
+
+                    mediaModal.show();
+
+                });
+
+            });
+
+
+        // Click to zoom image inside modal
+        imgWrapper.addEventListener(
+            'click',
+            function () {
+
+                this.classList.toggle('is-zoomed');
+
+            }
+        );
+
+
+        document
+            .getElementById('mediaViewerModal')
+            .addEventListener(
+                'hidden.bs.modal',
+                function () {
+
+                    modalVid.pause();
+
+                    modalVid.src = "";
+
+                    imgWrapper.classList.remove('is-zoomed');
+
+                }
+            );
+
+
+        // Home + shop: use current location
+        // type = "home"  => HomeLat / HomeLng + Home Map
+        // type = "shop"  => ShopLat / ShopLng + Shop Map
+        // Existing address text is NOT changed.
+
+        function useEditProfileCurrentLocation(type) {
+
+            var isHome = type === 'home';
+
+            var button = document.getElementById(
+                isHome ? 'homeCurrentLocationBtn' : 'shopCurrentLocationBtn'
+            );
+
+            var addressInput = document.getElementById(
+                isHome ? 'HomeAddressInput' : 'ShopAddressInput'
+            );
+
+            var latInput = document.getElementById(
+                isHome ? 'homeLatInput' : 'shopLatInput'
+            );
+
+            var lngInput = document.getElementById(
+                isHome ? 'homeLngInput' : 'shopLngInput'
+            );
+
+            var mapFrame = document.getElementById(
+                isHome ? 'homeGoogleMapIframe' : 'shopGoogleMapIframe'
+            );
+
+            var status = document.getElementById(
+                isHome ? 'homeLocationStatus' : 'shopLocationStatus'
+            );
+
+            if (!navigator.geolocation) {
+                showProviderAlert('Location services are not available in this browser.');
+                return;
+            }
+
+            if (!button) return;
+
+            button.disabled = true;
+            button.innerHTML =
+                '<i class="bi bi-hourglass-split me-1"></i> Getting Location...';
+
+            if (status) {
+                status.textContent = 'Reading your current location...';
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                async function (position) {
+
+                    var lat = position.coords.latitude;
+                    var lng = position.coords.longitude;
+
+                    if (latInput) latInput.value = lat;
+                    if (lngInput) lngInput.value = lng;
+
+                    if (mapFrame) {
+                        mapFrame.src =
+                            'https://maps.google.com/maps?q=' +
+                            encodeURIComponent(lat + ',' + lng) +
+                            '&z=19&output=embed';
+                    }
+
+                    // Convert the new coordinates into a readable address.
+                    try {
+                        var response = await fetch(
+                            'https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=' +
+                            encodeURIComponent(lat) +
+                            '&lon=' +
+                            encodeURIComponent(lng) +
+                            '&zoom=18&addressdetails=1',
+                            {
+                                headers: {
+                                    'Accept': 'application/json'
+                                }
+                            }
+                        );
+
+                        if (!response.ok) {
+                            throw new Error('Reverse geocoding failed.');
+                        }
+
+                        var data = await response.json();
+
+                        if (addressInput && data && data.display_name) {
+                            addressInput.value = data.display_name;
+
+                            addressInput.dispatchEvent(
+                                new Event('input', { bubbles: true })
+                            );
+
+                            addressInput.dispatchEvent(
+                                new Event('change', { bubbles: true })
+                            );
+
+                            if (status) {
+                                status.textContent =
+                                    'Address updated from current location.';
+                            }
+                        } else if (status) {
+                            status.textContent =
+                                'Location updated, but an address could not be found.';
+                        }
+
+                    } catch (error) {
+                        if (status) {
+                            status.textContent =
+                                'Location updated. Address lookup is temporarily unavailable.';
+                        }
+                    }
+
+                    button.disabled = false;
+                    button.innerHTML =
+                        '<i class="bi bi-check-circle-fill me-1"></i> Location Updated';
+
+                    setTimeout(function () {
+                        button.innerHTML =
+                            '<i class="bi bi-geo-alt-fill me-1"></i> Use Current Location';
+                    }, 2200);
+                },
+
+                function (error) {
+
+                    button.disabled = false;
+                    button.innerHTML =
+                        '<i class="bi bi-geo-alt-fill me-1"></i> Use Current Location';
+
+                    if (status) {
+                        status.textContent = '';
+                    }
+
+                    if (error.code === 1) {
+                        showProviderAlert('Please allow location access in your browser.');
+                    } else if (error.code === 2) {
+                        showProviderAlert('Your current location could not be determined.');
+                    } else if (error.code === 3) {
+                        showProviderAlert('Location request timed out. Please try again.');
+                    } else {
+                        showProviderAlert('Unable to get your current location.');
+                    }
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 15000,
+                    maximumAge: 0
+                }
+            );
+        }
+
+
+    </script>
+
+
+    <script id="servicego-load-more">
+
+        document.addEventListener(
+            "DOMContentLoaded",
+            function () {
+
+                const selectors = [
+                    ".notification-item",
+                    ".notification-card",
+                    ".notification",
+                    ".notif-item",
+                    ".notif-card",
+                    "[data-notification]"
+                ];
+
+
+                let items = [];
+
+
+                for (const selector of selectors) {
+
+                    const found =
+                        Array.from(
+                            document.querySelectorAll(selector)
+                        );
+
+                    if (found.length > items.length)
+                        items = found;
+
+                }
+
+
+                if (items.length <= 15)
+                    return;
+
+
+                const pageSize = 15;
+
+                let visible = pageSize;
+
+
+                const button =
+                    document.createElement("button");
+
+
+                button.type = "button";
+
+                button.id =
+                    "servicego-load-more";
+
+                button.className =
+                    "btn btn-outline-warning mt-3";
+
+                button.textContent =
+                    "Load More";
+
+
+                items.forEach(
+                    (item, index) => {
+
+                        if (index >= visible)
+                            item.style.display = "none";
+
+                    }
+                );
+
+
+                const last =
+                    items[items.length - 1];
+
+
+                last.parentNode.insertBefore(
+                    button,
+                    last.nextSibling
+                );
+
+
+                button.addEventListener(
+                    "click",
+                    function () {
+
+                        const next =
+                            Math.min(
+                                visible + pageSize,
+                                items.length
+                            );
+
+
+                        for (
+                            let i = visible;
+                            i < next;
+                            i++
+                        ) {
+
+                            items[i].style.display = "";
+
+                        }
+
+
+                        visible = next;
+
+
+                        if (visible >= items.length)
+                            button.remove();
+
+                    }
+                );
+
+            }
+        );
+
+    </script>
+
+</body>
+</html>

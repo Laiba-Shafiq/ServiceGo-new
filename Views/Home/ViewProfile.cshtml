@@ -1,0 +1,577 @@
+﻿@model ServiceGo.Models.Viewprofile
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@Model.FullName - ServiceGo</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <link rel="icon"
+          href="@Url.Content("~/images/Logo.png")"
+          type="image/x-icon" />
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: #f2f2f2;
+            padding: 30px 0;
+        }
+
+        .profile-card {
+            background: #fff;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            width: 100%;
+        }
+
+        .profile-img {
+            width: 130px;
+            height: 130px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid #f0ad4e;
+        }
+
+        .section-title {
+            font-weight: 700;
+            font-size: 1.2rem;
+            color: #d97600;
+            border-bottom: 2px solid #f0ad4e;
+            padding-bottom: 6px;
+            margin-top: 30px;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+        }
+
+        .info-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .info-list-item {
+            padding: 14px 0;
+            border-bottom: 1px solid #edf0f2;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 1rem;
+        }
+
+        .label {
+            font-weight: 600;
+            color: #444;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+            .label i {
+                color: #f0ad4e;
+            }
+
+        .value {
+            color: #666;
+            font-weight: 500;
+        }
+
+        .badge-custom {
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 5px 12px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .action-btn {
+            background: linear-gradient(180deg,#f0ad4e,#e39e3e);
+            color: #fff;
+            border-radius: 12px;
+            padding: 14px;
+            font-weight: 600;
+            border: none;
+            text-decoration: none;
+            text-align: center;
+        }
+
+            .action-btn:hover {
+                color: #fff;
+                background: linear-gradient(180deg,#e39e3e,#d98f2f);
+            }
+
+        .map-box {
+            width: 100%;
+            height: 250px;
+            border-radius: 10px;
+            border: 1px solid #ddd;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+
+            .map-box iframe {
+                width: 100%;
+                height: 100%;
+                border: 0;
+                display: block;
+            }
+
+        .location-address {
+            width: 100%;
+            color: #555;
+            font-weight: 500;
+            line-height: 1.6;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        .reviews-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .review-card {
+            background: #fffaf2;
+            border: 1px solid #f5dfbd;
+            border-radius: 14px;
+            padding: 16px;
+        }
+
+        .review-name {
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .review-stars {
+            color: #f0ad4e;
+            letter-spacing: 2px;
+            font-size: 0.9rem;
+        }
+
+        .review-rating {
+            background: #fff3cd;
+            color: #856404;
+            border-radius: 8px;
+            padding: 4px 9px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .review-comment {
+            color: #555;
+            line-height: 1.6;
+            margin-top: 12px;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        .review-empty {
+            color: #888;
+            font-style: italic;
+        }
+
+        .no-reviews {
+            border: 1px dashed #ddd;
+            border-radius: 14px;
+            padding: 20px;
+            text-align: center;
+            color: #777;
+        }
+
+            .no-reviews i {
+                color: #f0ad4e;
+                margin-right: 6px;
+            }
+
+        .reviews-toggle-row {
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.2s ease;
+        }
+
+            .reviews-toggle-row:hover {
+                background: #fffaf2;
+            }
+
+        .reviews-chevron {
+            transition: transform 0.25s ease;
+            font-size: 0.85rem;
+        }
+
+        .reviews-toggle-row[aria-expanded="true"] .reviews-chevron {
+            transform: rotate(180deg);
+        }
+
+        .reviews-expand-item {
+            list-style: none;
+            padding: 0;
+            border-bottom: 1px solid #edf0f2;
+        }
+
+        .reviews-panel {
+            padding: 4px 0 16px;
+        }
+
+        /* Mobile Responsive */
+        @@media (max-width: 576px) {
+            body {
+                padding: 15px 0;
+            }
+
+            .profile-card {
+                padding: 25px 18px;
+                border-radius: 15px;
+            }
+
+            .profile-img {
+                width: 110px;
+                height: 110px;
+            }
+
+            .info-list-item {
+                align-items: flex-start;
+                gap: 10px;
+            }
+
+            .label {
+                font-size: 0.9rem;
+            }
+
+            .value {
+                font-size: 0.9rem;
+                text-align: right;
+            }
+
+            .section-title {
+                font-size: 1.05rem;
+            }
+
+            .map-box {
+                height: 220px;
+            }
+        }
+
+        /* Keep the text caret visible only where typing is possible. */
+        body {
+            caret-color: transparent;
+        }
+
+        input,
+        textarea,
+        select,
+        [contenteditable="true"] {
+            caret-color: auto;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container py-4">
+        <div class="row justify-content-center">
+
+            <div class="col-12 col-sm-11 col-md-10 col-lg-9">
+
+                <div class="profile-card">
+
+                    <!-- Profile Header -->
+                    <div class="text-center mb-4">
+
+                        <img src="@(string.IsNullOrEmpty(Model.ProfileImage)
+                                                                                                                                                                                                                                       ? Url.Content("~/images/Profile icon.png")
+                                                                                                                                                                                                                                       : Url.Content(Model.ProfileImage))"
+                             class="profile-img mb-2"
+                             alt="Profile">
+
+                        <h2 class="fw-bold m-0" style="font-size: 1.8rem;">
+                            @Model.FullName
+                        </h2>
+
+                        <p class="text-muted m-0">
+                            ID: @Model.ProviderCode
+                        </p>
+
+                    </div>
+
+
+                    <!-- Overview -->
+                    <h4 class="section-title">
+                        Overview
+                    </h4>
+
+                    <ul class="info-list">
+
+                        <li class="info-list-item">
+                            <span class="label">
+                                <i class="bi bi-star-fill"></i>
+                                Rating
+                            </span>
+
+                            <span class="value">
+                                @Model.Rating / 5.0
+                            </span>
+                        </li>
+
+                        <li class="info-list-item reviews-toggle-row"
+                            role="button"
+                            tabindex="0"
+                            aria-expanded="false"
+                            aria-controls="providerReviewsPanel"
+                            onclick="toggleProviderReviews(this)">
+                            <span class="label">
+                                <i class="bi bi-chat-square-text-fill"></i>
+                                Reviews
+                            </span>
+
+                            <span class="value d-flex align-items-center gap-2">
+                                <i class="bi bi-chevron-down reviews-chevron"></i>
+                            </span>
+                        </li>
+
+                        <li class="reviews-expand-item">
+                            <div id="providerReviewsPanel" class="reviews-panel" hidden>
+                                <div class="reviews-list">
+                                    @if (ViewBag.ProviderReviews != null &&
+                                                                        ViewBag.ProviderReviews.Count > 0)
+                                    {
+                                        foreach (var review in ViewBag.ProviderReviews)
+                                        {
+                                            <div class="review-card">
+                                                <div class="d-flex justify-content-between align-items-start gap-3">
+                                                    <div>
+                                                        <div class="review-name">
+                                                            @(string.IsNullOrWhiteSpace(review.CustomerName)
+                                                                                                                ? "Customer"
+                                                                                                                : review.CustomerName)
+                                                </div>
+
+                                                        <div class="review-stars">
+                                                    @for (int star = 1; star <= 5; star++)
+                                                            {
+                                                                <i class="bi @(star <= review.Rating ? "bi-star-fill" : "bi-star")"></i>
+                                                            }
+                                                        </div>
+                                                    </div>
+
+                                                    <span class="review-rating">
+                                                        @review.Rating/5
+                                                    </span>
+                                                </div>
+
+                                                @if (!string.IsNullOrWhiteSpace(review.Comment))
+                                                {
+                                                    <p class="review-comment mb-0">
+                                                        @review.Comment
+                                                    </p>
+                                                }
+                                                else
+                                                {
+                                                    <p class="review-comment review-empty mb-0">
+                                                        No written comment provided.
+                                                    </p>
+                                                }
+                                            </div>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <div class="no-reviews">
+                                            <i class="bi bi-chat-square-text"></i>
+                                            <span>Not yet.</span>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </li>
+                    </ul>
+
+
+                    <!-- Professional Details -->
+                    <h4 class="section-title">
+                        Professional Details
+                    </h4>
+
+                    <ul class="info-list">
+
+                        <li class="info-list-item">
+                            <span class="label">
+                                <i class="bi bi-tools"></i>
+                                Services
+                            </span>
+
+                            <span class="value">
+                                <span class="badge-custom">
+                                    @Model.ServiceCategory
+                                </span>
+                            </span>
+                        </li>
+
+                        <li class="info-list-item">
+                            <span class="label">
+                                <i class="bi bi-gear-wide-connected"></i>
+                                Type
+                            </span>
+
+                            <span class="value">
+                                <span class="badge-custom">
+                                    @Model.ServiceType
+                                </span>
+                            </span>
+                        </li>
+
+                    </ul>
+
+
+                    <!-- Availability -->
+                    <h4 class="section-title">
+                        Availability
+                    </h4>
+
+                    <ul class="info-list">
+
+                        <li class="info-list-item">
+                            <span class="label">
+                                <i class="bi bi-calendar-week"></i>
+                                Working Days
+                            </span>
+
+                            <span class="value">
+                                @(string.IsNullOrWhiteSpace(Model.WorkingDays)
+                                                                ? "Not specified"
+                                                                : string.Join(", ", Model.WorkingDays.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(day =>
+                                                                day.Trim().ToLowerInvariant() switch
+                                                                {
+                                                                    "monday" => "MON",
+                                                                    "tuesday" => "TUE",
+                                                                    "wednesday" => "WED",
+                                                                    "thursday" => "THU",
+                                                                    "friday" => "FRI",
+                                                                    "saturday" => "SAT",
+                                                                    "sunday" => "SUN",
+                                                                    _ => day.Trim().ToUpperInvariant()
+                                                                })))
+                            </span>
+                        </li>
+
+                        <li class="info-list-item">
+                            <span class="label">
+                                <i class="bi bi-clock-fill"></i>
+                                Working Hours
+                            </span>
+
+                            <span class="value">
+                                @(string.IsNullOrWhiteSpace(Model.AvailableHours)
+                                                                ? "Not specified"
+                                                                : Model.AvailableHours)
+                            </span>
+                        </li>
+
+                    </ul>
+
+
+                    <!-- Contact & Location -->
+                    <h4 class="section-title">
+                        Location
+                    </h4>
+
+                    <ul class="info-list">
+
+                        <li class="info-list-item">
+                            <span class="label">
+                                <i class="bi bi-building"></i>
+                                City
+                            </span>
+
+                            <span class="value">
+                                @Model.CityHub
+                            </span>
+                        </li>
+
+
+                        <!-- Shop Location -->
+                        @if (!string.IsNullOrWhiteSpace(Model.ShopLat) &&
+                                                Model.ShopLat != "0" &&
+                                                Model.ShopLat != "0.0")
+                        {
+                            <li class="info-list-item flex-column align-items-start gap-2">
+
+
+                                <div class="location-address">
+                                    <strong>Shop Address:</strong>
+                                    <span>@Model.ShopAddress</span>
+                                </div>
+
+                                <div class="map-box">
+                                    <iframe loading="lazy"
+                                            referrerpolicy="no-referrer-when-downgrade"
+                                            src="https://www.google.com/maps?q=@Model.ShopLat,@Model.ShopLng&z=15&output=embed"
+                                            title="Provider Shop Location">
+                                    </iframe>
+                                </div>
+
+                            </li>
+                        }
+
+
+                        <!--
+                           Provider Home Location is intentionally NOT displayed publicly.
+                           HomeLat/HomeLng/HomeAddress remain backend registration data only
+                           for Home Service distance/calculation logic.
+                        -->
+                        <!-- Book now only -->
+                        <div class="row mt-5 g-3">
+
+                            <div class="col-12">
+
+                                <a href="@Url.Action("Booking", "Home", new { id = Model.ProviderId })"
+                                   class="btn action-btn w-100">
+
+                                    Book Now
+
+                                </a>
+
+                            </div>
+
+                        </div>
+
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        function toggleProviderReviews(row) {
+            const panel = document.getElementById('providerReviewsPanel');
+            if (!panel) return;
+
+            const isOpen = row.getAttribute('aria-expanded') === 'true';
+            row.setAttribute('aria-expanded', (!isOpen).toString());
+            panel.hidden = isOpen;
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const row = document.querySelector('.reviews-toggle-row');
+            if (!row) return;
+
+            row.addEventListener('keydown', function (event) {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    toggleProviderReviews(row);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

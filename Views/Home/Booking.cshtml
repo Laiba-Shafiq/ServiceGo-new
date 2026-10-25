@@ -1,0 +1,3320 @@
+﻿@inject IConfiguration Configuration
+@model ServiceGo.Models.Booking
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Book the Service - ServiceGo</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="@Url.Content("~/images/Logo.png")?v=2" type="image/png">
+    <link rel="shortcut icon" href="@Url.Content("~/images/Logo.png")?v=2" type="image/png">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: #f2f2f2;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px 0;
+        }
+
+        .provider-availability-popup {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            background: rgba(0, 0, 0, 0.55);
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+            .provider-availability-popup.show {
+                display: flex;
+            }
+
+        .provider-availability-popup-card {
+            width: 100%;
+            max-width: 430px;
+            background: #fff;
+            border-radius: 18px;
+            padding: 28px 24px;
+            text-align: center;
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.25);
+        }
+
+        .provider-availability-popup-icon {
+            width: 54px;
+            height: 54px;
+            margin: 0 auto 14px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #fff3cd;
+            color: #b7791f;
+            font-size: 1.45rem;
+        }
+
+        .provider-availability-popup-title {
+            margin: 0 0 10px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .provider-availability-popup-message {
+            margin: 0 0 20px;
+            color: #666;
+            line-height: 1.6;
+            font-size: 0.95rem;
+        }
+
+        .provider-availability-popup-close {
+            border: 0;
+            border-radius: 10px;
+            padding: 10px 24px;
+            background: #f0ad4e;
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .booking-card {
+            background: #fff;
+            padding: 40px;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 850px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+        }
+
+        h3 {
+            color: #f0ad4e;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 1.6rem;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+            .form-group label {
+                font-weight: 600 !important;
+                display: block;
+                margin-bottom: 6px;
+                color: #333;
+                font-size: 0.9rem;
+            }
+
+        .form-control,
+        .form-select {
+            width: 100%;
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid #ccc;
+            font-size: 1rem;
+            background: #fff;
+        }
+
+        .btn-gps {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            white-space: nowrap;
+            transition: 0.2s;
+        }
+
+            .btn-gps:hover {
+                background-color: #218838;
+                color: white;
+            }
+
+            .btn-gps:disabled {
+                opacity: 0.7;
+                cursor: not-allowed;
+            }
+
+        .btn-search-map {
+            background-color: #0dcaf0;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+            .btn-search-map:hover {
+                background-color: #0aa9c7;
+                color: white;
+            }
+
+            .btn-search-map:disabled {
+                opacity: 0.7;
+                cursor: not-allowed;
+            }
+
+        .map-wrapper {
+            margin-top: 12px;
+            display: none;
+        }
+
+            .map-wrapper.location-ready {
+                display: block;
+            }
+
+        .provider-map-box {
+            display: none;
+        }
+
+            .provider-map-box.active {
+                display: block;
+            }
+
+        .location-actions {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        @@media (max-width: 576px) {
+            .location-actions {
+                justify-content: flex-start;
+            }
+        }
+
+        .map-box {
+            border-radius: 12px;
+            overflow: hidden;
+            border: 2px solid #ced4da;
+            margin-bottom: 15px;
+            background: #fff;
+            height: 260px;
+        }
+
+        .map-title {
+            background: #f8f9fa;
+            padding: 8px 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border-bottom: 1px solid #ced4da;
+            color: #555;
+        }
+
+        .info-box {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #856404;
+            margin-top: 8px;
+        }
+
+        .btn-request {
+            width: 100%;
+            padding: 15px;
+            border-radius: 12px;
+            background: linear-gradient(180deg,#f0ad4e,#e39e3e);
+            color: #fff;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            font-size: 1.1rem;
+            margin-top: 15px;
+        }
+
+            .btn-request:disabled {
+                opacity: 0.7;
+                cursor: not-allowed;
+            }
+
+        .logo {
+            width: 90px;
+            display: block;
+            margin: 0 auto 15px auto;
+            cursor: pointer;
+        }
+
+        #locationText {
+            display: none !important;
+        }
+
+        .fare-breakdown {
+            margin-top: 20px;
+            padding: 16px;
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            background: #f8f9fa;
+        }
+
+        .fare-breakdown-title {
+            font-size: 17px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .fare-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 7px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+            .fare-row:last-of-type {
+                border-bottom: 0;
+            }
+
+        .fare-note {
+            margin-top: 9px;
+            font-size: 12px;
+            color: #6c757d;
+        }
+
+        .hidden-calculation-fields {
+            display: none !important;
+        }
+
+        /* Keep the text caret only where the user can type. */
+        body, button, label, span, strong, div, img, h1, h2, h3, h4, h5, h6 {
+            caret-color: transparent;
+        }
+
+        input[type="text"],
+        input[type="email"],
+        input[type="tel"],
+        input[type="number"],
+        input[type="password"],
+        input[type="date"],
+        input[type="time"],
+        textarea,
+        select {
+            caret-color: auto;
+        }
+
+        .booking-time-wrap {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            max-width: 260px;
+        }
+
+        .booking-time-part {
+            width: 58px;
+            height: 42px;
+            border: 0;
+            border-bottom: 2px solid #ced4da;
+            border-radius: 0;
+            background: transparent;
+            text-align: center;
+            font-size: 16px;
+            outline: none;
+            box-shadow: none;
+        }
+
+            .booking-time-part:focus {
+                border-bottom-color: #f0ad4e;
+                box-shadow: none;
+            }
+
+        .booking-time-colon {
+            font-size: 20px;
+            font-weight: 600;
+            line-height: 1;
+            margin-top: 8px;
+        }
+
+        .booking-period {
+            width: 82px;
+            height: 42px;
+            border-radius: 8px;
+        }
+
+        .google-map {
+            height: 220px;
+            width: 100%;
+        }
+
+        /*
+                 * Home Service: customer location map gets extra height.
+                 * Shop Service keeps the normal map size.
+                 */
+        #customerMap.home-service-map {
+            height: 360px;
+        }
+
+        .map-error {
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            background: #f8f9fa;
+            font-size: 13px;
+        }
+
+        @@media (max-width: 767px) {
+
+            #customerMap.home-service-map {
+                height: 320px;
+            }
+
+            body {
+                padding: 20px 10px;
+                align-items: flex-start;
+            }
+
+            .booking-card {
+                padding: 25px 18px;
+                border-radius: 16px;
+            }
+
+            h3 {
+                font-size: 1.35rem;
+            }
+
+            .input-group {
+                flex-wrap: nowrap;
+            }
+
+            .btn-search-map {
+                white-space: nowrap;
+                padding: 8px 10px;
+                font-size: 0.78rem;
+            }
+
+            .map-box {
+                height: 260px;
+            }
+
+            .google-map {
+                height: 220px;
+            }
+        }
+    </style>
+
+    <style>
+        /* Pretty ServiceGo message popup (replaces the browser's "localhost says" alert) */
+        .sg-alert-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 100000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background: rgba(40, 24, 4, 0.5);
+            backdrop-filter: blur(3px);
+            animation: sgFade .18s ease-out;
+        }
+
+        .sg-alert-box {
+            width: 100%;
+            max-width: 380px;
+            padding: 30px 26px 24px;
+            text-align: center;
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(180deg, #fffaf2 0%, #ffffff 55%);
+            border-radius: 24px;
+            box-shadow: 0 20px 50px rgba(217, 118, 0, 0.25);
+            animation: sgPop .22s ease-out;
+        }
+
+        .sg-alert-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 70px;
+            height: 70px;
+            margin-bottom: 14px;
+            border-radius: 50%;
+            font-size: 1.9rem;
+            background: #fff4e3;
+            box-shadow: 0 6px 16px rgba(217, 118, 0, 0.18);
+        }
+
+        .sg-alert-box.success .sg-alert-icon {
+            background: #e8f8ee;
+            box-shadow: 0 6px 16px rgba(25, 135, 84, 0.2);
+        }
+
+        .sg-alert-box.error .sg-alert-icon {
+            background: #fdecec;
+            box-shadow: 0 6px 16px rgba(220, 53, 69, 0.2);
+        }
+
+        .sg-alert-title {
+            margin: 0 0 8px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #8a4b00;
+        }
+
+        .sg-alert-text {
+            margin: 0 0 20px;
+            font-size: .93rem;
+            line-height: 1.55;
+            color: #5f564a;
+            white-space: pre-line;
+            word-break: break-word;
+        }
+
+        .sg-alert-btn {
+            min-width: 120px;
+            padding: 10px 26px;
+            border: 0;
+            border-radius: 999px;
+            font-weight: 600;
+            color: #fff;
+            background: linear-gradient(135deg, #f0a030, #d97600);
+            box-shadow: 0 6px 16px rgba(217, 118, 0, 0.3);
+            cursor: pointer;
+            transition: transform .15s ease, box-shadow .15s ease;
+        }
+
+            .sg-alert-btn:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 8px 20px rgba(217, 118, 0, 0.38);
+            }
+
+        @@keyframes sgFade {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @@keyframes sgPop {
+            from {
+                opacity: 0;
+                transform: scale(.92) translateY(8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: none;
+            }
+        }
+    </style>
+
+    <style id="sg-popup-polish">
+        /* Compact message popup (replaces the browser alert) */
+        .sg-alert-overlay {
+            padding: 16px;
+            background: rgba(33, 37, 41, 0.45);
+        }
+
+        .sg-alert-box {
+            max-width: 340px;
+            padding: 24px 22px 20px;
+            border-radius: 20px;
+            background: #ffffff;
+            box-shadow: 0 18px 45px rgba(33, 37, 41, 0.22);
+        }
+
+        .sg-alert-icon {
+            width: 54px;
+            height: 54px;
+            margin-bottom: 12px;
+            font-size: 0;
+            color: #d97600;
+            background: #fff4e3;
+            box-shadow: none;
+        }
+
+            .sg-alert-icon svg {
+                width: 28px;
+                height: 28px;
+            }
+
+        .sg-alert-box.success .sg-alert-icon {
+            color: #198754;
+            background: #e8f8ee;
+            box-shadow: none;
+        }
+
+        .sg-alert-box.error .sg-alert-icon {
+            color: #dc3545;
+            background: #fdecec;
+            box-shadow: none;
+        }
+
+        .sg-alert-title {
+            margin: 0 0 6px;
+            font-size: 1.08rem;
+            font-weight: 700;
+            color: #212529;
+        }
+
+        .sg-alert-text {
+            margin: 0 0 16px;
+            font-size: 0.92rem;
+            line-height: 1.5;
+            color: #6c757d;
+        }
+
+        .sg-alert-btn {
+            min-width: 110px;
+            padding: 0.55rem 1.6rem;
+            border: 0;
+            border-radius: 12px;
+            font-weight: 600;
+            color: #ffffff;
+            background: #d97600;
+        }
+
+            .sg-alert-btn:hover {
+                background: #bf6700;
+            }
+    </style>
+</head>
+
+<body>
+
+    <div class="booking-card">
+
+        <img src="@Url.Content("~/images/Logo.png")"
+             class="logo"
+             alt="ServiceGo Logo"
+             onclick="window.location.href='@Url.Action("Index", "Home")'" />
+
+        <h3 class="text-center mb-4">
+            Book Your Service
+        </h3>
+
+        <form id="bookingForm"
+              method="post"
+              enctype="multipart/form-data"
+              action="@Url.Action("SubmitBooking", "Home")">
+
+            @Html.AntiForgeryToken()
+            <input type="hidden"
+                   name="ProviderId"
+                   value="@ViewBag.ProviderId" />
+
+
+            <!-- Customer information -->
+            <!-- Customer name -->
+            <div class="form-group">
+                <label>Customer Name</label>
+                <input type="text"
+                       name="CustomerName"
+                       id="customerNameInput"
+                       class="form-control"
+                       value="@ViewBag.CustomerName"
+                       placeholder="Enter your name"
+                       autocomplete="name"
+                       required />
+            </div>
+
+            <!-- Customer email -->
+            <!--
+               Email is collected for the backend/account flow.
+               It is stored with the booking but must not be shown to the provider.
+            -->
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email"
+                       name="CustomerEmail"
+                       id="customerEmailInput"
+                       class="form-control"
+                       value="@ViewBag.CustomerEmail"
+                       placeholder="Enter your email"
+                       autocomplete="email"
+                       required />
+            </div>
+
+            <!-- Service -->
+
+            <div class="form-group">
+
+                <label>Select Service</label>
+
+                <select name="ServiceName"
+                        class="form-select"
+                        required>
+
+                    <option value="">
+                        -- Choose a Service --
+                    </option>
+
+                    @if (ViewBag.ProviderServices != null)
+                    {
+                        foreach (var s in ViewBag.ProviderServices)
+                        {
+                            <option value="@s">
+                                @s
+                            </option>
+                        }
+                    }
+
+                </select>
+
+            </div>
+
+
+            <!-- Service type -->
+
+            <div class="form-group">
+
+                <label>Service Type</label>
+
+                <select class="form-select"
+                        id="serviceTypeInput"
+                        name="ServiceType"
+                        onchange="toggleServiceFields()"
+                        required>
+
+                    <option value="">
+                        -- Choose Service Type --
+                    </option>
+
+                    @if (ViewBag.ProviderServiceTypes != null)
+                    {
+                        foreach (var st in ViewBag.ProviderServiceTypes)
+                        {
+                            <option value="@st">
+                                @st
+                            </option>
+                        }
+                    }
+
+                </select>
+
+            </div>
+
+
+            <!-- Customer address -->
+
+            <div class="form-group"
+                 id="addressArea">
+
+                <label id="addressLabel">
+                    Your House Complete Address
+                </label>
+
+                <div class="input-group">
+
+                    <input type="text"
+                           id="addressInput"
+                           name="Address"
+                           class="form-control"
+                           placeholder="e.g. House 12, Street 3, Model Town, Rawalpindi"
+                           autocomplete="street-address" />
+
+                    <button type="button"
+                            class="btn-search-map"
+                            id="searchAddressButton"
+                            onclick="searchAddressOnMap()">
+
+                        <i class="bi bi-search"></i>
+                        Search Address
+
+                    </button>
+
+                </div>
+
+                <small class="text-muted">
+                    Enter an address and click 'Search Address'.
+                </small>
+
+
+                <!-- Shop address -->
+
+                <div id="shopTargetAddress"
+                     class="info-box d-none mt-2">
+
+                    <i class="bi bi-geo-alt-fill text-danger"></i>
+
+                    <strong>Shop Location:</strong>
+
+                    <span id="shopAddressText">
+                        @ViewBag.ShopAddress
+                    </span>
+
+                </div>
+
+
+                <!-- Home address -->
+
+                <div id="homeTargetAddress"
+                     class="info-box d-none mt-2">
+
+                    <i class="bi bi-house-door-fill text-warning"></i>
+
+                    <strong>Provider Home Base:</strong>
+
+                    <span id="homeAddressText">
+                        @ViewBag.HomeAddress
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            <!-- Optional GPS -->
+
+            <div class="form-group">
+
+                <div class="location-actions mb-2">
+
+                    <button type="button"
+                            class="btn-gps"
+                            id="gpsButton"
+                            onclick="getLocation()">
+
+                        <i class="bi bi-crosshair"></i>
+                        Use My Location
+
+                    </button>
+
+                </div>
+
+                <input type="hidden"
+                       id="locationText"
+                       name="Coordinates" />
+
+
+                <!-- Maps -->
+
+                <div id="mapContainer"
+                     class="map-wrapper">
+
+                    <div class="row g-3">
+
+                        <!-- Customer map -->
+
+                        <div class="col-md-6" id="customerMapCol">
+
+                            <div class="map-box">
+
+                                <div class="map-title">
+
+                                    <i class="bi bi-person-fill text-primary"></i>
+
+                                    Your Location
+
+                                </div>
+
+                                <div id="customerMap"
+                                     class="google-map">
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- Provider map -->
+
+                        <div class="col-md-6" id="providerMapCol">
+
+                            <div id="providerMapBox"
+                                 class="map-box provider-map-box">
+
+                                <div class="map-title"
+                                     id="providerMapTitle">
+
+                                    <i class="bi bi-geo-alt-fill text-danger"></i>
+
+                                    Provider Location
+
+                                </div>
+
+                                <div id="providerMap"
+                                     class="google-map">
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- Date / time -->
+
+            <div class="row">
+
+                <div class="col-md-6 form-group">
+
+                    <label>Select Date</label>
+
+                    <input type="date"
+                           id="dateInput"
+                           name="BookingDate"
+                           class="form-control"
+                           required />
+
+                    <div id="dateError"
+                         class="text-danger small mt-1"
+                         style="display:none;">
+                    </div>
+
+                </div>
+
+                <div class="col-md-6 form-group">
+
+                    <label>Select Time</label>
+
+                    <input type="time"
+                           id="timeInput"
+                           name="BookingTime"
+                           class="form-control"
+                           step="60"
+                           required />
+
+                    <div id="timeError"
+                         class="text-danger small mt-1"
+                         style="display:none;">
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- Problem details -->
+
+            <div class="form-group">
+
+                <label>
+                    Problem / Details
+                </label>
+
+                <textarea name="ProblemDetails"
+                          class="form-control"
+                          rows="3"></textarea>
+
+            </div>
+
+
+            <!-- Image -->
+
+            <div class="form-group">
+
+                <label>
+                    Upload Problem Image (Optional)
+                </label>
+
+                <input type="file"
+                       name="ProblemImage"
+                       class="form-control"
+                       accept="image/*" />
+
+            </div>
+
+
+            <!-- Fare / distance breakdown -->
+
+            <div class="fare-breakdown" id="fareBreakdown">
+
+                <div class="fare-breakdown-title">
+                    Fare &amp; Distance Breakdown
+                </div>
+
+                <div class="fare-row" id="visitChargesRow">
+                    <span>Visit Charges</span>
+                    <strong>Rs. <span id="visitChargeDisplay">0</span></strong>
+                </div>
+
+                <div class="fare-note">
+                    Visit charges are calculated using the selected service type and distance.
+                </div>
+
+            </div>
+
+            <!-- Hidden fare calculations -->
+
+            <div class="hidden-calculation-fields">
+
+                <input type="hidden"
+                       id="distance"
+                       name="Distance"
+                       value="0" />
+
+                <input type="hidden"
+                       id="visitCharge"
+                       name="VisitCharges"
+                       value="0" />
+
+            </div>
+
+
+            <!-- Submit -->
+
+            <button type="submit"
+                    class="btn-request"
+                    id="submitBookingButton">
+
+                Request Service Booking
+
+            </button>
+
+        </form>
+
+    </div>
+
+
+    <div id="providerAvailabilityPopup"
+         class="provider-availability-popup"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="providerAvailabilityPopupTitle">
+        <div class="provider-availability-popup-card">
+            <div class="provider-availability-popup-icon">
+                <i class="bi bi-calendar-x"></i>
+            </div>
+            <h4 id="providerAvailabilityPopupTitle"
+                class="provider-availability-popup-title">
+                Provider Not Available
+            </h4>
+            <p id="providerAvailabilityPopupMessage"
+               class="provider-availability-popup-message">
+                The provider is not available in this time. Please review the provider's profile for available days and hours.
+            </p>
+            <button type="button"
+                    class="provider-availability-popup-close"
+                    onclick="closeProviderAvailabilityPopup()">
+                OK
+            </button>
+        </div>
+    </div>
+
+
+    <script>
+        /* ServiceGo message popup: replaces the browser alert (no "localhost says"). */
+        function sgAlert(message, onClose) {
+            var text = String(message == null ? "" : message).trim();
+            var type = "info", title = "Please note";
+            var icons = {
+                info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7.5" r="0.6" fill="currentColor"/><path d="M12 11.5v6"/></svg>',
+                success: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+                error: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>'
+            };
+
+            if (/^\[ok\]\s*/i.test(text)) { type = "success"; title = "Done"; text = text.replace(/^\[ok\]\s*/i, ""); }
+            else if (/^\[error\]\s*/i.test(text)) { type = "error"; title = "Something went wrong"; text = text.replace(/^\[error\]\s*/i, ""); }
+
+            var overlay = document.createElement("div");
+            overlay.className = "sg-alert-overlay";
+
+            var box = document.createElement("div");
+            box.className = "sg-alert-box " + type;
+            box.setAttribute("role", "alertdialog");
+            box.setAttribute("aria-modal", "true");
+
+            var iconEl = document.createElement("div");
+            iconEl.className = "sg-alert-icon";
+            iconEl.innerHTML = icons[type] || icons.info;
+
+            var titleEl = document.createElement("h5");
+            titleEl.className = "sg-alert-title";
+            titleEl.textContent = title;
+
+            var textEl = document.createElement("p");
+            textEl.className = "sg-alert-text";
+            textEl.textContent = text;
+
+            var btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "sg-alert-btn";
+            btn.textContent = "OK";
+
+            box.appendChild(iconEl);
+            box.appendChild(titleEl);
+            box.appendChild(textEl);
+            box.appendChild(btn);
+            overlay.appendChild(box);
+            document.body.appendChild(overlay);
+
+            var closed = false;
+            function close() {
+                if (closed) return;
+                closed = true;
+                document.removeEventListener("keydown", onKey);
+                overlay.remove();
+                if (typeof onClose === "function") onClose();
+            }
+            function onKey(e) { if (e.key === "Escape" || e.key === "Enter") close(); }
+
+            btn.addEventListener("click", close);
+            overlay.addEventListener("click", function (e) { if (e.target === overlay) close(); });
+            document.addEventListener("keydown", onKey);
+            btn.focus();
+        }
+
+        window.alert = function (message) { sgAlert(message); };
+
+        // The Google Maps API key is read from configuration (GoogleMaps:ApiKey in
+        // appsettings or an environment variable). Do not paste the key into this file.
+
+        const GOOGLE_MAPS_API_KEY =
+            @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Configuration["GoogleMaps:ApiKey"] ?? ""));
+
+
+        /* Global variables */
+
+        let customerMap = null;
+        let providerMap = null;
+
+        let customerMarker = null;
+        let providerMarker = null;
+
+        let geocoder = null;
+
+        let googleMapsApiLoaded = false;
+        let googleMapsLoadingPromise = null;
+
+        let googleMapsResolve = null;
+        let googleMapsReject = null;
+
+        let googleMapsLoadTimeout = null;
+
+
+        /* Fallback location */
+
+        const FALLBACK_LAT = 33.6844;
+        const FALLBACK_LNG = 73.0479;
+
+
+        /*
+         * Customer coordinates remain EMPTY
+         * until customer actually selects a location.
+         */
+
+        let lastUserLat = null;
+        let lastUserLng = null;
+
+
+        /* Provider coordinates */
+
+        const rawShopLat =
+            parseFloat('@ViewBag.ShopLat');
+
+        const rawShopLng =
+            parseFloat('@ViewBag.ShopLng');
+
+        const rawHomeLat =
+            parseFloat('@ViewBag.HomeLat');
+
+        const rawHomeLng =
+            parseFloat('@ViewBag.HomeLng');
+
+
+        const shopLat =
+            Number.isFinite(rawShopLat)
+                ? rawShopLat
+                : FALLBACK_LAT;
+
+        const shopLng =
+            Number.isFinite(rawShopLng)
+                ? rawShopLng
+                : FALLBACK_LNG;
+
+        const homeLat =
+            Number.isFinite(rawHomeLat)
+                ? rawHomeLat
+                : FALLBACK_LAT;
+
+        const homeLng =
+            Number.isFinite(rawHomeLng)
+                ? rawHomeLng
+                : FALLBACK_LNG;
+
+
+        /* Google maps callback */
+
+        window.initGoogleMaps = function () {
+
+            try {
+
+                if (googleMapsLoadTimeout) {
+
+                    clearTimeout(
+                        googleMapsLoadTimeout
+                    );
+
+                    googleMapsLoadTimeout = null;
+
+                }
+
+
+                if (
+                    typeof google === "undefined" ||
+                    !google.maps
+                ) {
+
+                    throw new Error(
+                        "Google Maps object unavailable."
+                    );
+
+                }
+
+
+                googleMapsApiLoaded = true;
+
+                geocoder =
+                    new google.maps.Geocoder();
+
+
+                console.log(
+                    "Google Maps API loaded successfully."
+                );
+
+
+                if (googleMapsResolve) {
+
+                    const resolve =
+                        googleMapsResolve;
+
+                    googleMapsResolve = null;
+                    googleMapsReject = null;
+
+                    resolve();
+
+                }
+
+            }
+            catch (error) {
+
+                console.error(
+                    "Google Maps initialization error:",
+                    error
+                );
+
+
+                if (googleMapsReject) {
+
+                    const reject =
+                        googleMapsReject;
+
+                    googleMapsResolve = null;
+                    googleMapsReject = null;
+
+                    reject(error);
+
+                }
+
+            }
+
+        };
+
+
+        /* Google maps auth failure */
+
+        window.gm_authFailure = function () {
+
+            console.error(
+                "Google Maps authentication failed."
+            );
+
+
+            googleMapsApiLoaded = false;
+
+
+            const message =
+                "Google Maps API key was rejected. " +
+                "In Google Cloud Console, make sure Maps JavaScript API and " +
+                "Geocoding API are enabled, billing is active, " +
+                "and the API key website restrictions are configured correctly.";
+
+
+            showGoogleMapsError(
+                message
+            );
+
+
+            if (googleMapsReject) {
+
+                const reject =
+                    googleMapsReject;
+
+                googleMapsResolve = null;
+                googleMapsReject = null;
+
+                reject(
+                    new Error(
+                        "Google Maps authentication failed."
+                    )
+                );
+
+            }
+
+        };
+
+
+        /* Load google maps API */
+
+        function loadGoogleMaps() {
+
+            if (
+                googleMapsApiLoaded &&
+                typeof google !== "undefined" &&
+                google.maps
+            ) {
+
+                return Promise.resolve();
+
+            }
+
+
+            if (googleMapsLoadingPromise) {
+
+                return googleMapsLoadingPromise;
+
+            }
+
+
+            if (!GOOGLE_MAPS_API_KEY) {
+                return Promise.reject(
+                    new Error("Google Maps API key is missing.")
+                );
+            }
+
+
+            googleMapsLoadingPromise =
+                new Promise(
+                    function (
+                        resolve,
+                        reject
+                    ) {
+
+                        googleMapsResolve =
+                            resolve;
+
+                        googleMapsReject =
+                            reject;
+
+
+                        googleMapsLoadTimeout =
+                            setTimeout(
+                                function () {
+
+                                    googleMapsResolve = null;
+                                    googleMapsReject = null;
+
+                                    googleMapsLoadingPromise = null;
+
+                                    reject(
+                                        new Error(
+                                            "Google Maps API loading timed out."
+                                        )
+                                    );
+
+                                },
+                                15000
+                            );
+
+
+                        const existingScript =
+                            document.querySelector(
+                                'script[data-servicego-maps="true"]'
+                            );
+
+
+                        if (existingScript) {
+
+                            return;
+
+                        }
+
+
+                        const script =
+                            document.createElement(
+                                "script"
+                            );
+
+
+                        script.async = true;
+                        script.defer = true;
+
+
+                        script.dataset.servicegoMaps =
+                            "true";
+
+
+                        script.src =
+                            "https://maps.googleapis.com/maps/api/js" +
+                            "?key=" +
+                            encodeURIComponent(
+                                GOOGLE_MAPS_API_KEY
+                            ) +
+                            "&libraries=places" +
+                            "&callback=initGoogleMaps" +
+                            "&loading=async" +
+                            "&v=weekly";
+
+
+                        script.onerror =
+                            function () {
+
+                                if (googleMapsLoadTimeout) {
+
+                                    clearTimeout(
+                                        googleMapsLoadTimeout
+                                    );
+
+                                    googleMapsLoadTimeout =
+                                        null;
+
+                                }
+
+
+                                googleMapsResolve = null;
+                                googleMapsReject = null;
+                                googleMapsLoadingPromise = null;
+
+
+                                reject(
+                                    new Error(
+                                        "Google Maps JavaScript API failed to load."
+                                    )
+                                );
+
+                            };
+
+
+                        document.head.appendChild(
+                            script
+                        );
+
+                    }
+                );
+
+
+            return googleMapsLoadingPromise;
+
+        }
+
+
+        /* Provider location */
+
+        function getProviderLocation() {
+
+            const type =
+                document.getElementById(
+                    "serviceTypeInput"
+                ).value;
+
+
+            if (
+                type === "Shop Service"
+            ) {
+
+                return {
+                    lat: shopLat,
+                    lng: shopLng
+                };
+
+            }
+
+
+            if (
+                type === "Home Service"
+            ) {
+
+                return {
+                    lat: homeLat,
+                    lng: homeLng
+                };
+
+            }
+
+
+            return {
+                lat: FALLBACK_LAT,
+                lng: FALLBACK_LNG
+            };
+
+        }
+
+
+        /* Initialize maps */
+
+        async function initMaps(
+            customerLat,
+            customerLng
+        ) {
+
+            try {
+
+                await loadGoogleMaps();
+
+            }
+            catch (error) {
+
+                console.error(
+                    "Google Maps loading error:",
+                    error
+                );
+
+
+                showGoogleMapsError(
+                    "Google Maps could not be loaded. " +
+                    "In Google Cloud Console, check the API key, " +
+                    "Maps JavaScript API, Geocoding API, and billing settings."
+                );
+
+
+                showProviderMapError();
+
+
+                return false;
+
+            }
+
+
+            if (
+                typeof google === "undefined" ||
+                !google.maps
+            ) {
+
+                showGoogleMapsError(
+                    "Google Maps is not available."
+                );
+
+
+                showProviderMapError();
+
+
+                return false;
+
+            }
+
+
+            const mapContainer =
+                document.getElementById(
+                    "mapContainer"
+                );
+
+
+            mapContainer.classList.add("location-ready");
+
+
+            const displayCustomerLat =
+                Number.isFinite(customerLat)
+                    ? customerLat
+                    : FALLBACK_LAT;
+
+
+            const displayCustomerLng =
+                Number.isFinite(customerLng)
+                    ? customerLng
+                    : FALLBACK_LNG;
+
+
+            const provider =
+                getProviderLocation();
+
+
+            /* Customer map */
+
+            if (!customerMap) {
+
+                customerMap =
+                    new google.maps.Map(
+                        document.getElementById(
+                            "customerMap"
+                        ),
+                        {
+                            center: {
+                                lat:
+                                    displayCustomerLat,
+
+                                lng:
+                                    displayCustomerLng
+                            },
+
+                            zoom: 15,
+
+                            mapTypeControl: false,
+
+                            streetViewControl: false,
+
+                            fullscreenControl: true
+                        }
+                    );
+
+
+                customerMarker =
+                    new google.maps.Marker(
+                        {
+                            position: {
+                                lat:
+                                    displayCustomerLat,
+
+                                lng:
+                                    displayCustomerLng
+                            },
+
+                            map: customerMap,
+
+                            draggable: false,
+
+                            title:
+                                "Your Location"
+                        }
+                    );
+
+            }
+            else {
+
+                customerMap.setCenter(
+                    {
+                        lat:
+                            displayCustomerLat,
+
+                        lng:
+                            displayCustomerLng
+                    }
+                );
+
+
+                customerMarker.setPosition(
+                    {
+                        lat:
+                            displayCustomerLat,
+
+                        lng:
+                            displayCustomerLng
+                    }
+                );
+
+            }
+
+
+            /* Provider map */
+
+            if (!providerMap) {
+
+                providerMap =
+                    new google.maps.Map(
+                        document.getElementById(
+                            "providerMap"
+                        ),
+                        {
+                            center: {
+                                lat:
+                                    provider.lat,
+
+                                lng:
+                                    provider.lng
+                            },
+
+                            zoom: 14,
+
+                            mapTypeControl: false,
+
+                            streetViewControl: false,
+
+                            fullscreenControl: true
+                        }
+                    );
+
+
+                providerMarker =
+                    new google.maps.Marker(
+                        {
+                            position: {
+                                lat:
+                                    provider.lat,
+
+                                lng:
+                                    provider.lng
+                            },
+
+                            map: providerMap,
+
+                            draggable: false,
+
+                            title:
+                                "Provider Location"
+                        }
+                    );
+
+            }
+            else {
+
+                providerMap.setCenter(
+                    {
+                        lat:
+                            provider.lat,
+
+                        lng:
+                            provider.lng
+                    }
+                );
+
+
+                providerMarker.setPosition(
+                    {
+                        lat:
+                            provider.lat,
+
+                        lng:
+                            provider.lng
+                    }
+                );
+
+            }
+
+
+            /*
+             * Important
+             * Customer coordinates are NOT created here.
+             */
+
+
+            setTimeout(
+                function () {
+
+                    if (
+                        customerMap &&
+                        google.maps.event
+                    ) {
+
+                        google.maps.event.trigger(
+                            customerMap,
+                            "resize"
+                        );
+
+                    }
+
+
+                    if (
+                        providerMap &&
+                        google.maps.event
+                    ) {
+
+                        google.maps.event.trigger(
+                            providerMap,
+                            "resize"
+                        );
+
+                    }
+
+                },
+                300
+            );
+
+
+            updateCalculations();
+
+
+            return true;
+
+        }
+
+
+        /* Select customer location */
+
+        function selectCustomerLocation(
+            lat,
+            lng,
+            reverseGeocode
+        ) {
+
+            if (
+                !Number.isFinite(lat) ||
+                !Number.isFinite(lng)
+            ) {
+
+                return;
+
+            }
+
+
+            lastUserLat =
+                lat;
+
+            lastUserLng =
+                lng;
+
+
+            document.getElementById(
+                "locationText"
+            ).value =
+                lat.toFixed(6) +
+                ", " +
+                lng.toFixed(6);
+
+
+            if (customerMarker) {
+
+                customerMarker.setPosition(
+                    {
+                        lat: lat,
+                        lng: lng
+                    }
+                );
+
+            }
+
+
+            if (customerMap) {
+
+                customerMap.panTo(
+                    {
+                        lat: lat,
+                        lng: lng
+                    }
+                );
+
+            }
+
+
+            updateCalculations();
+
+
+            if (reverseGeocode) {
+
+                reverseGeocodeLocation(
+                    lat,
+                    lng
+                );
+
+            }
+
+        }
+
+
+        /* Address search */
+
+        async function searchAddressOnMap() {
+
+            const addressInput =
+                document.getElementById(
+                    "addressInput"
+                );
+
+
+            const searchButton =
+                document.getElementById(
+                    "searchAddressButton"
+                );
+
+
+            const query =
+                addressInput.value.trim();
+
+
+            if (!query) {
+
+                alert(
+                    "Please enter an address first."
+                );
+
+                addressInput.focus();
+
+                return;
+
+            }
+
+
+            const oldButton =
+                searchButton.innerHTML;
+
+
+            searchButton.disabled =
+                true;
+
+
+            searchButton.innerHTML =
+                '<i class="bi bi-hourglass-split"></i> Searching...';
+
+
+            try {
+
+                await loadGoogleMaps();
+
+
+                if (!geocoder) {
+
+                    geocoder =
+                        new google.maps.Geocoder();
+
+                }
+
+
+                geocoder.geocode(
+                    {
+                        address:
+                            query,
+
+                        region:
+                            "PK"
+                    },
+
+                    async function (
+                        results,
+                        status
+                    ) {
+
+                        searchButton.disabled =
+                            false;
+
+
+                        searchButton.innerHTML =
+                            oldButton;
+
+
+                        console.log(
+                            "Google Geocoder status:",
+                            status
+                        );
+
+
+                        if (
+                            status === "OK" &&
+                            results &&
+                            results.length > 0
+                        ) {
+
+                            const result =
+                                results[0];
+
+
+                            const location =
+                                result.geometry.location;
+
+
+                            const lat =
+                                location.lat();
+
+
+                            const lng =
+                                location.lng();
+
+
+                            const mapReady =
+                                await initMaps(
+                                    lat,
+                                    lng
+                                );
+
+
+                            if (!mapReady) {
+                                return;
+                            }
+
+
+                            selectCustomerLocation(
+                                lat,
+                                lng,
+                                false
+                            );
+
+
+                            if (
+                                result.formatted_address
+                            ) {
+
+                                addressInput.value =
+                                    result.formatted_address;
+
+                            }
+
+
+                            if (customerMap) {
+
+                                customerMap.setCenter(
+                                    {
+                                        lat:
+                                            lat,
+
+                                        lng:
+                                            lng
+                                    }
+                                );
+
+
+                                customerMap.setZoom(
+                                    17
+                                );
+
+                            }
+
+
+                            return;
+
+                        }
+
+
+                        if (
+                            status === "ZERO_RESULTS"
+                        ) {
+
+                            alert(
+                                "This address could not be found on Google Maps. " +
+                                "Try adding the city/province to the address.\n\n" +
+                                "Example:\n" +
+                                "House 12, Street 3, Committee Chowk, Rawalpindi, Punjab, Pakistan"
+                            );
+
+                            return;
+
+                        }
+
+
+                        if (
+                            status === "REQUEST_DENIED"
+                        ) {
+
+                            alert(
+                                "Google Maps request was denied.\n\n" +
+
+                                "Check the following in Google Cloud Console:\n" +
+
+                                "1. Maps JavaScript API is enabled.\n" +
+
+                                "2. Geocoding API is enabled.\n" +
+
+                                "3. Billing is enabled.\n" +
+
+                                "4. API key website restrictions are configured correctly.\n" +
+
+                                "5. Both Maps JavaScript API and Geocoding API are selected under API restrictions."
+                            );
+
+                            return;
+
+                        }
+
+
+                        if (
+                            status ===
+                            "OVER_QUERY_LIMIT"
+                        ) {
+
+                            alert(
+                                "Google Maps request limit has been exceeded. " +
+                                "Check billing or API quota."
+                            );
+
+                            return;
+
+                        }
+
+
+                        if (
+                            status ===
+                            "INVALID_REQUEST"
+                        ) {
+
+                            alert(
+                                "The address search request is invalid. Please enter the address again."
+                            );
+
+                            return;
+
+                        }
+
+
+                        alert(
+                            "Google Maps address search error.\nStatus: " +
+                            status
+                        );
+
+                    }
+                );
+
+            }
+            catch (error) {
+
+                console.error(
+                    "Address search error:",
+                    error
+                );
+
+
+                searchButton.disabled =
+                    false;
+
+
+                searchButton.innerHTML =
+                    oldButton;
+
+
+                alert(
+                    "Google Maps could not be loaded.\n\n" +
+                    "Check the API key and Google Cloud configuration."
+                );
+
+            }
+
+        }
+
+
+        /* Reverse geocoding */
+
+        async function reverseGeocodeLocation(
+            lat,
+            lng
+        ) {
+
+            try {
+
+                await loadGoogleMaps();
+
+
+                if (!geocoder) {
+
+                    geocoder =
+                        new google.maps.Geocoder();
+
+                }
+
+
+                geocoder.geocode(
+                    {
+                        location: {
+                            lat:
+                                lat,
+
+                            lng:
+                                lng
+                        }
+                    },
+
+                    function (
+                        results,
+                        status
+                    ) {
+
+                        console.log(
+                            "Reverse geocoder status:",
+                            status
+                        );
+
+
+                        if (
+                            status === "OK" &&
+                            results &&
+                            results.length > 0
+                        ) {
+
+                            const addressInput =
+                                document.getElementById(
+                                    "addressInput"
+                                );
+
+
+                            if (
+                                results[0].formatted_address
+                            ) {
+
+                                addressInput.value =
+                                    results[0].formatted_address;
+
+                            }
+
+                        }
+
+                    }
+                );
+
+            }
+            catch (error) {
+
+                console.error(
+                    "Reverse geocoding error:",
+                    error
+                );
+
+            }
+
+        }
+
+
+        /* Optional GPS */
+
+        function getLocation() {
+
+            if (!navigator.geolocation) {
+
+                alert(
+                    "Location services are not available in your browser. " +
+                    "Search for the address manually."
+                );
+
+                return;
+
+            }
+
+
+            const gpsButton =
+                document.getElementById(
+                    "gpsButton"
+                );
+
+
+            const oldButton =
+                gpsButton.innerHTML;
+
+
+            gpsButton.disabled =
+                true;
+
+
+            gpsButton.innerHTML =
+                '<i class="bi bi-hourglass-split"></i> Getting Location...';
+
+
+            navigator.geolocation.getCurrentPosition(
+
+                async function (
+                    position
+                ) {
+
+                    const lat =
+                        position.coords.latitude;
+
+
+                    const lng =
+                        position.coords.longitude;
+
+
+                    try {
+
+                        const mapReady =
+                            await initMaps(
+                                lat,
+                                lng
+                            );
+
+
+                        if (mapReady) {
+
+                            selectCustomerLocation(
+                                lat,
+                                lng,
+                                true
+                            );
+
+                        }
+
+                    }
+                    catch (error) {
+
+                        console.error(
+                            error
+                        );
+
+                    }
+
+
+                    gpsButton.disabled =
+                        false;
+
+
+                    gpsButton.innerHTML =
+                        oldButton;
+
+                },
+
+                function (
+                    error
+                ) {
+
+                    console.error(
+                        "GPS error:",
+                        error
+                    );
+
+
+                    gpsButton.disabled =
+                        false;
+
+
+                    gpsButton.innerHTML =
+                        oldButton;
+
+
+                    if (
+                        error.code === 1
+                    ) {
+
+                        alert(
+                            "Location permission was denied. " +
+                            "You can search for the address manually."
+                        );
+
+                    }
+                    else {
+
+                        alert(
+                            "The current location could not be determined. " +
+                            "You can search for the address manually."
+                        );
+
+                    }
+
+                },
+
+                {
+                    enableHighAccuracy:
+                        true,
+
+                    timeout:
+                        15000,
+
+                    maximumAge:
+                        0
+                }
+
+            );
+
+        }
+
+
+        /* Service type change */
+
+        function updateProviderMapVisibility() {
+            const type = document.getElementById("serviceTypeInput").value;
+            const box = document.getElementById("providerMapBox");
+            const title = document.getElementById("providerMapTitle");
+            if (!box) return;
+
+            // Security rule
+            // Home Service -> provider private/base location MUST stay hidden.
+            // Shop Service -> provider shop location may be shown.
+            box.classList.remove("active");
+
+            if (type === "Shop Service") {
+                box.classList.add("active");
+                if (title) {
+                    title.innerHTML = '<i class="bi bi-shop text-danger"></i> Provider Shop Location';
+                }
+            }
+        }
+
+        function toggleServiceFields() {
+
+            const type =
+                document.getElementById(
+                    "serviceTypeInput"
+                ).value;
+
+            // Home Service: make the customer's map larger.
+            // Shop Service: keep the normal map size.
+            const customerMapElement = document.getElementById("customerMap");
+            const customerMapCol = document.getElementById("customerMapCol");
+            const providerMapCol = document.getElementById("providerMapCol");
+
+            if (customerMapElement) {
+                customerMapElement.classList.toggle(
+                    "home-service-map",
+                    type === "Home Service"
+                );
+
+                // Home Service: provider home map is hidden, so customer map
+                // should use the full available width instead of half width.
+                if (customerMapCol) {
+                    customerMapCol.classList.toggle("col-md-12", type === "Home Service");
+                    customerMapCol.classList.toggle("col-md-6", type !== "Home Service");
+                }
+
+                if (providerMapCol) {
+                    providerMapCol.classList.toggle("d-none", type === "Home Service");
+                }
+
+                if (customerMap && typeof google !== "undefined" && google.maps?.event) {
+                    setTimeout(function () {
+                        google.maps.event.trigger(customerMap, "resize");
+                    }, 100);
+                }
+            }
+
+            updateProviderMapVisibility();
+
+
+            const addressInput = document.getElementById("addressInput");
+            const addressLabel = document.getElementById("addressLabel");
+
+            if (type === "Shop Service" || type === "Shop") {
+                if (addressLabel) addressLabel.textContent = "Your Home Address (Optional)";
+                if (addressInput) {
+                    addressInput.required = false;
+                    addressInput.placeholder = "Optional: enter your home address";
+                }
+            } else if (type === "Home Service" || type === "Home") {
+                if (addressLabel) addressLabel.textContent = "Your House Complete Address";
+                if (addressInput) {
+                    addressInput.required = true;
+                    addressInput.placeholder = "e.g. House 12, Street 3, Model Town, Rawalpindi";
+                }
+            } else {
+                if (addressLabel) addressLabel.textContent = "Your House Complete Address";
+                if (addressInput) {
+                    addressInput.required = true;
+                    addressInput.placeholder = "e.g. House 12, Street 3, Model Town, Rawalpindi";
+                }
+            }
+
+            const shopBox =
+                document.getElementById(
+                    "shopTargetAddress"
+                );
+
+
+            const homeBox =
+                document.getElementById(
+                    "homeTargetAddress"
+                );
+
+
+            shopBox.classList.add(
+                "d-none"
+            );
+
+
+            homeBox.classList.add(
+                "d-none"
+            );
+
+
+            if (type === "Shop Service") {
+                // Customer is going to the provider's shop.
+                // Shop address + shop map are public.
+                shopBox.classList.remove("d-none");
+            }
+            // Home Service: provider home/base address remains hidden.
+
+            if (type === "Shop Service") {
+                if (providerMap && providerMarker) {
+                    const provider = getProviderLocation();
+
+                    providerMap.setCenter({
+                        lat: provider.lat,
+                        lng: provider.lng
+                    });
+
+                    providerMarker.setPosition({
+                        lat: provider.lat,
+                        lng: provider.lng
+                    });
+                } else {
+                    initMaps(lastUserLat, lastUserLng);
+                }
+            }
+
+
+            updateCalculations();
+
+        }
+
+
+        /* Haversine distance */
+
+        function calculateDistance(
+            lat1,
+            lon1,
+            lat2,
+            lon2
+        ) {
+
+            if (
+                !Number.isFinite(lat1) ||
+                !Number.isFinite(lon1) ||
+                !Number.isFinite(lat2) ||
+                !Number.isFinite(lon2)
+            ) {
+
+                return 0;
+
+            }
+
+
+            const R =
+                6371;
+
+
+            const dLat =
+                (lat2 - lat1) *
+                Math.PI /
+                180;
+
+
+            const dLon =
+                (lon2 - lon1) *
+                Math.PI /
+                180;
+
+
+            const a =
+                Math.sin(
+                    dLat / 2
+                ) ** 2 +
+
+                Math.cos(
+                    lat1 *
+                    Math.PI /
+                    180
+                ) *
+
+                Math.cos(
+                    lat2 *
+                    Math.PI /
+                    180
+                ) *
+
+                Math.sin(
+                    dLon / 2
+                ) ** 2;
+
+
+            return R *
+                (
+                    2 *
+                    Math.atan2(
+                        Math.sqrt(a),
+                        Math.sqrt(1 - a)
+                    )
+                );
+
+        }
+
+
+        /*
+         * Fare calculation
+         * Shop Service = Visit Charges hidden / 0
+         * Home Service = Visit Charges shown
+         * Per KM = 15
+         * Platform Commission is handled server-side
+         */
+
+        function updateCalculations() {
+
+            const type =
+                document.getElementById(
+                    "serviceTypeInput"
+                ).value;
+
+
+            const provider =
+                getProviderLocation();
+
+
+            let dist =
+                0;
+
+
+            if (
+                Number.isFinite(lastUserLat) &&
+                Number.isFinite(lastUserLng)
+            ) {
+
+                dist =
+                    calculateDistance(
+                        lastUserLat,
+                        lastUserLng,
+
+                        provider.lat,
+                        provider.lng
+                    );
+
+            }
+
+
+            // Visit charges apply only when the provider travels to the customer.
+            // Shop Service: customer visits the shop, so visit charges are always 0.
+            const perKmRate = 15;
+
+            let total = 0;
+
+            if (type === "Home Service") {
+                const homeBaseFee = 100;
+                total = homeBaseFee + (dist * perKmRate);
+            }
+
+
+            document.getElementById(
+                "distance"
+            ).value =
+                dist.toFixed(2);
+
+
+            document.getElementById(
+                "visitCharge"
+            ).value =
+                total.toFixed(0);
+
+
+            const visitChargeDisplay =
+                document.getElementById("visitChargeDisplay");
+
+            const visitChargesRow =
+                document.getElementById("visitChargesRow");
+
+            const fareBreakdown =
+                document.getElementById("fareBreakdown");
+
+            // Shop Service: hide the complete charges section.
+            // Home Service: show the complete charges section.
+            const showVisitCharges =
+                type === "Home Service" || type === "Home";
+
+            if (fareBreakdown) {
+                fareBreakdown.style.display =
+                    showVisitCharges ? "block" : "none";
+            }
+
+            if (visitChargesRow) {
+                visitChargesRow.style.display =
+                    showVisitCharges ? "flex" : "none";
+            }
+
+            if (visitChargeDisplay) {
+                visitChargeDisplay.textContent = total.toFixed(0);
+            }
+
+        }
+
+
+        /* Google maps error */
+
+        function showGoogleMapsError(
+            message
+        ) {
+
+            const customerMapElement =
+                document.getElementById(
+                    "customerMap"
+                );
+
+
+            if (customerMapElement) {
+
+                customerMapElement.innerHTML =
+                    `
+                    <div class="map-error">
+
+                        <div>
+
+                            <i class="bi bi-exclamation-triangle-fill
+                                      text-warning
+                                      fs-2
+                                      d-block
+                                      mb-2">
+                            </i>
+
+                            <strong>
+                                Google Maps Error
+                            </strong>
+
+                            <div class="mt-2">
+                                ${message}
+                            </div>
+
+                        </div>
+
+                    </div>
+                    `;
+
+            }
+
+        }
+
+
+        function showProviderMapError() {
+
+            const providerMapElement =
+                document.getElementById(
+                    "providerMap"
+                );
+
+
+            if (providerMapElement) {
+
+                providerMapElement.innerHTML =
+                    `
+                    <div class="map-error">
+
+                        <div>
+
+                            <i class="bi bi-exclamation-triangle-fill
+                                      text-warning
+                                      fs-2
+                                      d-block
+                                      mb-2">
+                            </i>
+
+                            Google Maps could not be loaded.
+
+                        </div>
+
+                    </div>
+                    `;
+
+            }
+
+        }
+
+
+        /* Date / time */
+
+        const dateInput =
+            document.getElementById("dateInput");
+
+        const timeInput =
+            document.getElementById("timeInput");
+
+        const dateError =
+            document.getElementById("dateError");
+
+        const timeError =
+            document.getElementById("timeError");
+
+        function getLocalDateString(date = new Date()) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, "0");
+            const day = String(date.getDate()).padStart(2, "0");
+            return `${year}-${month}-${day}`;
+        }
+
+        dateInput.min = getLocalDateString();
+
+        function setDateError(message) {
+            if (!dateError) return;
+            dateError.textContent = message || "";
+            dateError.style.display = message ? "block" : "none";
+        }
+
+        function setTimeError(message) {
+            if (!timeError) return;
+            timeError.textContent = message || "";
+            timeError.style.display = message ? "block" : "none";
+        }
+
+        function clearDateTimeErrors() {
+            setDateError("");
+            setTimeError("");
+        }
+
+        function showProviderAvailabilityPopup(message) {
+            const popup = document.getElementById(
+                "providerAvailabilityPopup"
+            );
+
+            const messageElement = document.getElementById(
+                "providerAvailabilityPopupMessage"
+            );
+
+            if (messageElement) {
+                messageElement.textContent =
+                    message ||
+                    "The provider is not available in this time. Please review the provider's profile for available days and hours.";
+            }
+
+            if (popup) {
+                popup.classList.add("show");
+            }
+        }
+
+        function normalizeProviderDays(value) {
+            return (value || "")
+                .toLowerCase()
+                .replace(/[\[\]"]/g, "")
+                .split(/[,;|]+/)
+                .map(function (day) {
+                    return day.trim();
+                })
+                .filter(Boolean);
+        }
+
+        function getProviderDays() {
+            return normalizeProviderDays(
+                '@Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.ProviderAvailableDays ?? ""))'
+            );
+        }
+
+        function isProviderAvailableOnSelectedDay(selectedDate) {
+            const providerDays = getProviderDays();
+
+            if (!selectedDate || !providerDays.length) {
+                return false;
+            }
+
+            const date = new Date(selectedDate + "T00:00:00");
+
+            if (Number.isNaN(date.getTime())) {
+                return false;
+            }
+
+            const fullDayNames = [
+                "sunday",
+                "monday",
+                "tuesday",
+                "wednesday",
+                "thursday",
+                "friday",
+                "saturday"
+            ];
+
+            const shortDayNames = [
+                "sun",
+                "mon",
+                "tue",
+                "wed",
+                "thu",
+                "fri",
+                "sat"
+            ];
+
+            const fullDay = fullDayNames[date.getDay()];
+            const shortDay = shortDayNames[date.getDay()];
+
+            return providerDays.some(function (day) {
+                const normalized = day.replace(/\./g, "").trim();
+                return normalized === fullDay ||
+                       normalized === shortDay ||
+                       normalized.startsWith(fullDay.substring(0, 3));
+            });
+        }
+
+        function parseProviderTime(value) {
+            if (!value) return null;
+
+            const raw = String(value).trim().toUpperCase();
+            if (!raw) return null;
+
+            // Accept normal 12-hour/24-hour values and values containing seconds.
+            const match = raw.match(
+                /^(\d{1,2}):(\d{2})(?::\d{2})?(?:\s*([AP]M))?$/
+            );
+
+            if (!match) return null;
+
+            let hours = Number(match[1]);
+            const minutes = Number(match[2]);
+            const meridiem = match[3];
+
+            if (!Number.isInteger(hours) ||
+                !Number.isInteger(minutes) ||
+                minutes < 0 || minutes > 59) {
+                return null;
+            }
+
+            if (meridiem) {
+                if (hours < 1 || hours > 12) return null;
+
+                if (meridiem === "AM" && hours === 12) hours = 0;
+                if (meridiem === "PM" && hours !== 12) hours += 12;
+            } else if (hours < 0 || hours > 23) {
+                return null;
+            }
+
+            return hours * 60 + minutes;
+        }
+
+        function formatMinutesAsTime(minutes) {
+            const hours = Math.floor(minutes / 60);
+            const mins = minutes % 60;
+            return `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
+        }
+
+        function getProviderWorkingRange() {
+            const providerStart = parseProviderTime(
+                @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.ProviderStartTime ?? ""))
+            );
+
+            const providerEnd = parseProviderTime(
+                @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.ProviderEndTime ?? ""))
+            );
+
+            if (providerStart === null || providerEnd === null) {
+                return null;
+            }
+
+            return {
+                start: providerStart,
+                end: providerEnd
+            };
+        }
+
+        function applyProviderWorkingHours() {
+            const range = getProviderWorkingRange();
+
+            if (!range) {
+                timeInput.removeAttribute("min");
+                timeInput.removeAttribute("max");
+                return;
+            }
+
+            // Automatically fetch provider hours and bind them to the time input.
+            timeInput.min = formatMinutesAsTime(range.start);
+            timeInput.max = formatMinutesAsTime(range.end);
+        }
+
+        function isProviderAvailableAtSelectedTime(selectedTime) {
+            const range = getProviderWorkingRange();
+
+            if (!range || !selectedTime) {
+                return false;
+            }
+
+            const selectedMinutes = parseProviderTime(selectedTime);
+
+            if (selectedMinutes === null) {
+                return false;
+            }
+
+            return selectedMinutes >= range.start &&
+                   selectedMinutes <= range.end;
+        }
+
+        function validateBookingDateTime() {
+            const selectedDate = dateInput.value;
+            const selectedTime = timeInput.value;
+            const today = getLocalDateString();
+
+            clearDateTimeErrors();
+
+            if (!selectedDate) {
+                setDateError("Please select a booking date.");
+                return false;
+            }
+
+            if (selectedDate < today) {
+                setDateError("A past date cannot be selected.");
+                return false;
+            }
+
+            if (!isProviderAvailableOnSelectedDay(selectedDate)) {
+                setDateError(
+                    "The provider is not available on the selected day. Please review the provider's profile for available days and hours."
+                );
+                return false;
+            }
+
+            if (!selectedTime) {
+                setTimeError("Please select a booking time.");
+                return false;
+            }
+
+            const selectedMinutes = parseProviderTime(selectedTime);
+
+            if (selectedMinutes === null) {
+                setTimeError("Invalid time.");
+                return false;
+            }
+
+            const selectedDateTime = new Date(
+                `${selectedDate}T${selectedTime}`
+            );
+
+            if (Number.isNaN(selectedDateTime.getTime())) {
+                setTimeError("Invalid time.");
+                return false;
+            }
+
+            if (selectedDateTime <= new Date()) {
+                setTimeError("The selected booking time has already passed.");
+                return false;
+            }
+
+            if (!isProviderAvailableAtSelectedTime(selectedTime)) {
+                setTimeError(
+                    "The provider is not available at the selected time. Please review the provider's profile for available days and hours."
+                );
+                return false;
+            }
+
+            clearDateTimeErrors();
+            return true;
+        }
+
+        applyProviderWorkingHours();
+
+        dateInput.addEventListener("change", function () {
+            validateBookingDateTime();
+        });
+
+        timeInput.addEventListener("change", function () {
+            validateBookingDateTime();
+        });
+
+        timeInput.addEventListener("input", function () {
+            if (this.value) {
+                validateBookingDateTime();
+            }
+        });
+
+
+        /* Address enter key */
+
+
+        document.getElementById(
+            "addressInput"
+        )
+        .addEventListener(
+            "keydown",
+            function (
+                event
+            ) {
+
+                if (
+                    event.key === "Enter"
+                ) {
+
+                    event.preventDefault();
+
+                    searchAddressOnMap();
+
+                }
+
+            }
+        );
+
+
+        /* Initial page load */
+
+        document.addEventListener(
+            "DOMContentLoaded",
+            async function () {
+
+                try {
+
+                    await loadGoogleMaps();
+
+
+                    toggleServiceFields();
+
+                }
+                catch (error) {
+
+                    console.error(
+                        "Initial Google Maps error:",
+                        error
+                    );
+
+
+                    showGoogleMapsError(
+                        "Google Maps has not been initialized. " +
+                        "Check the API key and Google Cloud settings."
+                    );
+
+
+                    showProviderMapError();
+
+                }
+
+            }
+        );
+
+
+        /* Form submission */
+
+        document.getElementById(
+            "bookingForm"
+        )
+        .addEventListener(
+            "submit",
+            async function (
+                event
+            ) {
+
+                event.preventDefault();
+
+
+                if (!this.checkValidity()) {
+                    this.reportValidity();
+                    return;
+                }
+
+                if (!validateBookingDateTime()) {
+                    return;
+                }
+
+                const serviceType =
+                    document.getElementById("serviceTypeInput").value.trim();
+
+                const isHomeService =
+                    serviceType === "Home Service" ||
+                    serviceType === "Home";
+
+                const addressInput =
+                    document.getElementById("addressInput");
+
+                const address = addressInput.value.trim();
+
+                // Home Service: customer address/location is mandatory.
+                // Shop Service: customer's home address is optional because
+                // the customer is travelling to the provider's shop.
+                if (isHomeService && !address) {
+                    alert("Please enter your complete home address.");
+                    addressInput.focus();
+                    return;
+                }
+
+                const coordinates =
+                    document.getElementById("locationText").value.trim();
+
+                if (isHomeService && !coordinates) {
+                    alert("Please search for your address or select your exact home location on the map.");
+                    return;
+                }
+
+                // For Shop Service, the provider's shop location is used.
+                // Customer home coordinates are not required.
+                const coordinateParts = coordinates
+                    ? coordinates.split(",")
+                    : [];
+
+                if (isHomeService && coordinateParts.length !== 2) {
+                    alert("Customer home location coordinates are invalid.");
+                    return;
+                }
+
+
+                const selectedLat = coordinateParts.length === 2
+                    ? parseFloat(coordinateParts[0])
+                    : null;
+
+                const selectedLng = coordinateParts.length === 2
+                    ? parseFloat(coordinateParts[1])
+                    : null;
+
+                if (isHomeService &&
+                    (!Number.isFinite(selectedLat) ||
+                     !Number.isFinite(selectedLng))) {
+                    alert("Customer home location is invalid. Please search for the address again.");
+                    return;
+                }
+
+                if (Number.isFinite(selectedLat) && Number.isFinite(selectedLng)) {
+                    lastUserLat = selectedLat;
+                    lastUserLng = selectedLng;
+                }
+
+
+                updateCalculations();
+
+
+                const submitButton =
+                    document.getElementById(
+                        "submitBookingButton"
+                    );
+
+
+                const originalButtonText =
+                    submitButton.innerHTML;
+
+
+                submitButton.disabled =
+                    true;
+
+
+                submitButton.innerHTML =
+                    '<i class="bi bi-hourglass-split"></i> Processing...';
+
+
+                const formData =
+                    new FormData(
+                        this
+                    );
+
+
+                const tokenElement =
+                    document.querySelector(
+                        'input[name="__RequestVerificationToken"]'
+                    );
+
+
+                const token =
+                    tokenElement
+                        ? tokenElement.value
+                        : "";
+
+
+                try {
+
+                    const response =
+                        await fetch(
+                            this.action,
+                            {
+                                method:
+                                    "POST",
+
+                                headers: {
+
+                                    "RequestVerificationToken":
+                                        token,
+
+                                    "X-Requested-With":
+                                        "XMLHttpRequest"
+
+                                },
+
+                                body:
+                                    formData
+                            }
+                        );
+
+
+                    const contentType =
+                        response.headers.get(
+                            "content-type"
+                        ) || "";
+
+
+                    if (
+                        !contentType.includes(
+                            "application/json"
+                        )
+                    ) {
+
+                        throw new Error(
+                            "The server did not return a JSON response."
+                        );
+
+                    }
+
+
+                    const data =
+                        await response.json();
+
+
+                    if (
+                        data.success
+                    ) {
+
+                        sgAlert(
+                            "[ok] Booking confirmed!" +
+                            (
+                                data.bookingId
+                                    ? " ID: " +
+                                      data.bookingId
+                                    : ""
+                            ),
+                            function () {
+                                window.location.href =
+                                    data.redirectUrl ||
+                                    '@Url.Action("CusDashboard", "Customer")';
+                            }
+                        );
+
+
+                        return;
+
+                    }
+
+
+                    if (
+                        data.needsLogin ||
+                        data.needsSignup
+                    ) {
+
+                        if (data.needsLogin) {
+                            sgAlert(
+                                data.message ||
+                                "Please login to continue your booking.",
+                                function () {
+                                    window.location.href =
+                                        data.redirectUrl ||
+                                        '@Url.Action("Login", "Home")';
+                                }
+                            );
+
+                            return;
+                        }
+
+                        sgAlert(
+                            data.message ||
+                            "Please sign up to continue your booking.",
+                            function () {
+                                window.location.href =
+                                    data.redirectUrl ||
+                                    '@Url.Action("SignUp", "Home")';
+                            }
+                        );
+
+                        return;
+                    }
+
+
+                    if (data.providerUnavailable) {
+                        showProviderAvailabilityPopup(
+                            data.message ||
+                            "The provider is not available in this time. Please review the provider's profile for available days and hours."
+                        );
+                    }
+                    else {
+                        alert(
+                            "[error] " +
+                            (
+                                data.message ||
+                                "Booking could not be submitted."
+                            )
+                        );
+                    }
+
+
+                    submitButton.disabled =
+                        false;
+
+
+                    submitButton.innerHTML =
+                        originalButtonText;
+
+                }
+                catch (error) {
+
+                    console.error(
+                        "Booking submission error:",
+                        error
+                    );
+
+
+                    alert(
+                        "[error] An error occurred while submitting the booking. Please try again."
+                    );
+
+
+                    submitButton.disabled =
+                        false;
+
+
+                    submitButton.innerHTML =
+                        originalButtonText;
+
+                }
+
+            }
+        );
+
+    </script>
+
+</body>
+</html>

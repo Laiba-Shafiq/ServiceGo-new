@@ -1,0 +1,3018 @@
+﻿@{
+    Layout = null;
+
+    bool isLoggedIn = ViewBag.IsLoggedIn == true;
+    string userRole = ViewBag.UserRole as string ?? "";
+    string providerState = ViewBag.ProviderState as string ?? "";
+    string providerName = ViewBag.ProviderName as string ?? "";
+    string providerRejectionReason = ViewBag.ProviderRejectionReason as string ?? "";
+    string providerCode = ViewBag.ProviderCode as string ?? "";
+    string customerName = ViewBag.CustomerName as string ?? "";
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0" />
+
+    <title>ServiceGo - Your All-in-One Home Service Solution</title>
+
+    <meta name="description"
+          content="ServiceGo helps customers find, connect with and book verified local service providers." />
+    <meta name="theme-color" content="#f0ad4e" />
+
+    <!-- Resource hints -->
+
+    <link rel="preconnect"
+          href="https://cdn.jsdelivr.net"
+          crossorigin />
+
+    <link rel="dns-prefetch"
+          href="//cdn.jsdelivr.net" />
+
+    <!-- Favicon -->
+    <link rel="icon"
+          href="/images/Logo.png"
+          type="image/png" />
+
+    <!--
+       Lcp image
+       Keep the first hero image high priority.
+    -->
+
+    <link rel="preload"
+          as="image"
+          href="/images/Engineers.png"
+          fetchpriority="high" />
+
+    <!-- Bootstrap CSS -->
+
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
+
+    <style>
+
+        :root {
+            --primary-gradient: linear-gradient(135deg, #f0ad4e 0%, #ff6b6b 100%);
+            --accent-color: #ff6b6b;
+            --hover-color: #e0962f;
+        }
+
+
+        img {
+            max-width: 100%;
+            height: auto;
+        }
+
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        /* Compact, modern public footer */
+        .servicego-footer {
+            margin-top: 0;
+            padding: 52px 0 20px;
+            background: linear-gradient(135deg, #fff4df 0%, #fffaf3 52%, #ffe9cf 100%);
+            color: #3a2a1d;
+            border-top: 1px solid rgba(216,137,32,.18);
+            box-shadow: 0 -10px 35px rgba(91,61,28,.06);
+        }
+
+        .servicego-footer-brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .servicego-footer-logo {
+            width: 48px;
+            height: 48px;
+            object-fit: contain;
+            border-radius: 10px;
+        }
+
+        .servicego-footer h3,
+        .servicego-footer h4 {
+            margin: 0 0 10px;
+            font-weight: 700;
+        }
+
+        .servicego-footer h3 {
+            font-size: 1.2rem;
+        }
+
+        .servicego-footer h4 {
+            color: #c97715;
+            font-size: .92rem;
+        }
+
+        .servicego-footer p {
+            margin: 0;
+            color: #756452;
+            font-size: .88rem;
+        }
+
+        .servicego-footer a {
+            display: block;
+            width: fit-content;
+            margin: 0 0 9px;
+            color: #655342;
+            text-decoration: none;
+            font-size: .88rem;
+            transition: color .2s ease, transform .2s ease;
+        }
+
+            .servicego-footer a:hover {
+                color: #c97715;
+                transform: translateX(3px);
+            }
+
+        .servicego-footer-bottom {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            margin-top: 34px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(115,79,40,.14);
+            color: #806f5d;
+            font-size: .78rem;
+        }
+
+        .servicego-footer-developer {
+            color: #5b4938;
+            font-weight: 700;
+        }
+
+            .servicego-footer-developer strong {
+                color: #c97715;
+            }
+
+        @@media (max-width: 575px) {
+            .servicego-footer {
+                padding-top: 36px;
+            }
+
+            .servicego-footer-bottom {
+                flex-direction: column;
+            }
+        }
+
+        body {
+            margin: 0;
+            caret-color: transparent;
+        }
+
+        input,
+        textarea,
+        select,
+        [contenteditable="true"] {
+            caret-color: auto;
+        }
+
+        .navbar {
+            min-height: 56px;
+        }
+
+        .navbar-nav .nav-link {
+            color: #000 !important;
+            font-weight: 600;
+            transition: color .15s ease;
+        }
+
+            .navbar-nav .nav-link:hover {
+                color: var(--accent-color) !important;
+            }
+
+        .servicego-logo {
+            width: 40px;
+            height: 40px;
+            object-fit: contain;
+            flex: 0 0 40px;
+        }
+
+        .hero-slider-container {
+            position: relative;
+            width: 100%;
+            overflow: hidden;
+            background: #222;
+            min-height: 580px;
+        }
+
+        .slider-img {
+            display: block;
+            width: 100%;
+            height: 580px;
+            object-fit: cover;
+        }
+
+        .slider-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, .62);
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .slider-fixed-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 3;
+            width: 100%;
+            max-width: 850px;
+            padding: 0 20px;
+        }
+
+            .slider-fixed-content h1 {
+                color: #fff;
+                text-shadow: 0 2px 12px rgba(0, 0, 0, .35);
+            }
+
+        .service-card {
+            border-radius: 16px !important;
+            overflow: hidden;
+            transition: transform .15s ease, box-shadow .15s ease;
+            cursor: pointer;
+            contain: layout paint;
+        }
+
+            .service-card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 10px 20px rgba(255, 107, 107, .15) !important;
+            }
+
+            .service-card img {
+                display: block;
+                width: 100%;
+                height: 200px;
+                object-fit: cover;
+            }
+
+        .step-card {
+            padding: 30px;
+            border-radius: 12px;
+            background: #fff;
+            border: 2px dashed #f0ad4e;
+            transition: background .15s ease, border-color .15s ease, transform .15s ease;
+            min-height: 250px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            contain: layout paint;
+        }
+
+            .step-card:hover {
+                background: #fffcf7;
+                border-color: #ff6b6b;
+                transform: translateY(-5px);
+            }
+
+        .step-icon {
+            font-size: 42px;
+            line-height: 1;
+            color: var(--accent-color);
+            margin-bottom: 15px;
+        }
+
+        .why-slider-img {
+            display: block;
+            width: 100%;
+            height: 400px;
+            object-fit: cover;
+            border-radius: 12px;
+        }
+
+        .more .card {
+            background: #fff;
+            border-radius: 16px;
+            cursor: pointer;
+            border: none !important;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, .06) !important;
+            width: 250px;
+            height: 240px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            flex-shrink: 0;
+            padding: 25px !important;
+            contain: layout paint;
+        }
+
+            .more .card img {
+                display: block;
+                width: auto;
+                max-width: 100%;
+                height: 100px;
+                object-fit: contain;
+                margin: 0 auto;
+            }
+
+        .marquee-container {
+            overflow: hidden;
+            width: 100%;
+            display: flex;
+            padding: 30px 0;
+        }
+
+        .marquee-track {
+            display: flex;
+            gap: 2rem;
+            width: max-content;
+            will-change: transform;
+            transform: translate3d(0, 0, 0);
+            backface-visibility: hidden;
+        }
+
+        .extended-footer {
+            min-height: 320px;
+        }
+
+            .extended-footer h5 {
+                position: relative;
+                padding-bottom: 10px;
+            }
+
+                .extended-footer h5::after {
+                    content: '';
+                    position: absolute;
+                    left: 0;
+                    bottom: 0;
+                    width: 40px;
+                    height: 3px;
+                    background: var(--primary-gradient);
+                    border-radius: 2px;
+                }
+
+        .footer-support-links a {
+            color: #f0ad4e;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color .15s ease, padding-left .15s ease;
+        }
+
+            .footer-support-links a:hover {
+                color: #ff6b6b;
+                padding-left: 5px;
+            }
+
+        .services,
+        .how-it-works,
+        .why,
+        .more {
+            content-visibility: auto;
+            contain-intrinsic-size: 600px;
+        }
+
+        /* Fluid responsive sizing - no media queries required */
+        .hero-slider-container {
+            min-height: clamp(420px, 40vw, 580px);
+        }
+
+        .slider-img {
+            height: clamp(420px, 40vw, 580px);
+        }
+
+        .slider-fixed-content {
+            padding: 0 clamp(15px, 2vw, 20px);
+        }
+
+            .slider-fixed-content h1 {
+                font-size: clamp(2rem, 3.2vw, 3rem);
+            }
+
+            .slider-fixed-content p {
+                font-size: clamp(1rem, 1.5vw, 1.25rem);
+            }
+
+        .why-slider-img {
+            height: clamp(280px, 31.25vw, 400px);
+        }
+
+        .more .card {
+            width: clamp(180px, 19.5vw, 250px);
+            height: clamp(190px, 18.75vw, 240px);
+            padding: clamp(15px, 2vw, 25px) !important;
+        }
+
+            .more .card img {
+                height: clamp(75px, 7.8vw, 100px);
+            }
+
+        .step-card {
+            min-height: clamp(0px, 19.5vw, 250px);
+        }
+
+
+        .header-greeting {
+            color: #4b3a28;
+            font-weight: 700;
+            font-size: .94rem;
+            white-space: nowrap;
+            padding: 0 .35rem;
+        }
+
+        .hero-welcome {
+            display: inline-block;
+            margin-bottom: 12px;
+            color: rgba(255,255,255,.96);
+            font-size: clamp(1rem, 1.35vw, 1.18rem);
+            font-weight: 600;
+            letter-spacing: .01em;
+            text-shadow: 0 2px 10px rgba(0,0,0,.45);
+        }
+
+        .header-status {
+            color: #b87812;
+            font-weight: 700;
+            font-size: .92rem;
+            white-space: nowrap;
+            padding: 0 .35rem;
+        }
+
+        .header-action {
+            color: #2f2f2f !important;
+            font-weight: 700 !important;
+        }
+
+        .servicego-navbar .header-action[href*="HelpCenter"] {
+            font-weight: 700 !important;
+            white-space: nowrap;
+        }
+
+        .header-action:hover {
+            color: #d88920 !important;
+        }
+
+        .provider-status-text {
+            display: block;
+            margin: 14px auto 0;
+            color: #fff;
+            font-size: 1rem;
+            font-weight: 600;
+            line-height: 1.65;
+            text-shadow: 0 2px 10px rgba(0,0,0,.35);
+        }
+
+        .provider-hero-status {
+            width: min(100%, 720px);
+            margin: 18px auto 0;
+            padding: 18px 22px;
+            border: 1px solid rgba(255,255,255,.28);
+            border-radius: 16px;
+            background: rgba(0,0,0,.30);
+            box-shadow: 0 10px 30px rgba(0,0,0,.18);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            color: #fff;
+            text-align: center;
+        }
+
+        .provider-hero-status-title {
+            margin-bottom: 6px;
+            font-size: 1.12rem;
+            font-weight: 800;
+            color: #fff;
+        }
+
+        .provider-hero-status-message {
+            margin: 0;
+            font-size: .98rem;
+            line-height: 1.65;
+            color: rgba(255,255,255,.94);
+        }
+
+        .provider-hero-status.pending {
+            border-color: rgba(240,173,78,.55);
+        }
+
+        .provider-hero-status.rejected {
+            border-color: rgba(255,107,107,.55);
+        }
+
+        .provider-reason {
+            margin: 13px auto 0;
+            padding: 11px 14px;
+            border-radius: 10px;
+            background: rgba(255,255,255,.12);
+            color: #fff;
+            font-size: .95rem;
+            line-height: 1.6;
+            text-align: left;
+        }
+
+            .provider-reason strong {
+                color: #ffd27a;
+            }
+
+        @@media (max-width: 576px) {
+            .provider-hero-status {
+                padding: 15px 16px;
+                border-radius: 13px;
+            }
+
+            .provider-hero-status-title {
+                font-size: 1rem;
+            }
+
+            .provider-hero-status-message,
+            .provider-reason {
+                font-size: .9rem;
+            }
+        }
+
+        .nav-logout {
+            color: #c66b00 !important;
+            font-weight: 700 !important;
+        }
+
+        .navbar-nav {
+            gap: clamp(2px, .5vw, 6px);
+        }
+
+            .navbar-nav .nav-link {
+                font-size: clamp(.85rem, 1.1vw, 1rem);
+                padding-left: clamp(.4rem, .8vw, .75rem) !important;
+                padding-right: clamp(.4rem, .8vw, .75rem) !important;
+            }
+
+        .servicego-logo {
+            width: clamp(36px, 3.2vw, 40px);
+            height: clamp(36px, 3.2vw, 40px);
+            flex-basis: clamp(36px, 3.2vw, 40px);
+        }
+
+        .servicego-navbar {
+            min-height: 64px;
+            border-bottom: 1px solid rgba(240,173,78,.12);
+        }
+
+            .servicego-navbar .navbar-brand {
+                margin-right: 1.5rem;
+            }
+
+            .servicego-navbar .navbar-nav {
+                gap: .45rem;
+            }
+
+            .servicego-navbar .nav-link {
+                padding: .35rem .6rem !important;
+                border-radius: 8px;
+                font-weight: 700 !important;
+            }
+
+                .servicego-navbar .nav-link:hover {
+                    background: #fff8ef;
+                }
+
+
+            /* Public navbar must remain fully visible after logout. */
+            .servicego-navbar .navbar-collapse {
+                display: flex !important;
+                flex-grow: 1;
+                justify-content: flex-end;
+            }
+
+            .servicego-navbar .public-nav {
+                display: flex !important;
+                align-items: center;
+                visibility: visible !important;
+                opacity: 1 !important;
+            }
+
+                .servicego-navbar .public-nav .nav-item,
+                .servicego-navbar .public-nav .nav-link {
+                    display: block !important;
+                    visibility: visible !important;
+                    opacity: 1 !important;
+                }
+
+                .servicego-navbar .public-nav .nav-link {
+                    color: #1f1a16 !important;
+                    font-weight: 700 !important;
+                }
+
+                    .servicego-navbar .public-nav .nav-link:hover {
+                        color: #c97715 !important;
+                        background: #fff8ef;
+                    }
+
+        /* Mobile navbar refinement: Help Center and header links fit cleanly. */
+        @@media (max-width: 576px) {
+            .servicego-navbar .container {
+                padding-left: 10px;
+                padding-right: 10px;
+            }
+
+            .servicego-navbar .navbar-brand {
+                margin-right: .55rem;
+                flex-shrink: 0;
+            }
+
+                .servicego-navbar .navbar-brand span {
+                    font-size: .95rem;
+                }
+
+            .servicego-navbar .servicego-logo {
+                width: 34px;
+                height: 34px;
+                flex-basis: 34px;
+            }
+
+            .servicego-navbar .navbar-nav {
+                gap: .3rem;
+                flex-wrap: nowrap;
+            }
+
+                .servicego-navbar .navbar-nav .nav-item {
+                    flex-shrink: 0;
+                }
+
+                .servicego-navbar .navbar-nav .nav-link,
+                .servicego-navbar .header-greeting,
+                .servicego-navbar .header-status {
+                    font-size: .78rem;
+                    padding-left: .42rem !important;
+                    padding-right: .42rem !important;
+                    font-weight: 700 !important;
+                }
+
+            .servicego-navbar .header-greeting {
+                padding-left: .3rem;
+                padding-right: .3rem;
+            }
+
+            .servicego-navbar .header-action[href*="HelpCenter"] {
+                line-height: normal;
+                text-align: left;
+                white-space: nowrap;
+                max-width: none;
+                font-weight: 700 !important;
+            }
+        }
+
+        /* Motion preference is handled by the small JS initializer below. */
+
+        /*
+                 * Home content redesign
+                 * Header + hero remain unchanged. These styles affect only
+                 * the content below the hero.
+                 */
+        .redesigned-section {
+            position: relative;
+            padding: 92px 0;
+        }
+
+        .section-heading {
+            max-width: 760px;
+            margin: 0 auto 52px;
+        }
+
+        .section-kicker {
+            display: inline-block;
+            margin-bottom: 12px;
+            padding: 7px 14px;
+            border-radius: 999px;
+            background: rgba(240,173,78,.12);
+            color: #d88920;
+            font-size: .74rem;
+            font-weight: 800;
+            letter-spacing: .16em;
+        }
+
+        .section-heading h2 {
+            margin: 0 0 14px;
+            color: #241b14;
+            font-size: clamp(2rem,3.2vw,2.75rem);
+            font-weight: 850;
+            letter-spacing: -.035em;
+        }
+
+        .section-heading p {
+            margin: 0;
+            color: #746b63;
+            font-size: 1.03rem;
+            line-height: 1.8;
+        }
+
+        .services {
+            background: linear-gradient(180deg,#fff 0%,#fffaf4 100%);
+        }
+
+        .service-grid {
+            align-items: stretch;
+        }
+
+        .modern-service-card {
+            height: 100%;
+            overflow: hidden;
+            border: 1px solid rgba(82,57,35,.08);
+            border-radius: 24px;
+            background: #fff;
+            box-shadow: 0 12px 35px rgba(76,52,30,.08);
+            transition: transform .25s ease,box-shadow .25s ease,border-color .25s ease;
+        }
+
+            .modern-service-card:hover {
+                transform: translateY(-8px);
+                border-color: rgba(240,173,78,.45);
+                box-shadow: 0 20px 48px rgba(76,52,30,.14);
+            }
+
+        .service-image-wrap {
+            position: relative;
+            height: 235px;
+            overflow: hidden;
+            background: #f7f1e9;
+        }
+
+            .service-image-wrap::after {
+                content: '';
+                position: absolute;
+                inset: 0;
+                background: linear-gradient(180deg,transparent 55%,rgba(22,14,8,.28));
+                pointer-events: none;
+            }
+
+            .service-image-wrap img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                display: block;
+                transition: transform .45s ease;
+            }
+
+        .modern-service-card:hover .service-image-wrap img {
+            transform: scale(1.055);
+        }
+
+        .service-number {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            z-index: 2;
+            width: 42px;
+            height: 42px;
+            display: grid;
+            place-items: center;
+            border-radius: 50%;
+            background: rgba(255,255,255,.92);
+            color: #c97715;
+            font-size: .75rem;
+            font-weight: 900;
+            box-shadow: 0 6px 18px rgba(0,0,0,.12);
+        }
+
+        .service-content {
+            padding: 24px 24px 27px;
+        }
+
+        .service-label {
+            color: #c97715;
+            font-size: .68rem;
+            font-weight: 900;
+            letter-spacing: .14em;
+        }
+
+        .service-content h3 {
+            margin: 8px 0 8px;
+            color: #251d17;
+            font-size: 1.25rem;
+            font-weight: 800;
+        }
+
+        .service-content p {
+            margin: 0;
+            color: #766d65;
+            line-height: 1.65;
+            font-size: .92rem;
+        }
+
+        .how-section {
+            background: #fbf7f1;
+            overflow: hidden;
+        }
+
+        .process-grid {
+            position: relative;
+        }
+
+        .process-line {
+            position: absolute;
+            left: 18%;
+            right: 18%;
+            top: 245px;
+            border-top: 2px dashed rgba(240,173,78,.45);
+            z-index: 0;
+        }
+
+        .process-card {
+            position: relative;
+            z-index: 1;
+            min-height: 285px;
+            padding: 34px 28px;
+            text-align: center;
+            border: 1px solid rgba(70,48,27,.08);
+            border-radius: 24px;
+            background: rgba(255,255,255,.88);
+            box-shadow: 0 12px 34px rgba(70,48,27,.07);
+            transition: transform .25s ease,box-shadow .25s ease;
+        }
+
+            .process-card:hover {
+                transform: translateY(-7px);
+                box-shadow: 0 20px 42px rgba(70,48,27,.12);
+            }
+
+        .featured-process {
+            background: linear-gradient(145deg,#fffaf1,#fff);
+            border-color: rgba(240,173,78,.42);
+            box-shadow: 0 18px 45px rgba(240,173,78,.16);
+        }
+
+        .process-icon {
+            width: 72px;
+            height: 72px;
+            margin: 0 auto 20px;
+            display: grid;
+            place-items: center;
+            border-radius: 22px;
+            background: var(--primary-gradient);
+            color: #fff;
+            font-size: 2rem;
+            font-weight: 800;
+            box-shadow: 0 10px 24px rgba(240,173,78,.22);
+        }
+
+        .process-step {
+            color: #c97715;
+            font-size: .68rem;
+            font-weight: 900;
+            letter-spacing: .15em;
+        }
+
+        .process-card h3 {
+            margin: 10px 0 10px;
+            color: #2a211a;
+            font-size: 1.22rem;
+            font-weight: 800;
+        }
+
+        .process-card p {
+            margin: 0;
+            color: #766d65;
+            line-height: 1.7;
+            font-size: .94rem;
+        }
+
+        .why-section {
+            background: #fff;
+        }
+
+        .why-panel {
+            overflow: hidden;
+            border: 1px solid rgba(70,48,27,.08);
+            border-radius: 30px;
+            background: #fbf7f1;
+            box-shadow: 0 18px 55px rgba(60,43,26,.09);
+        }
+
+        .why-image-wrap {
+            position: relative;
+            min-height: 475px;
+            height: 100%;
+            overflow: hidden;
+        }
+
+            .why-image-wrap .why-slider-img {
+                height: 100%;
+                min-height: 475px;
+                border-radius: 0;
+                object-fit: cover;
+            }
+
+        .why-badge {
+            position: absolute;
+            left: 24px;
+            bottom: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            padding: 14px 18px;
+            border: 1px solid rgba(255,255,255,.4);
+            border-radius: 15px;
+            background: rgba(20,14,8,.68);
+            color: #fff;
+            backdrop-filter: blur(8px);
+        }
+
+            .why-badge strong {
+                font-size: 1rem;
+            }
+
+            .why-badge span {
+                color: rgba(255,255,255,.82);
+                font-size: .78rem;
+            }
+
+        .why-copy {
+            padding: 52px 54px;
+        }
+
+        .why-mini {
+            color: #c97715;
+            font-size: .7rem;
+            font-weight: 900;
+            letter-spacing: .16em;
+        }
+
+        .why-copy h3 {
+            margin: 10px 0 16px;
+            color: #281f18;
+            font-size: clamp(1.65rem,2.4vw,2.25rem);
+            line-height: 1.18;
+            font-weight: 850;
+            letter-spacing: -.03em;
+        }
+
+        .why-copy > p {
+            margin: 0 0 25px;
+            color: #71675e;
+            line-height: 1.8;
+        }
+
+        .why-points {
+            display: grid;
+            gap: 17px;
+        }
+
+            .why-points > div {
+                display: flex;
+                align-items: flex-start;
+                gap: 13px;
+            }
+
+                .why-points > div > span {
+                    flex: 0 0 30px;
+                    width: 30px;
+                    height: 30px;
+                    display: grid;
+                    place-items: center;
+                    border-radius: 50%;
+                    background: #fff;
+                    color: #d88920;
+                    font-weight: 900;
+                    box-shadow: 0 5px 15px rgba(70,48,27,.09);
+                }
+
+            .why-points p {
+                margin: 0;
+                color: #2d251e;
+                font-size: .92rem;
+                line-height: 1.45;
+            }
+
+            .why-points strong {
+                display: block;
+                font-size: .96rem;
+            }
+
+            .why-points small {
+                display: block;
+                margin-top: 3px;
+                color: #776e66;
+                font-size: .83rem;
+                line-height: 1.5;
+            }
+
+        .more-section {
+            background: linear-gradient(180deg,#fffaf4 0%,#fff 100%);
+            padding-bottom: 95px;
+        }
+
+            .more-section .section-heading {
+                margin-bottom: 35px;
+            }
+
+        .modern-marquee-track {
+            gap: 18px;
+        }
+
+        .professional-chip {
+            width: 245px;
+            height: 190px;
+            flex: 0 0 245px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 13px;
+            padding: 22px;
+            border: 1px solid rgba(70,48,27,.08);
+            border-radius: 22px;
+            background: #fff;
+            box-shadow: 0 10px 28px rgba(70,48,27,.07);
+            transition: transform .25s ease,box-shadow .25s ease;
+        }
+
+            .professional-chip:hover {
+                transform: translateY(-6px);
+                box-shadow: 0 18px 36px rgba(70,48,27,.11);
+            }
+
+            .professional-chip img {
+                width: 125px;
+                height: 90px;
+                object-fit: contain;
+            }
+
+            .professional-chip span {
+                color: #2c241d;
+                font-weight: 800;
+                font-size: .94rem;
+            }
+
+        .footer-support-links {
+            border-top: 1px solid rgba(255,255,255,.1) !important;
+        }
+
+        @@media (max-width: 991.98px) {
+            .redesigned-section {
+                padding: 72px 0;
+            }
+
+            .process-line {
+                display: none;
+            }
+
+            .why-copy {
+                padding: 38px 30px;
+            }
+        }
+
+        @@media (max-width: 767.98px) {
+            .redesigned-section {
+                padding: 60px 0;
+            }
+
+            .section-heading {
+                margin-bottom: 36px;
+            }
+
+            .service-image-wrap {
+                height: 215px;
+            }
+
+            .why-image-wrap, .why-image-wrap .why-slider-img {
+                min-height: 340px;
+                height: 340px;
+            }
+
+            .why-copy {
+                padding: 32px 24px;
+            }
+
+            .professional-chip {
+                width: 210px;
+                flex-basis: 210px;
+                height: 175px;
+            }
+        }
+
+        /* Customer / provider visual difference + non-clickable media */
+        .modern-service-card,
+        .professional-chip,
+        .provider-card,
+        .provider-service-item,
+        .provider-visual,
+        .why-image-wrap img,
+        .service-image-wrap img {
+            cursor: default !important;
+        }
+
+            .modern-service-card img,
+            .professional-chip img,
+            .provider-service-item img,
+            .provider-visual img,
+            .why-image-wrap img {
+                pointer-events: none;
+                user-select: none;
+            }
+
+        .provider-home {
+            padding-top: 78px;
+            background: linear-gradient(135deg,#19130f 0%,#2c2118 58%,#46311e 100%);
+            color: #fff;
+        }
+
+        .provider-welcome-grid {
+            display: grid;
+            grid-template-columns: 1.05fr .95fr;
+            min-height: 470px;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,.12);
+            border-radius: 34px;
+            background: rgba(255,255,255,.045);
+            box-shadow: 0 25px 70px rgba(0,0,0,.18);
+        }
+
+        .provider-intro {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 60px 58px;
+        }
+
+        .provider-kicker {
+            width: max-content;
+            margin-bottom: 15px;
+            padding: 7px 13px;
+            border: 1px solid rgba(240,173,78,.35);
+            border-radius: 999px;
+            color: #f4bd68;
+            font-size: .7rem;
+            font-weight: 900;
+            letter-spacing: .18em;
+        }
+
+        .provider-intro h2 {
+            margin: 0 0 18px;
+            font-size: clamp(2.2rem,4vw,3.7rem);
+            line-height: 1.03;
+            letter-spacing: -.045em;
+            font-weight: 900;
+        }
+
+        .provider-intro p {
+            max-width: 620px;
+            margin: 0;
+            color: rgba(255,255,255,.72);
+            font-size: 1.02rem;
+            line-height: 1.8;
+        }
+
+        .provider-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 28px;
+        }
+
+            .provider-pills span {
+                padding: 9px 13px;
+                border: 1px solid rgba(255,255,255,.13);
+                border-radius: 999px;
+                background: rgba(255,255,255,.055);
+                color: rgba(255,255,255,.84);
+                font-size: .78rem;
+                font-weight: 700;
+            }
+
+        .provider-visual {
+            position: relative;
+            min-height: 470px;
+            overflow: hidden;
+            background: #211810;
+        }
+
+            .provider-visual::after {
+                content: '';
+                position: absolute;
+                inset: 0;
+                background: linear-gradient(90deg,rgba(25,19,15,.22),rgba(25,19,15,.02) 50%,rgba(25,19,15,.18));
+                pointer-events: none;
+            }
+
+            .provider-visual img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                display: block;
+                opacity: .88;
+            }
+
+        .provider-visual-tag {
+            position: absolute;
+            z-index: 2;
+            left: 24px;
+            right: 24px;
+            bottom: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding: 17px 20px;
+            border: 1px solid rgba(255,255,255,.18);
+            border-radius: 18px;
+            background: rgba(20,14,9,.72);
+            backdrop-filter: blur(10px);
+        }
+
+            .provider-visual-tag strong {
+                color: #f5bd68;
+                font-size: .72rem;
+                letter-spacing: .14em;
+            }
+
+            .provider-visual-tag span {
+                color: rgba(255,255,255,.84);
+                font-size: .88rem;
+            }
+
+        .provider-tools {
+            background: #f8f3ec;
+        }
+
+        .provider-card {
+            position: relative;
+            min-height: 285px;
+            padding: 34px 30px;
+            overflow: hidden;
+            border: 1px solid rgba(66,47,31,.09);
+            border-radius: 26px;
+            background: #fff;
+            box-shadow: 0 14px 38px rgba(58,41,25,.08);
+            transition: transform .25s ease,box-shadow .25s ease;
+        }
+
+            .provider-card:hover {
+                transform: translateY(-6px);
+                box-shadow: 0 22px 48px rgba(58,41,25,.13);
+            }
+
+        .provider-card-highlight {
+            background: linear-gradient(145deg,#2a2119,#46301c);
+            border-color: rgba(240,173,78,.3);
+            color: #fff;
+        }
+
+        .provider-card-number {
+            position: absolute;
+            top: 20px;
+            right: 22px;
+            color: #c9862d;
+            font-size: .72rem;
+            font-weight: 900;
+            letter-spacing: .1em;
+        }
+
+        .provider-card-icon {
+            width: 62px;
+            height: 62px;
+            margin-bottom: 24px;
+            display: grid;
+            place-items: center;
+            border-radius: 18px;
+            background: linear-gradient(135deg,#f0ad4e,#d9821f);
+            color: #fff;
+            font-size: 1.6rem;
+            font-weight: 900;
+            box-shadow: 0 10px 25px rgba(214,137,36,.2);
+        }
+
+        .provider-card h3 {
+            margin: 0 0 11px;
+            color: #2b2118;
+            font-size: 1.25rem;
+            font-weight: 850;
+        }
+
+        .provider-card-highlight h3 {
+            color: #fff;
+        }
+
+        .provider-card p {
+            margin: 0;
+            color: #766b61;
+            line-height: 1.75;
+            font-size: .93rem;
+        }
+
+        .provider-card-highlight p {
+            color: rgba(255,255,255,.72);
+        }
+
+        .provider-services {
+            background: #fff;
+        }
+
+        .provider-service-strip {
+            display: grid;
+            grid-template-columns: repeat(6,1fr);
+            gap: 14px;
+        }
+
+        .provider-service-item {
+            min-height: 170px;
+            padding: 18px 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            border: 1px solid rgba(66,47,31,.08);
+            border-radius: 20px;
+            background: #fffaf4;
+            box-shadow: 0 9px 25px rgba(58,41,25,.06);
+        }
+
+            .provider-service-item img {
+                width: 105px;
+                height: 78px;
+                object-fit: contain;
+            }
+
+            .provider-service-item span {
+                color: #33271e;
+                font-size: .85rem;
+                font-weight: 850;
+                text-align: center;
+            }
+
+        @@media (max-width: 991.98px) {
+            .provider-welcome-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .provider-visual {
+                min-height: 350px;
+            }
+
+            .provider-intro {
+                padding: 48px 34px;
+            }
+
+            .provider-service-strip {
+                grid-template-columns: repeat(3,1fr);
+            }
+        }
+
+        @@media (max-width: 575.98px) {
+            .provider-home {
+                padding-top: 60px;
+            }
+
+            .provider-intro {
+                padding: 38px 24px;
+            }
+
+            .provider-visual {
+                min-height: 290px;
+            }
+
+            .provider-service-strip {
+                grid-template-columns: repeat(2,1fr);
+            }
+
+            .provider-service-item {
+                min-height: 150px;
+            }
+        }
+
+
+        /*
+                 * Role home redesign
+                 * Header + hero are intentionally untouched.
+                 */
+        .role-home {
+            padding: 76px 0 88px;
+            background: linear-gradient(180deg,#fffaf4 0%,#ffffff 100%);
+        }
+
+        .role-home-shell {
+            max-width: 1180px;
+            margin: 0 auto;
+        }
+
+        .role-home-top {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 24px;
+            margin-bottom: 34px;
+        }
+
+        .role-home-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            padding: 7px 13px;
+            border-radius: 999px;
+            background: #fff0da;
+            color: #c97715;
+            font-size: .72rem;
+            font-weight: 900;
+            letter-spacing: .14em;
+            text-transform: uppercase;
+        }
+
+        .role-home-title {
+            margin: 0;
+            color: #251d17;
+            font-size: clamp(2rem,3.5vw,3rem);
+            line-height: 1.08;
+            font-weight: 850;
+            letter-spacing: -.04em;
+        }
+
+        .role-home-subtitle {
+            max-width: 650px;
+            margin: 12px 0 0;
+            color: #766d65;
+            line-height: 1.75;
+            font-size: 1rem;
+        }
+
+        .role-home-primary {
+            flex: 0 0 auto;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 50px;
+            padding: 0 22px;
+            border-radius: 14px;
+            background: linear-gradient(135deg,#f0ad4e,#ff8c42);
+            color: #fff !important;
+            text-decoration: none;
+            font-weight: 800;
+            box-shadow: 0 12px 26px rgba(240,173,78,.24);
+            transition: transform .2s ease,box-shadow .2s ease;
+        }
+
+            .role-home-primary:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 16px 32px rgba(240,173,78,.3);
+            }
+
+        .role-stat-grid {
+            display: grid;
+            grid-template-columns: repeat(3,1fr);
+            gap: 18px;
+            margin-bottom: 30px;
+        }
+
+        .role-stat-card,
+        .role-action-card,
+        .role-status-card {
+            border: 1px solid rgba(82,57,35,.08);
+            border-radius: 22px;
+            background: #fff;
+            box-shadow: 0 12px 34px rgba(76,52,30,.07);
+        }
+
+        .role-stat-card {
+            padding: 24px;
+            min-height: 132px;
+        }
+
+        .role-stat-icon {
+            width: 42px;
+            height: 42px;
+            display: grid;
+            place-items: center;
+            margin-bottom: 16px;
+            border-radius: 13px;
+            background: #fff5e8;
+            color: #d88920;
+            font-weight: 900;
+            font-size: 1.05rem;
+        }
+
+        .role-stat-label {
+            color: #83776d;
+            font-size: .78rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+        }
+
+        .role-stat-value {
+            margin-top: 5px;
+            color: #251d17;
+            font-size: 1.05rem;
+            font-weight: 800;
+        }
+
+        .role-action-grid {
+            display: grid;
+            grid-template-columns: repeat(3,1fr);
+            gap: 18px;
+        }
+
+        .role-action-card {
+            position: relative;
+            min-height: 190px;
+            padding: 27px;
+            overflow: hidden;
+            text-decoration: none;
+            transition: transform .22s ease,box-shadow .22s ease,border-color .22s ease;
+        }
+
+            .role-action-card::after {
+                content: '';
+                position: absolute;
+                width: 110px;
+                height: 110px;
+                right: -40px;
+                bottom: -50px;
+                border-radius: 50%;
+                background: #fff4e2;
+            }
+
+            .role-action-card:hover {
+                transform: translateY(-6px);
+                border-color: rgba(240,173,78,.38);
+                box-shadow: 0 20px 45px rgba(76,52,30,.12);
+            }
+
+        .role-action-icon {
+            width: 48px;
+            height: 48px;
+            display: grid;
+            place-items: center;
+            margin-bottom: 20px;
+            border-radius: 15px;
+            background: #fff4e2;
+            color: #c97715;
+            font-size: 1.2rem;
+            font-weight: 900;
+        }
+
+        .role-action-card h3 {
+            position: relative;
+            z-index: 1;
+            margin: 0 0 8px;
+            color: #251d17;
+            font-size: 1.12rem;
+            font-weight: 850;
+        }
+
+        .role-action-card p {
+            position: relative;
+            z-index: 1;
+            margin: 0;
+            color: #766d65;
+            line-height: 1.65;
+            font-size: .9rem;
+        }
+
+        .role-status-card {
+            padding: 24px 26px;
+            margin-bottom: 26px;
+        }
+
+            .role-status-card.pending {
+                border-color: rgba(240,173,78,.35);
+                background: linear-gradient(135deg,#fffaf0,#fff);
+            }
+
+            .role-status-card.rejected {
+                border-color: rgba(255,107,107,.3);
+                background: linear-gradient(135deg,#fff6f4,#fff);
+            }
+
+            .role-status-card.incomplete {
+                border-color: rgba(240,173,78,.3);
+                background: linear-gradient(135deg,#fffaf0,#fff);
+            }
+
+        .role-status-title {
+            margin: 0 0 7px;
+            color: #2b2119;
+            font-size: 1.08rem;
+            font-weight: 850;
+        }
+
+        .role-status-text {
+            margin: 0;
+            color: #756b62;
+            line-height: 1.7;
+            font-size: .93rem;
+        }
+
+        .role-status-reason {
+            margin-top: 13px;
+            padding: 12px 14px;
+            border-radius: 12px;
+            background: rgba(255,107,107,.08);
+            color: #704038;
+            line-height: 1.6;
+            font-size: .9rem;
+        }
+
+        .role-home-note {
+            margin-top: 24px;
+            padding: 17px 20px;
+            border-radius: 15px;
+            background: #fff8ef;
+            color: #766d65;
+            font-size: .88rem;
+            line-height: 1.65;
+        }
+
+        @@media (max-width: 900px) {
+            .role-home-top {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .role-stat-grid, .role-action-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @@media (max-width: 576px) {
+            .role-home {
+                padding: 55px 0 65px;
+            }
+
+            .role-stat-grid, .role-action-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .role-home-primary {
+                width: 100%;
+            }
+        }
+
+        /*
+                 * Premium public home redesign
+                 * Header + hero remain untouched.
+                 */
+
+        .public-home {
+            background: #fffaf5;
+            color: #2b2119;
+        }
+
+        .public-intro {
+            padding: 82px 0 42px;
+            background: radial-gradient(circle at 8% 20%, rgba(240,173,78,.18), transparent 28%), radial-gradient(circle at 92% 15%, rgba(255,107,107,.10), transparent 24%), #fffaf5;
+        }
+
+        .public-intro-grid {
+            display: grid;
+            grid-template-columns: 1.1fr .9fr;
+            gap: 28px;
+            align-items: stretch;
+        }
+
+        .public-intro-copy,
+        .public-intro-card {
+            border: 1px solid rgba(72,49,29,.08);
+            border-radius: 30px;
+            box-shadow: 0 18px 55px rgba(71,49,29,.08);
+        }
+
+        .public-intro-copy {
+            padding: 48px;
+            background: linear-gradient(145deg,#fff,#fff7ed);
+        }
+
+        .public-kicker {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 13px;
+            border-radius: 999px;
+            background: #fff0dc;
+            color: #bd7418;
+            font-size: .7rem;
+            font-weight: 900;
+            letter-spacing: .16em;
+        }
+
+        .public-intro-copy h2 {
+            margin: 18px 0 14px;
+            max-width: 760px;
+            font-size: clamp(2rem,4vw,3.5rem);
+            line-height: 1.05;
+            letter-spacing: -.045em;
+            font-weight: 900;
+        }
+
+            .public-intro-copy h2 span {
+                color: #d8871f;
+            }
+
+        .public-intro-copy p {
+            max-width: 680px;
+            margin: 0;
+            color: #756a60;
+            line-height: 1.8;
+            font-size: 1rem;
+        }
+
+        .public-intro-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 28px;
+        }
+
+        .public-btn-primary,
+        .public-btn-secondary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 50px;
+            padding: 0 21px;
+            border-radius: 14px;
+            text-decoration: none;
+            font-weight: 800;
+            transition: transform .2s ease,box-shadow .2s ease,background .2s ease;
+        }
+
+        .public-btn-primary {
+            color: #fff;
+            background: linear-gradient(135deg,#f0ad4e,#ef7d37);
+            box-shadow: 0 12px 25px rgba(222,130,39,.23);
+        }
+
+        .public-btn-secondary {
+            color: #5d4630;
+            background: #fff;
+            border: 1px solid rgba(72,49,29,.10);
+        }
+
+            .public-btn-primary:hover,
+            .public-btn-secondary:hover {
+                color: inherit;
+                transform: translateY(-3px);
+            }
+
+        .public-btn-primary:hover {
+            color: #fff;
+            box-shadow: 0 17px 32px rgba(222,130,39,.28);
+        }
+
+        .public-intro-card {
+            position: relative;
+            overflow: hidden;
+            min-height: 330px;
+            padding: 34px;
+            background: linear-gradient(145deg,#2b2119,#50361f);
+            color: #fff;
+        }
+
+            .public-intro-card::before {
+                content: "";
+                position: absolute;
+                width: 230px;
+                height: 230px;
+                right: -80px;
+                top: -90px;
+                border-radius: 50%;
+                background: rgba(240,173,78,.16);
+            }
+
+            .public-intro-card h3 {
+                position: relative;
+                z-index: 1;
+                margin: 0 0 20px;
+                font-size: 1.5rem;
+                font-weight: 900;
+            }
+
+        .public-trust-list {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            gap: 14px;
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+
+            .public-trust-list li {
+                display: flex;
+                align-items: flex-start;
+                gap: 12px;
+                padding: 13px 14px;
+                border: 1px solid rgba(255,255,255,.10);
+                border-radius: 15px;
+                background: rgba(255,255,255,.06);
+            }
+
+        .public-trust-icon {
+            flex: 0 0 34px;
+            width: 34px;
+            height: 34px;
+            display: grid;
+            place-items: center;
+            border-radius: 11px;
+            background: linear-gradient(135deg,#f0ad4e,#ef7d37);
+            color: #fff;
+            font-weight: 900;
+        }
+
+        .public-trust-list strong {
+            display: block;
+            margin-bottom: 2px;
+            font-size: .92rem;
+        }
+
+        .public-trust-list span {
+            display: block;
+            color: rgba(255,255,255,.68);
+            font-size: .78rem;
+            line-height: 1.5;
+        }
+
+        .premium-section {
+            padding: 88px 0;
+        }
+
+            .premium-section.soft {
+                background: #fff;
+            }
+
+            .premium-section.cream {
+                background: linear-gradient(180deg,#fff8ef 0%,#fff 100%);
+            }
+
+        .premium-heading {
+            max-width: 760px;
+            margin: 0 auto 42px;
+            text-align: center;
+        }
+
+            .premium-heading .eyebrow {
+                color: #c87918;
+                font-size: .7rem;
+                font-weight: 900;
+                letter-spacing: .17em;
+            }
+
+            .premium-heading h2 {
+                margin: 9px 0 10px;
+                color: #2a211a;
+                font-size: clamp(2rem,3.4vw,3rem);
+                line-height: 1.1;
+                letter-spacing: -.035em;
+                font-weight: 900;
+            }
+
+            .premium-heading p {
+                margin: 0;
+                color: #786d63;
+                line-height: 1.75;
+            }
+
+        .premium-service-card {
+            position: relative;
+            height: 100%;
+            overflow: hidden;
+            border: 1px solid rgba(72,49,29,.08);
+            border-radius: 24px;
+            background: #fff;
+            box-shadow: 0 12px 35px rgba(72,49,29,.07);
+            transition: transform .25s ease,box-shadow .25s ease;
+        }
+
+            .premium-service-card:hover {
+                transform: translateY(-8px);
+                box-shadow: 0 24px 48px rgba(72,49,29,.13);
+            }
+
+        .premium-service-image {
+            height: 190px;
+            overflow: hidden;
+            background: #f6eee4;
+        }
+
+            .premium-service-image img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                display: block;
+                transition: transform .45s ease;
+            }
+
+        .premium-service-card:hover .premium-service-image img {
+            transform: scale(1.06);
+        }
+
+        .premium-service-body {
+            padding: 23px;
+        }
+
+        .premium-service-tag {
+            display: inline-block;
+            margin-bottom: 9px;
+            color: #c87918;
+            font-size: .65rem;
+            font-weight: 900;
+            letter-spacing: .13em;
+        }
+
+        .premium-service-body h3 {
+            margin: 0 0 8px;
+            color: #2c231b;
+            font-size: 1.15rem;
+            font-weight: 850;
+        }
+
+        .premium-service-body p {
+            margin: 0;
+            color: #776d64;
+            line-height: 1.65;
+            font-size: .88rem;
+        }
+
+        .process-wrap {
+            position: relative;
+        }
+
+            .process-wrap::before {
+                content: "";
+                position: absolute;
+                top: 53px;
+                left: 15%;
+                right: 15%;
+                height: 2px;
+                background: linear-gradient(90deg,rgba(240,173,78,.12),rgba(240,173,78,.7),rgba(240,173,78,.12));
+            }
+
+        .premium-process-card {
+            position: relative;
+            z-index: 1;
+            height: 100%;
+            padding: 30px 25px;
+            text-align: center;
+            border: 1px solid rgba(72,49,29,.08);
+            border-radius: 23px;
+            background: #fff;
+            box-shadow: 0 12px 32px rgba(72,49,29,.06);
+        }
+
+        .premium-process-number {
+            width: 58px;
+            height: 58px;
+            margin: 0 auto 18px;
+            display: grid;
+            place-items: center;
+            border-radius: 18px;
+            background: linear-gradient(135deg,#f0ad4e,#ef7d37);
+            color: #fff;
+            font-weight: 900;
+            box-shadow: 0 10px 24px rgba(222,130,39,.20);
+        }
+
+        .premium-process-card h3 {
+            margin: 0 0 8px;
+            font-size: 1.12rem;
+            font-weight: 850;
+        }
+
+        .premium-process-card p {
+            margin: 0;
+            color: #776d64;
+            line-height: 1.65;
+            font-size: .9rem;
+        }
+
+        .premium-why {
+            overflow: hidden;
+            border-radius: 30px;
+            background: #211913;
+            box-shadow: 0 22px 65px rgba(50,34,21,.14);
+        }
+
+        .premium-why-image {
+            height: 100%;
+            min-height: 470px;
+            overflow: hidden;
+        }
+
+            .premium-why-image img {
+                width: 100%;
+                height: 100%;
+                min-height: 470px;
+                object-fit: cover;
+                display: block;
+            }
+
+        .premium-why-copy {
+            padding: 52px;
+            color: #fff;
+        }
+
+            .premium-why-copy .eyebrow {
+                color: #f0ad4e;
+                font-size: .7rem;
+                font-weight: 900;
+                letter-spacing: .16em;
+            }
+
+            .premium-why-copy h3 {
+                margin: 10px 0 15px;
+                font-size: clamp(1.7rem,3vw,2.5rem);
+                line-height: 1.12;
+                letter-spacing: -.035em;
+                font-weight: 900;
+            }
+
+            .premium-why-copy > p {
+                margin: 0 0 25px;
+                color: rgba(255,255,255,.68);
+                line-height: 1.8;
+            }
+
+        .premium-benefit {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 17px;
+        }
+
+        .premium-benefit-icon {
+            flex: 0 0 32px;
+            width: 32px;
+            height: 32px;
+            display: grid;
+            place-items: center;
+            border-radius: 50%;
+            background: rgba(240,173,78,.15);
+            color: #f0ad4e;
+            font-weight: 900;
+        }
+
+        .premium-benefit strong {
+            display: block;
+            margin-bottom: 2px;
+            font-size: .93rem;
+        }
+
+        .premium-benefit span {
+            color: rgba(255,255,255,.62);
+            font-size: .82rem;
+            line-height: 1.5;
+        }
+
+        .premium-cta {
+            margin-top: 72px;
+            padding: 48px 35px;
+            border-radius: 28px;
+            text-align: center;
+            background: linear-gradient(135deg,#f0ad4e,#ef7d37 55%,#df665f);
+            box-shadow: 0 20px 50px rgba(220,118,48,.22);
+            color: #fff;
+        }
+
+            .premium-cta h2 {
+                margin: 0 0 10px;
+                font-size: clamp(1.8rem,3vw,2.6rem);
+                font-weight: 900;
+                letter-spacing: -.03em;
+            }
+
+            .premium-cta p {
+                max-width: 650px;
+                margin: 0 auto 22px;
+                color: rgba(255,255,255,.88);
+                line-height: 1.7;
+            }
+
+            .premium-cta .public-btn-secondary {
+                background: #fff;
+                color: #5b3d23;
+                border: 0;
+            }
+
+        @@media (max-width: 900px) {
+            .public-intro-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .process-wrap::before {
+                display: none;
+            }
+
+            .premium-why-copy {
+                padding: 38px 30px;
+            }
+        }
+
+        @@media (max-width: 576px) {
+            .public-intro,
+            .premium-section {
+                padding: 62px 0;
+            }
+
+            .public-intro-copy {
+                padding: 30px 23px;
+            }
+
+            .public-intro-card {
+                min-height: auto;
+                padding: 27px 22px;
+            }
+
+            .premium-why-image,
+            .premium-why-image img {
+                min-height: 300px;
+            }
+
+            .premium-why-copy {
+                padding: 32px 23px;
+            }
+
+            .premium-cta {
+                margin-top: 48px;
+                padding: 36px 22px;
+            }
+        }
+    </style>
+
+    <style id="sg-modal-polish">
+        /* Softer, rounded Bootstrap modals */
+        .modal-content {
+            border: 0;
+            border-radius: 18px;
+            box-shadow: 0 18px 50px rgba(33, 37, 41, 0.22);
+            overflow: hidden;
+        }
+
+        .modal-backdrop.show {
+            opacity: 0.4;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Navbar -->
+
+    <nav class="navbar navbar-expand navbar-light bg-white shadow-sm sticky-top servicego-navbar">
+
+        <div class="container">
+
+            <a class="navbar-brand d-flex align-items-center"
+               href="@Url.Action("Index", "Home")"
+               aria-label="ServiceGo Home">
+
+                <img src="/images/Logo.png"
+                     alt="ServiceGo Logo"
+                     width="40"
+                     height="40"
+                     class="me-2 servicego-logo"
+                     loading="eager"
+                     decoding="async" />
+
+                <span class="fw-bold text-dark">ServiceGo</span>
+            </a>
+
+            <div class="navbar-collapse">
+                <ul class="navbar-nav ms-auto align-items-center public-nav">
+
+                    @if (!isLoggedIn || string.IsNullOrWhiteSpace(userRole))
+                    {
+                        <!-- Public homepage navigation: always shown after logout. -->
+                        <li class="nav-item">
+                            <a class="nav-link" href="#servicesSection">Services</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="@Url.Action("Login", "Home")">Login</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="@Url.Action("Choserole", "Home")">Sign Up</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link header-action" href="@Url.Action("HelpCenter", "Home")">Help Center</a>
+                        </li>
+                    }
+                    else if (userRole.Equals("Customer", StringComparison.OrdinalIgnoreCase))
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link header-action" href="@Url.Action("CusDashboard", "Customer")">Dashboard</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link nav-logout" href="@Url.Action("Logout", "Home")">Logout</a>
+                        </li>
+                    }
+                    else if (userRole.Equals("Provider", StringComparison.OrdinalIgnoreCase))
+                    {
+                        @if (providerState == "Incomplete")
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link header-action" href="@Url.Action("Register", "Home")">Complete Registration</a>
+                            </li>
+                        }
+                        else if (providerState == "Pending")
+                        {
+                            <li class="nav-item">
+                                <span class="header-status">Registration Pending</span>
+                            </li>
+                        }
+                        else if (providerState == "Rejected")
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link header-action" href="@Url.Action("ReRegistration", "Home")">Update Registration</a>
+                            </li>
+                        }
+                        else if (providerState == "Approved")
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link header-action" href="@Url.Action("Dashboard", "Provider")">Dashboard</a>
+                            </li>
+                        }
+
+                        <li class="nav-item">
+                            <a class="nav-link nav-logout" href="@Url.Action("Logout", "Home")">Logout</a>
+                        </li>
+                    }
+
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+
+    <!-- Main -->
+
+    <main>
+        <!-- Public logged-out users land directly on this Home/Index page. -->
+        <!-- Hero -->
+        @if (!isLoggedIn)
+        {
+            <section class="hero-slider-container"
+                     aria-label="ServiceGo introduction">
+
+                <div id="serviceGoHeroSlider"
+                     class="carousel slide carousel-fade"
+                     data-bs-ride="carousel"
+                     data-bs-interval="4000"
+                     data-bs-pause="false">
+
+                    <div class="carousel-inner">
+
+                        <!-- First / lcp slide -->
+
+                        <div class="carousel-item active">
+
+                            <div class="slider-overlay"
+                                 aria-hidden="true"></div>
+
+                            <img src="/images/Engineers.png"
+                                 class="d-block w-100 slider-img"
+                                 width="1920"
+                                 height="580"
+                                 alt="ServiceGo professional service providers"
+                                 loading="eager"
+                                 fetchpriority="high"
+                                 decoding="async" />
+
+                        </div>
+
+
+                        <!-- Second slide -->
+
+                        <div class="carousel-item">
+
+                            <div class="slider-overlay"
+                                 aria-hidden="true"></div>
+
+                            <img src="/images/background.png"
+                                 class="d-block w-100 slider-img"
+                                 width="1920"
+                                 height="1080"
+                                 alt="ServiceGo home services"
+                                 loading="lazy"
+                                 fetchpriority="low"
+                                 decoding="async" />
+
+                        </div>
+
+
+                        <!-- Third slide -->
+
+                        <div class="carousel-item">
+
+                            <div class="slider-overlay"
+                                 aria-hidden="true"></div>
+
+                            <img src="/images/Image.png"
+                                 class="d-block w-100 slider-img"
+                                 width="1920"
+                                 height="1080"
+                                 alt="ServiceGo local professionals"
+                                 loading="lazy"
+                                 fetchpriority="low"
+                                 decoding="async" />
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- Fixed hero content -->
+
+                <div class="slider-fixed-content text-center text-white">
+
+                    @if (!isLoggedIn)
+                    {
+                        <h1 class="fw-bold display-5 mb-0">
+                            SERVICEGO: Your Local Service Solution
+                        </h1>
+
+                        <p class="lead mt-3 mb-0">
+                            A simple platform to find, connect with and book verified service providers.
+                        </p>
+
+                        <div class="mt-4">
+                            <a href="@Url.Action("SearchResult", "Home")"
+                               class="btn btn-warning btn-lg fw-bold px-5 py-3 shadow">
+                                Explore Providers
+                            </a>
+                        </div>
+                    }
+                    else if (userRole.Equals("Customer", StringComparison.OrdinalIgnoreCase))
+                    {
+                        <div class="hero-welcome">
+                            Hey @(string.IsNullOrWhiteSpace(customerName) ? "Customer" : customerName.Split(' ')[0]), Welcome to ServiceGo
+                        </div>
+
+                        <h1 class="fw-bold display-5 mb-0">
+                            Find the Right Service for You
+                        </h1>
+
+                        <p class="lead mt-3 mb-0">
+                            Discover trusted local professionals, compare their services and book the help you need.
+                        </p>
+
+                        <div class="mt-4 d-flex flex-wrap justify-content-center gap-3">
+                            <a href="@Url.Action("SearchResult", "Home")"
+                               class="btn btn-warning btn-lg fw-bold px-5 py-3 shadow">
+                                Find Services
+                            </a>
+                            <a href="@Url.Action("CusDashboard", "Customer")"
+                               class="btn btn-light btn-lg fw-bold px-4 py-3 shadow">
+                                My Dashboard
+                            </a>
+                        </div>
+                    }
+                    else if (userRole.Equals("Provider", StringComparison.OrdinalIgnoreCase))
+                    {
+                        <div class="hero-welcome">
+                            Welcome back, @(string.IsNullOrWhiteSpace(providerName) ? "Provider" : providerName.Split(' ')[0])
+                        </div>
+
+                        <h1 class="fw-bold display-5 mb-0">
+                            Grow Your Service Business with ServiceGo
+                        </h1>
+
+                        <p class="lead mt-3 mb-0">
+                            Manage your professional profile, stay connected with customers and keep your services ready for bookings.
+                        </p>
+
+                        <div class="mt-4">
+                            @if (providerState == "Incomplete")
+                            {
+                                <a href="@Url.Action("Register", "Home")"
+                                   class="btn btn-warning btn-lg fw-bold px-5 py-3 shadow">
+                                    Complete Registration
+                                </a>
+                            }
+                            else if (providerState == "Pending")
+                            {
+                                <div class="provider-hero-status pending">
+                                    <div class="provider-hero-status-title">
+                                        Your Registration Is Under Review
+                                    </div>
+                                    <p class="provider-hero-status-message">
+                                        Your registration has been submitted successfully.
+                                        Our admin is reviewing your details and will update you once a decision is made.
+                                    </p>
+                                </div>
+                            }
+                            else if (providerState == "Rejected")
+                            {
+                                <div class="provider-hero-status rejected">
+                                    <div class="provider-hero-status-title">
+                                        Registration Update Required
+                                    </div>
+
+                                    <p class="provider-hero-status-message">
+                                        Please review the reason below and update your registration.
+                                    </p>
+
+                                    @if (!string.IsNullOrWhiteSpace(providerRejectionReason))
+                                    {
+                                        <div class="provider-reason">
+                                            <strong>Admin's Reason:</strong>
+                                            @providerRejectionReason
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="provider-reason">
+                                            <strong>Reason:</strong>
+                                            Please update your registration details and submit them again for review.
+                                        </div>
+                                    }
+                                </div>
+
+                                <a href="@Url.Action("ReRegistration", "Home")"
+                                   class="btn btn-warning btn-lg fw-bold px-5 py-3 shadow mt-3">
+                                    Update Registration
+                                </a>
+                            }
+                            else
+                            {
+                                <a href="@Url.Action("Dashboard", "Provider")"
+                                   class="btn btn-warning btn-lg fw-bold px-5 py-3 shadow">
+                                    Open Provider Dashboard
+                                </a>
+                            }
+                        </div>
+                    }
+
+                </div>
+
+            </section>
+        }
+
+
+        @if (isLoggedIn && userRole.Equals("Provider", StringComparison.OrdinalIgnoreCase))
+        {
+            <!--
+               Provider home
+               Logged-in provider home starts directly below the header.
+            -->
+            <section class="role-home">
+                <div class="container role-home-shell">
+                    <div class="role-home-top">
+                        <div>
+                            <span class="role-home-eyebrow">Provider Home</span>
+                            <h2 class="role-home-title">Welcome back, @(string.IsNullOrWhiteSpace(providerName) ? "Provider" : providerName)</h2>
+                            <p class="role-home-subtitle">Your professional space is ready. Manage your ServiceGo profile, stay on top of customer activity and keep your services ready for new bookings.</p>
+                        </div>
+                        @if (providerState == "Approved")
+                        {
+                            <a class="role-home-primary" href="@Url.Action("Dashboard", "Provider")">Open Provider Dashboard</a>
+                        }
+                        else if (providerState == "Incomplete")
+                        {
+                            <a class="role-home-primary" href="@Url.Action("Register", "Home")">Complete Registration</a>
+                        }
+                        else if (providerState == "Rejected")
+                        {
+                            <a class="role-home-primary" href="@Url.Action("ReRegistration", "Home")">Update Registration</a>
+                        }
+                    </div>
+
+                    @if (providerState == "Pending")
+                    {
+                        <div class="role-status-card pending">
+                            <h3 class="role-status-title">Registration is under review</h3>
+                            <p class="role-status-text">Your provider registration has been submitted successfully. The admin team is reviewing your details. You can return here after approval to access your provider workspace.</p>
+                        </div>
+                    }
+                    else if (providerState == "Rejected")
+                    {
+                        <div class="role-status-card rejected">
+                            <h3 class="role-status-title">Registration update required</h3>
+                            <p class="role-status-text">Your registration needs an update before it can be approved. Please review the admin feedback and submit the corrected information.</p>
+                            <div class="role-status-reason"><strong>Admin feedback:</strong> @(string.IsNullOrWhiteSpace(providerRejectionReason) ? "Please update your registration details and submit them again for review." : providerRejectionReason)</div>
+                        </div>
+                    }
+                    else if (providerState == "Incomplete")
+                    {
+                        <div class="role-status-card incomplete">
+                            <h3 class="role-status-title">Complete your provider profile</h3>
+                            <p class="role-status-text">Finish your registration so your professional information, services, availability and location can be used by customers.</p>
+                        </div>
+                    }
+
+                    <div class="role-stat-grid">
+                        <div class="role-stat-card"><div class="role-stat-icon">P</div><div class="role-stat-label">Provider ID</div><div class="role-stat-value">@(string.IsNullOrWhiteSpace(providerCode) ? "Not assigned yet" : providerCode)</div></div>
+                        <div class="role-stat-card"><div class="role-stat-icon">✓</div><div class="role-stat-label">Account status</div><div class="role-stat-value">@providerState</div></div>
+                        <div class="role-stat-card"><div class="role-stat-icon">S</div><div class="role-stat-label">ServiceGo role</div><div class="role-stat-value">Professional Provider</div></div>
+                    </div>
+
+                    <div class="role-action-grid">
+                        <a class="role-action-card" href="@Url.Action("Dashboard", "Provider")"><div class="role-action-icon">⌂</div><h3>Provider Dashboard</h3><p>Open your main provider workspace and manage your current ServiceGo activity.</p></a>
+                        <a class="role-action-card" href="@(providerState == "Approved" ? Url.Action("Profile", "Provider") : Url.Action("Profile", "Provider"))"><div class="role-action-icon">✎</div><h3>Professional Profile</h3><p>Keep your registration information, services, availability and service locations up to date.</p></a>
+                        <a class="role-action-card" href="@Url.Action("HelpCenter", "Home")"><div class="role-action-icon">?</div><h3>Provider Support</h3><p>Need help with your account or registration? Visit the ServiceGo Help Center.</p></a>
+                    </div>
+
+                    <div class="role-home-note">Your provider home is separate from the customer experience. Customers see their own service-focused home, while your provider tools remain focused on your professional work.</div>
+                </div>
+            </section>
+        }
+        else if (isLoggedIn && userRole.Equals("Customer", StringComparison.OrdinalIgnoreCase))
+        {
+            <!--
+               Customer home
+               Logged-in provider home starts directly below the header.
+            -->
+            <section class="role-home">
+                <div class="container role-home-shell">
+                    <div class="role-home-top">
+                        <div>
+                            <span class="role-home-eyebrow">Customer Home</span>
+                            <h2 class="role-home-title">Welcome back, @(string.IsNullOrWhiteSpace(customerName) ? "Customer" : customerName)</h2>
+                            <p class="role-home-subtitle">Find trusted local professionals, manage your bookings and keep your ServiceGo activity organized from one simple place.</p>
+                        </div>
+                        <a class="role-home-primary" href="@Url.Action("SearchResult", "Home")">Find a Service</a>
+                    </div>
+
+                    @if (ViewBag.CustomerProfileIncomplete == true)
+                    {
+                        <div class="role-status-card incomplete">
+                            <h3 class="role-status-title">Complete your customer profile</h3>
+                            <p class="role-status-text">Add your basic profile details to make your ServiceGo experience smoother.</p>
+                            <div class="mt-3"><a class="role-home-primary" href="@Url.Action("CusDashboard", "Customer", new { openProfile = "1" })">Complete Profile</a></div>
+                        </div>
+                    }
+
+                    <div class="role-stat-grid">
+                        <div class="role-stat-card"><div class="role-stat-icon">⌕</div><div class="role-stat-label">Discover</div><div class="role-stat-value">Local service providers</div></div>
+                        <div class="role-stat-card"><div class="role-stat-icon">✓</div><div class="role-stat-label">Booking</div><div class="role-stat-value">Manage your service requests</div></div>
+                        <div class="role-stat-card"><div class="role-stat-icon">★</div><div class="role-stat-label">Experience</div><div class="role-stat-value">Ratings &amp; service feedback</div></div>
+                    </div>
+
+                    <div class="role-action-grid">
+                        <a class="role-action-card" href="@Url.Action("SearchResult", "Home")"><div class="role-action-icon">⌕</div><h3>Find a Provider</h3><p>Search providers by service and location, review their information and choose the service you need.</p></a>
+                        <a class="role-action-card" href="@Url.Action("CusDashboard", "Customer")"><div class="role-action-icon">▣</div><h3>My Dashboard</h3><p>View your bookings, account activity, notifications and customer options in one place.</p></a>
+                        <a class="role-action-card" href="@Url.Action("HelpCenter", "Home")"><div class="role-action-icon">?</div><h3>Customer Support</h3><p>Get help with your ServiceGo account, bookings or other customer questions.</p></a>
+                    </div>
+
+                    <div class="role-home-note">Your customer home is separate from the provider experience. The provider portal has its own professional workspace, while your home stays focused on finding and managing services.</div>
+                </div>
+            </section>
+        }
+        else
+        {
+            <!--
+               Public servicego home
+               Logged-in customer home starts directly below the header.
+            -->
+
+            <div class="public-home">
+
+                <section class="public-intro">
+                    <div class="container">
+                        <div class="public-intro-grid">
+
+                            <div class="public-intro-copy">
+                                <span class="public-kicker">SERVICEGO • LOCAL SERVICES</span>
+                                <h2>Everything you need, <span>right when you need it.</span></h2>
+                                <p>
+                                    Discover skilled local professionals, compare provider details,
+                                    check ratings and book the service that fits your needs — all from
+                                    one simple ServiceGo experience.
+                                </p>
+
+                                <div class="public-intro-actions">
+                                    <a class="public-btn-primary" href="@Url.Action("SearchResult", "Home")">
+                                        Explore Providers
+                                    </a>
+                                    <a class="public-btn-secondary" href="#servicesSection">
+                                        View Services
+                                    </a>
+                                </div>
+                            </div>
+
+                            <div class="public-intro-card">
+                                <h3>Why people choose ServiceGo</h3>
+
+                                <ul class="public-trust-list">
+                                    <li>
+                                        <div class="public-trust-icon">✓</div>
+                                        <div>
+                                            <strong>Discover local professionals</strong>
+                                            <span>Browse services and providers in a straightforward experience.</span>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <div class="public-trust-icon">★</div>
+                                        <div>
+                                            <strong>Review before you book</strong>
+                                            <span>See provider information, ratings and customer feedback.</span>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <div class="public-trust-icon">⌂</div>
+                                        <div>
+                                            <strong>Book the way you need</strong>
+                                            <span>Choose available services and continue with your booking.</span>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+
+                        </div>
+                    </div>
+                </section>
+
+                <section id="servicesSection" class="premium-section soft">
+                    <div class="container">
+
+                        <div class="premium-heading">
+                            <span class="eyebrow">POPULAR SERVICES</span>
+                            <h2>Professional help for everyday needs</h2>
+                            <p>
+                                From quick repairs to home improvement, explore the services available
+                                through ServiceGo.
+                            </p>
+                        </div>
+
+                        <div class="row g-4">
+
+                            <div class="col-lg-4 col-md-6">
+                                <div class="premium-service-card">
+                                    <div class="premium-service-image">
+                                        <img src="/images/Plumber.png" alt="Plumbing Work" loading="lazy" decoding="async" />
+                                    </div>
+                                    <div class="premium-service-body">
+                                        <span class="premium-service-tag">HOME ESSENTIAL</span>
+                                        <h3>Plumbing Work</h3>
+                                        <p>Help with leaks, fittings, repairs and everyday plumbing needs.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-lg-4 col-md-6">
+                                <div class="premium-service-card">
+                                    <div class="premium-service-image">
+                                        <img src="/images/Electrician.png" alt="Electrical Repair" loading="lazy" decoding="async" />
+                                    </div>
+                                    <div class="premium-service-body">
+                                        <span class="premium-service-tag">HOME ESSENTIAL</span>
+                                        <h3>Electrical Repair</h3>
+                                        <p>Professional support for electrical repairs and installations.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-lg-4 col-md-6">
+                                <div class="premium-service-card">
+                                    <div class="premium-service-image">
+                                        <img src="/images/AC repair.png" alt="AC and Fridge Repair" loading="lazy" decoding="async" />
+                                    </div>
+                                    <div class="premium-service-body">
+                                        <span class="premium-service-tag">APPLIANCE CARE</span>
+                                        <h3>AC &amp; Fridge Repair</h3>
+                                        <p>Get cooling appliances checked, repaired and ready for use.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-lg-4 col-md-6">
+                                <div class="premium-service-card">
+                                    <div class="premium-service-image">
+                                        <img src="/images/Carpenter.png" alt="Carpentry and Woodwork" loading="lazy" decoding="async" />
+                                    </div>
+                                    <div class="premium-service-body">
+                                        <span class="premium-service-tag">HOME IMPROVEMENT</span>
+                                        <h3>Carpentry &amp; Woodwork</h3>
+                                        <p>Practical woodwork, repairs and home improvement support.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-lg-4 col-md-6">
+                                <div class="premium-service-card">
+                                    <div class="premium-service-image">
+                                        <img src="@Url.Content("~/images/Car mechanic.png")" alt="Car Mechanic Services" loading="lazy" decoding="async" />
+                                    </div>
+                                    <div class="premium-service-body">
+                                        <span class="premium-service-tag">AUTOMOTIVE</span>
+                                        <h3>Car Mechanic</h3>
+                                        <p>Get your car checked and repaired by trusted professional mechanics.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-lg-4 col-md-6">
+                                <div class="premium-service-card">
+                                    <div class="premium-service-image">
+                                        <img src="/images/Welder.png" alt="Welding Services" loading="lazy" decoding="async" />
+                                    </div>
+                                    <div class="premium-service-body">
+                                        <span class="premium-service-tag">SKILLED TRADE</span>
+                                        <h3>Welding Services</h3>
+                                        <p>Support for fabrication, repairs and custom welding work.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <div class="premium-cta">
+                            <h2>Ready to find the right professional?</h2>
+                            <p>
+                                Explore available providers, check their details and start your ServiceGo
+                                booking journey.
+                            </p>
+                            <a class="public-btn-secondary" href="@Url.Action("SearchResult", "Home")">
+                                Find a Provider
+                            </a>
+                        </div>
+
+                    </div>
+                </section>
+
+                <section class="premium-section cream">
+                    <div class="container">
+
+                        <div class="premium-heading">
+                            <span class="eyebrow">HOW IT WORKS</span>
+                            <h2>Simple from search to service</h2>
+                            <p>Three clear steps keep your service journey easy to understand.</p>
+                        </div>
+
+                        <div class="process-wrap">
+                            <div class="row g-4">
+
+                                <div class="col-md-4">
+                                    <div class="premium-process-card">
+                                        <div class="premium-process-number">01</div>
+                                        <h3>Find a Service</h3>
+                                        <p>Choose the type of service you need and explore available professionals.</p>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-4">
+                                    <div class="premium-process-card">
+                                        <div class="premium-process-number">02</div>
+                                        <h3>Review &amp; Book</h3>
+                                        <p>Check provider information, ratings, availability and booking details.</p>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-4">
+                                    <div class="premium-process-card">
+                                        <div class="premium-process-number">03</div>
+                                        <h3>Get It Done</h3>
+                                        <p>Manage your booking and stay connected throughout the service journey.</p>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
+                    </div>
+                </section>
+
+                <section class="premium-section soft">
+                    <div class="container">
+
+                        <div class="premium-why row g-0 align-items-stretch">
+                            <div class="col-lg-6">
+                                <div class="premium-why-image">
+                                    <img src="/images/Worker.png"
+                                         alt="ServiceGo professional worker"
+                                         loading="lazy"
+                                         decoding="async" />
+                                </div>
+                            </div>
+
+                            <div class="col-lg-6">
+                                <div class="premium-why-copy">
+                                    <span class="eyebrow">WHY SERVICEGO</span>
+                                    <h3>A cleaner way to manage local services.</h3>
+                                    <p>
+                                        ServiceGo brings discovery, provider information and booking
+                                        into one focused experience for everyday home services.
+                                    </p>
+
+                                    <div class="premium-benefit">
+                                        <div class="premium-benefit-icon">✓</div>
+                                        <div>
+                                            <strong>Provider information before booking</strong>
+                                            <span>Review available details before you decide to book.</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="premium-benefit">
+                                        <div class="premium-benefit-icon">★</div>
+                                        <div>
+                                            <strong>Ratings and feedback</strong>
+                                            <span>Use customer feedback as part of your provider review.</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="premium-benefit">
+                                        <div class="premium-benefit-icon">⌂</div>
+                                        <div>
+                                            <strong>One place for your service journey</strong>
+                                            <span>Keep booking activity and service interactions organized.</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </section>
+
+            </div>
+        }
+
+    </main>
+
+
+    <!-- Simple footer -->
+
+    <footer class="servicego-footer">
+        <div class="container">
+            <div class="row g-4 align-items-start">
+
+                <div class="col-lg-5 col-md-6">
+                    <div class="servicego-footer-brand">
+                        <img src="/images/Logo.png" alt="ServiceGo" class="servicego-footer-logo" />
+                        <div>
+                            <h3>ServiceGo</h3>
+                            <p>Trusted local services, made simple.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-3 col-md-3 col-6">
+                    <h4>Quick Links</h4>
+                    <a href="@Url.Action("Index", "Home")">Home</a>
+                    <a href="@Url.Action("SearchResult", "Home")">Find Services</a>
+                    <a href="@Url.Action("HelpCenter", "Home")">Help Center</a>
+                </div>
+
+                <div class="col-lg-4 col-md-3 col-6">
+                    <h4>Support</h4>
+                    <a href="mailto:servicego888@gmail.com">servicego888@gmail.com</a>
+                    <a href="@Url.Action("Terms", "Home")">Terms of Service</a>
+                    <a href="@Url.Action("Privacy", "Home")">Privacy Policy</a>
+                </div>
+
+            </div>
+
+            <div class="servicego-footer-bottom">
+                <span>© 2026 ServiceGo · All rights reserved.</span>
+                <span class="servicego-footer-developer">Developed by <strong>Laiba Shafiq & Haseeba Shoukat</strong></span>
+            </div>
+        </div>
+    </footer>
+
+
+    @if (isLoggedIn &&
+        userRole.Equals("Customer", StringComparison.OrdinalIgnoreCase) &&
+        ViewBag.CustomerProfileIncomplete == true)
+    {
+        <div class="modal fade" id="customerProfileReminderModal" tabindex="-1"
+             aria-labelledby="customerProfileReminderTitle" aria-hidden="true">
+            <div class="modal-dialog profile-reminder-dialog">
+                <div class="modal-content border-0 rounded-4 shadow">
+                    <div class="modal-header border-0 pb-0">
+                        <h5 class="modal-title fw-bold" id="customerProfileReminderTitle">
+                            Please Complete Your Profile
+                        </h5>
+                        <button type="button" class="btn-close"
+                                data-bs-dismiss="modal"
+                                aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body text-secondary">
+                        Complete your profile to unlock all customer features.
+                    </div>
+                    <div class="modal-footer border-0 pt-0">
+                        <button type="button" class="btn btn-light"
+                                data-bs-dismiss="modal">
+                            Maybe Later
+                        </button>
+                        <a class="btn btn-warning"
+                           href="@Url.Action("CusDashboard", "Customer", new { openProfile = "1" })">
+                            Complete Profile
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <style>
+        #customerProfileReminderModal .profile-reminder-dialog {
+            max-width: 390px;
+            margin: 62px auto 0;
+        }
+
+        #customerProfileReminderModal .modal-content {
+            border: 0;
+            border-radius: 18px;
+            overflow: hidden;
+            background: #ffffff;
+            box-shadow: 0 20px 55px rgba(0, 0, 0, 0.22);
+        }
+
+        #customerProfileReminderModal .modal-header {
+            padding: 22px 24px 8px;
+        }
+
+        #customerProfileReminderModal .modal-footer {
+            padding: 0 24px 20px;
+        }
+
+        /* Logout popup only */
+
+
+        @@media (max-width: 576px) {
+        }</style>
+
+    <!--
+       Bootstrap JS
+       Deferred so it does not block initial rendering.
+    -->
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
+            defer></script>
+
+
+    <!-- Search functions -->
+
+    <script>
+        (() => {
+            const track = document.querySelector(".marquee-track");
+            const container = document.querySelector(".marquee-container");
+
+            if (track && container) {
+                const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+                let paused = reduceMotion;
+                let x = 0;
+                let lastTime = performance.now();
+
+                const step = (time) => {
+                    const delta = Math.min(time - lastTime, 50);
+                    lastTime = time;
+
+                    if (!paused) {
+                        x -= delta * 0.035;
+                        const halfWidth = track.scrollWidth / 2;
+
+                        if (halfWidth > 0 && -x >= halfWidth) {
+                            x += halfWidth;
+                        }
+
+                        track.style.transform = `translate3d(${x}px, 0, 0)`;
+                    }
+
+                    requestAnimationFrame(step);
+                };
+
+                container.addEventListener("mouseenter", () => { paused = true; });
+                container.addEventListener("mouseleave", () => {
+                    paused = reduceMotion;
+                });
+
+                requestAnimationFrame(step);
+            }
+        })();
+
+        document.addEventListener("DOMContentLoaded", function () {
+            const profileReminder =
+                document.getElementById("customerProfileReminderModal");
+
+            if (profileReminder) {
+                const reminderModal =
+                    bootstrap.Modal.getOrCreateInstance(profileReminder);
+
+                setTimeout(function () {
+                    reminderModal.show();
+                }, 350);
+            }
+        });
+
+        function searchService() {
+            const cityInput = document.getElementById("cityInput");
+
+            if (!cityInput) {
+                return;
+            }
+
+            const city = cityInput.value.trim();
+
+            if (city === "") {
+                cityInput.focus();
+                return;
+            }
+
+            window.location.href =
+                '/Home/searchresult?city=' +
+                encodeURIComponent(city) +
+                '&category=All Categories';
+        }
+
+        function directServiceSearch(categoryName) {
+            window.location.href =
+                '/Home/searchresult?city=All Locations&category=' +
+                encodeURIComponent(categoryName);
+        }
+    </script>
+
+</body>
+</html>

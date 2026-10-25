@@ -1,0 +1,414 @@
+﻿@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Choose Role - ServiceGo</title>
+
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preload" as="image" href="/images/Sideimage.png" fetchpriority="high">
+
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+          rel="stylesheet">
+
+
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css"
+          rel="stylesheet">
+    <link rel="icon" href="@Url.Content("~/images/Logo.png")" type="image/x-icon">
+
+    <style>
+
+        /* Global */
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+        }
+
+
+        html {
+            width: 100%;
+            min-height: 100%;
+        }
+
+
+        body {
+            width: 100%;
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            overflow-x: hidden;
+            caret-color: transparent;
+        }
+
+
+        /* Left side image */
+
+        .left-side {
+            flex: 1;
+            position: relative;
+            min-height: 100vh;
+            background-image: url('/images/Sideimage.png');
+            background-repeat: no-repeat;
+            background-position: center center;
+            background-size: cover;
+        }
+
+
+            .left-side::after {
+                content: "";
+                position: absolute;
+                top: 0;
+                right: 0;
+                bottom: 0;
+                left: 0;
+                background-color: rgba(0, 0, 0, 0.25);
+                pointer-events: none;
+            }
+
+
+        /* Right side */
+
+        .right-side {
+            flex: 1;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px 20px;
+            background-color: #ffffff;
+        }
+
+
+        /* Role container */
+
+        .role-container {
+            width: 100%;
+            max-width: 900px;
+            text-align: center;
+        }
+
+
+        /* Logo */
+
+        .logo {
+            display: block;
+            width: 90px;
+            height: 71px;
+            object-fit: contain;
+            margin: 0 auto 30px;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+
+            .logo:hover {
+                transform: scale(1.08);
+            }
+
+
+        /* Heading */
+
+        h2 {
+            margin: 0 0 50px;
+            color: #f38b1c;
+            font-size: 2rem;
+            font-weight: 700;
+            line-height: 1.3;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+
+        /* Role box */
+
+        .role-box {
+            height: 100%;
+            padding: 45px 25px;
+            background-color: rgba(255, 255, 255, 0.85);
+            border: 2px solid #f6b25b;
+            border-radius: 25px;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(240, 173, 78, 0.20);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+
+            .role-box:hover {
+                transform: translateY(-10px) scale(1.03);
+                box-shadow: 0 12px 25px rgba(240, 173, 78, 0.40);
+            }
+
+
+            /* Icon */
+
+            .role-box i {
+                display: inline-block;
+                margin-bottom: 18px;
+                color: #f0ad4e;
+                font-size: 3.5rem;
+                line-height: 1;
+            }
+
+
+            /* Role title */
+
+            .role-box h4 {
+                margin: 0 0 12px;
+                color: #212529;
+                font-size: 1.5rem;
+                font-weight: 700;
+                line-height: 1.3;
+            }
+
+
+            /* Role description */
+
+            .role-box p {
+                margin: 0;
+                color: #555555;
+                font-size: 1rem;
+                line-height: 1.6;
+            }
+
+
+        /* Mobile */
+
+        @@media (max-width: 768px) {
+
+            body {
+                flex-direction: column;
+            }
+
+
+            .left-side {
+                display: none;
+            }
+
+
+            .right-side {
+                width: 100%;
+                min-height: 100vh;
+                padding: 30px 18px;
+            }
+
+
+            .role-container {
+                max-width: 600px;
+            }
+
+
+            .logo {
+                width: 80px;
+                height: 63px;
+                margin-bottom: 25px;
+            }
+
+
+            h2 {
+                font-size: 1.6rem;
+                margin-bottom: 30px;
+            }
+
+
+            .role-box {
+                padding: 35px 20px;
+                border-radius: 20px;
+            }
+
+
+                .role-box i {
+                    font-size: 3rem;
+                }
+
+
+                .role-box h4 {
+                    font-size: 1.3rem;
+                }
+        }
+
+
+        /* Small mobile */
+
+        @@media (max-width: 400px) {
+
+            .right-side {
+                padding: 25px 12px;
+            }
+
+
+            .logo {
+                width: 70px;
+                height: 55px;
+                margin-bottom: 20px;
+            }
+
+
+            h2 {
+                font-size: 1.4rem;
+                margin-bottom: 25px;
+            }
+
+
+            .role-box {
+                padding: 30px 16px;
+            }
+
+
+                .role-box i {
+                    font-size: 2.7rem;
+                }
+
+
+                .role-box h4 {
+                    font-size: 1.2rem;
+                }
+
+
+                .role-box p {
+                    font-size: 0.9rem;
+                }
+        }
+
+
+        /* Caret */
+
+        input,
+        textarea,
+        select,
+        button,
+        [contenteditable="true"] {
+            caret-color: auto;
+        }
+    </style>
+
+</head>
+
+
+<body>
+
+
+    <!-- Left side -->
+
+    <div class="left-side"
+         aria-hidden="true">
+    </div>
+
+
+    <!-- Right side -->
+
+    <div class="right-side">
+
+        <main class="role-container">
+
+
+            <!-- Servicego logo -->
+
+            <img src="/images/Logo.png"
+                 class="logo"
+                 width="90"
+                 height="71"
+                 onclick="window.location.href='@Url.Action("Index", "Home")'"
+                 alt="ServiceGo Logo"
+                 title="Go to ServiceGo Home">
+
+
+            <!-- Heading -->
+
+            <h2>
+                Choose Your Role
+            </h2>
+
+
+            <!-- Role cards -->
+
+            <div class="row g-4 justify-content-center">
+
+
+                <!-- Service provider -->
+
+                <div class="col-12 col-md-6">
+
+                    <div class="role-box"
+                         role="button"
+                         tabindex="0"
+                         onclick="window.location.href='@Url.Action("ProviderRegistrationStep1", "Home")'"
+                         onkeydown="if (event.key === 'Enter' || event.key === ' ') { window.location.href='@Url.Action("ProviderRegistrationStep1", "Home")'; }">
+
+                        <i class="bi bi-tools"
+                           aria-hidden="true">
+                        </i>
+
+
+                        <h4>
+                            Service Provider
+                        </h4>
+
+
+                        <p>
+                            Offer your professional services and grow your
+                            business with ServiceGo.
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <!-- Customer -->
+
+                <div class="col-12 col-md-6">
+
+                    <div class="role-box"
+                         role="button"
+                         tabindex="0"
+                         onclick="window.location.href='@Url.Action("SignUp", "Home")'"
+                         onkeydown="if (event.key === 'Enter' || event.key === ' ') { window.location.href='@Url.Action("SignUp", "Home")'; }">
+
+                        <i class="bi bi-person-check"
+                           aria-hidden="true">
+                        </i>
+
+
+                        <h4>
+                            Customer
+                        </h4>
+
+
+                        <p>
+                            Find trusted experts for your home services
+                            anytime, anywhere.
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+            </div>
+
+        </main>
+
+    </div>
+
+
+</body>
+
+</html>

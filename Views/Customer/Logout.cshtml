@@ -1,0 +1,914 @@
+﻿@{
+    Layout = null;
+
+    var customerProfileImage = ViewBag.CustomerProfileImage as string ?? string.Empty;
+    var profileImageUrl = string.IsNullOrWhiteSpace(customerProfileImage)
+        ? Url.Content("~/images/Profile icon.png")
+        : (customerProfileImage.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+           customerProfileImage.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
+           customerProfileImage.StartsWith("/", StringComparison.OrdinalIgnoreCase) ||
+           customerProfileImage.StartsWith("~/", StringComparison.OrdinalIgnoreCase))
+            ? Url.Content(customerProfileImage)
+            : Url.Content("~/" + customerProfileImage.TrimStart('/'));
+
+    var homeUrl = Url.Action("Index", "Home");
+    var dashboardUrl = Url.Action("CusDashboard", "Customer");
+    var historyUrl = Url.Action("History", "Customer");
+    var messagesUrl = Url.Action("Messages", "Customer");
+    var notificationsUrl = Url.Action("Notifications", "Customer");
+    var logoutUrl = Url.Action("Logout", "Customer");
+    var logoutConfirmedUrl = Url.Action("LogoutConfirmed", "Customer");
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="ServiceGo customer logout and account navigation page." />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#d97600" />
+    <title>ServiceGo - Logout</title>
+    <link rel="icon" href="@Url.Content("~/images/Logo.png")" type="image/png" />
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            margin: 0;
+            min-height: 100%;
+            overflow-x: hidden;
+        }
+
+        body {
+            font-family: "Poppins", Arial, sans-serif;
+            background: #f2f2f2;
+            min-height: 100vh;
+            display: flex;
+        }
+
+        /* Lightweight inline icon system: avoids Bootstrap + Bootstrap Icons downloads. */
+        .icon {
+            width: 1.4rem;
+            height: 1.4rem;
+            flex: 0 0 1.4rem;
+            display: inline-block;
+            vertical-align: middle;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .icon-fill {
+            fill: currentColor;
+            stroke: none;
+        }
+
+        .mobile-menu-btn {
+            display: none;
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            z-index: 2000;
+            background: #f0ad4e;
+            border: 0;
+            padding: 10px 12px;
+            border-radius: 6px;
+            color: #fff;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 80px;
+            min-width: 80px;
+            height: 100vh;
+            background-color: #d97600;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: width .3s ease, left .3s ease;
+            z-index: 1500;
+        }
+
+            .sidebar:hover,
+            .sidebar:focus-within {
+                width: 240px;
+                box-shadow: 4px 0 25px rgba(240,173,78,.5);
+            }
+
+            .sidebar img.logo {
+                width: 60px;
+                height: 60px;
+                min-width: 60px;
+                min-height: 60px;
+                margin: 20px 0;
+                background: #fff;
+                cursor: pointer;
+                border-radius: 10%;
+                object-fit: contain;
+                border: 2px solid #fff;
+                transition: transform .3s ease;
+            }
+
+                .sidebar img.logo:hover {
+                    transform: scale(1.05);
+                }
+
+            .sidebar .nav {
+                width: 100%;
+                margin-top: 10px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+
+                .sidebar .nav a {
+                    display: flex;
+                    align-items: center;
+                    color: #fff;
+                    text-decoration: none;
+                    padding: 12px 20px;
+                    border-radius: 10px;
+                    width: 90%;
+                    margin-bottom: 5px;
+                    transition: all .3s ease;
+                    background: transparent !important;
+                }
+
+                    .sidebar .nav a .icon {
+                        margin-right: 15px;
+                    }
+
+                    .sidebar .nav a.active {
+                        background-color: #ffb74d !important;
+                        color: #fff !important;
+                        font-weight: 600;
+                    }
+
+                    .sidebar .nav a:hover:not(.active) {
+                        background: transparent !important;
+                    }
+
+                .sidebar .nav span {
+                    opacity: 0;
+                    transition: opacity .3s ease;
+                }
+
+            .sidebar:hover .nav span,
+            .sidebar:focus-within .nav span {
+                opacity: 1;
+            }
+
+        .main {
+            min-height: 100vh;
+            margin-left: 80px;
+            flex-grow: 1;
+            width: calc(100% - 80px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 90px 30px 30px;
+            position: relative;
+            transition: margin-left .3s ease;
+        }
+
+        .sidebar:hover ~ .main,
+        .sidebar:focus-within ~ .main {
+            margin-left: 240px;
+            width: calc(100% - 240px);
+        }
+
+        .mobile-top,
+        .mobile-top-header {
+            display: none !important;
+        }
+
+        .logout-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.18);
+            z-index: 1090;
+        }
+
+        .logout-modal-card {
+            position: fixed;
+            top: 50%;
+            left: calc(50% + 35px);
+            transform: translate(-50%, -50%);
+            width: 330px;
+            max-width: calc(100vw - 32px);
+            padding: 24px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,.22);
+            text-align: center;
+            z-index: 1100;
+        }
+
+        .logout-modal-icon {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: #fff3df;
+            color: #d97600;
+        }
+
+            .logout-modal-icon .icon {
+                width: 22px;
+                height: 22px;
+            }
+
+        .logout-modal-card h3 {
+            margin: 0 0 7px;
+            color: #222;
+            font-size: 22px;
+            font-weight: 700;
+        }
+
+        .logout-modal-card p {
+            margin: 0 0 18px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .logout-modal-card form {
+            display: flex;
+            gap: 10px;
+        }
+
+        .logout-yes,
+        .logout-cancel {
+            flex: 1;
+            border-radius: 7px;
+            padding: 9px 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background .2s ease;
+            font: inherit;
+        }
+
+        .logout-yes {
+            border: 1px solid #d97600;
+            background: #d97600;
+            color: #fff;
+        }
+
+        .logout-cancel {
+            border: 1px solid #bbb;
+            background: #fff;
+            color: #444;
+        }
+
+        .logout-yes:hover {
+            background: #c86d00;
+        }
+
+        .logout-cancel:hover {
+            background: #f5f5f5;
+        }
+
+        /* Mobile dropdown, replacing Bootstrap JS/CSS with a tiny local implementation. */
+        .mobile-top .dropdown {
+            position: relative;
+        }
+
+        .mobile-top .dropdown-menu {
+            display: none;
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            width: 192px;
+            min-width: 192px;
+            margin: 0;
+            padding: 6px 0;
+            list-style: none;
+            border: 1px solid #ddd;
+            border-radius: 9px;
+            background: #fff;
+            box-shadow: 0 5px 16px rgba(0,0,0,.18);
+            overflow: hidden;
+            z-index: 3020;
+        }
+
+            .mobile-top .dropdown-menu.show {
+                display: block;
+            }
+
+            .mobile-top .dropdown-menu .dropdown-item {
+                width: 100%;
+                min-height: 48px;
+                height: 48px;
+                padding: 10px 16px;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                border: 0;
+                font-size: 16px;
+                line-height: 1.2;
+                font-weight: 700;
+                white-space: nowrap;
+                color: #2f2f2f;
+                background: #fff;
+                text-decoration: none;
+            }
+
+                .mobile-top .dropdown-menu .dropdown-item .icon {
+                    width: 20px;
+                    height: 20px;
+                    flex-basis: 20px;
+                    color: #444;
+                }
+
+                .mobile-top .dropdown-menu .dropdown-item:hover,
+                .mobile-top .dropdown-menu .dropdown-item.active {
+                    background: #fff3e0;
+                    color: #d97600;
+                }
+
+                    .mobile-top .dropdown-menu .dropdown-item:hover .icon,
+                    .mobile-top .dropdown-menu .dropdown-item.active .icon {
+                        color: #d97600;
+                    }
+
+        .mobile-top .dropdown-divider {
+            height: 0;
+            margin: 0;
+            border: 0;
+            border-top: 1px solid #ddd;
+        }
+
+        .mobile-top .dropdown-menu .text-danger,
+        .mobile-top .dropdown-menu .text-danger .icon {
+            color: #dc3545;
+        }
+
+        /* Preserve original support classes used elsewhere. */
+        .logout-card {
+            background: #fff;
+            padding: 40px 30px;
+            border-radius: 20px;
+            box-shadow: 0 6px 20px rgba(0,0,0,.15);
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+        }
+
+            .logout-card img {
+                width: 80px;
+                margin-bottom: 20px;
+                cursor: pointer;
+            }
+
+            .logout-card h3 {
+                color: #f0ad4e;
+                font-weight: 700;
+                margin-bottom: 20px;
+            }
+
+            .logout-card p {
+                color: #555;
+                margin-bottom: 20px;
+            }
+
+        .btn-login {
+            background-color: #f0ad4e;
+            color: #fff;
+            border: 0;
+            border-radius: 6px;
+            padding: 10px;
+            width: 100%;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+
+            .btn-login:hover {
+                background-color: #ffb74d;
+            }
+
+        .btn-cancel {
+            background-color: #ccc;
+            color: #333;
+            border: 0;
+            border-radius: 6px;
+            padding: 10px;
+            width: 100%;
+            cursor: pointer;
+        }
+
+            .btn-cancel:hover {
+                background-color: #999;
+            }
+
+        html, body, body * {
+            caret-color: transparent !important;
+        }
+
+        input, textarea, [contenteditable="true"], [contenteditable=""] {
+            caret-color: transparent !important;
+        }
+
+        @@media (max-width: 768px) {
+            .mobile-menu-btn {
+                display: block;
+            }
+
+            .sidebar {
+                display: none !important;
+                left: -240px;
+                width: 240px;
+            }
+
+                .sidebar.active {
+                    left: 0;
+                }
+
+            .main {
+                margin-left: 0 !important;
+                width: 100vw !important;
+                min-height: 100vh;
+                padding: 90px 15px 20px !important;
+            }
+
+            .mobile-top,
+            .mobile-top-header {
+                height: 70px;
+                min-height: 70px;
+                padding: 0 15px;
+                background: #fff;
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                display: flex !important;
+                align-items: center;
+                justify-content: space-between;
+                z-index: 3000;
+                box-shadow: 0 2px 10px rgba(0,0,0,.08);
+            }
+
+                .mobile-top > .dropdown {
+                    z-index: 3010;
+                }
+
+            .mobile-logo {
+                width: 45px;
+                height: 45px;
+                min-width: 45px;
+                min-height: 45px;
+                object-fit: contain;
+                border-radius: 8px;
+                cursor: pointer;
+            }
+
+            .mobile-profile-image {
+                width: 44px;
+                height: 44px;
+                min-width: 44px;
+                min-height: 44px;
+                border-radius: 50%;
+                object-fit: cover;
+                display: block;
+                border: 2px solid #f0a43c;
+                background: #fff;
+                cursor: pointer;
+            }
+
+            .logout-modal-card {
+                left: 50%;
+                width: 300px;
+            }
+        }
+
+        @@media (max-width: 420px) {
+            .main {
+                padding-left: 12px !important;
+                padding-right: 12px !important;
+            }
+
+            .logout-modal-card {
+                width: calc(100vw - 28px);
+                max-width: 300px;
+                padding: 20px;
+            }
+
+                .logout-modal-card h3 {
+                    font-size: 20px;
+                }
+
+                .logout-modal-card p {
+                    font-size: 13px;
+                }
+        }
+
+        @@media (min-width: 769px) {
+            .mobile-top, .mobile-top-header {
+                display: none !important;
+            }
+        }</style>
+
+    <style id="sg-popup-theme">
+        /* Compact, soft popups (SweetAlert2) */
+        .swal2-container {
+            padding: 12px !important;
+        }
+
+        .swal2-popup {
+            width: min(340px, calc(100vw - 32px)) !important;
+            padding: 22px 20px 18px !important;
+            border-radius: 20px !important;
+            box-shadow: 0 18px 50px rgba(33, 37, 41, .20) !important;
+            font-family: inherit !important;
+        }
+
+        .swal2-icon {
+            zoom: .72;
+            margin: .2em auto .7em !important;
+        }
+
+        .swal2-title {
+            font-size: 1.12rem !important;
+            font-weight: 700 !important;
+            color: #212529 !important;
+            padding: 0 !important;
+            margin: 0 0 .3rem !important;
+        }
+
+        .swal2-html-container {
+            font-size: .9rem !important;
+            line-height: 1.5 !important;
+            color: #6c757d !important;
+            margin: .2rem 0 0 !important;
+            padding: 0 .2em !important;
+        }
+
+        .swal2-actions {
+            margin-top: 1.1rem !important;
+            gap: 8px;
+        }
+
+        .swal2-styled {
+            border-radius: 12px !important;
+            padding: .55rem 1.2rem !important;
+            min-width: 92px;
+            font-size: .9rem !important;
+            font-weight: 600 !important;
+            box-shadow: none !important;
+        }
+
+            .swal2-styled.swal2-confirm {
+                background-color: #d97600 !important;
+            }
+
+            .swal2-styled.swal2-cancel {
+                background-color: #e9ecef !important;
+                color: #495057 !important;
+            }
+
+            .swal2-styled:focus {
+                box-shadow: 0 0 0 3px rgba(217, 118, 0, .25) !important;
+            }
+
+        .swal2-popup.swal2-show {
+            animation: sgPopIn .22s ease-out !important;
+        }
+
+        .swal2-popup.swal2-hide {
+            animation: sgPopOut .15s ease-in !important;
+        }
+
+        @@keyframes sgPopIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px) scale(.96);
+            }
+
+            to {
+                opacity: 1;
+                transform: none;
+            }
+        }
+
+        @@keyframes sgPopOut {
+            from {
+                opacity: 1;
+                transform: none;
+            }
+
+            to {
+                opacity: 0;
+                transform: translateY(6px) scale(.97);
+            }
+        }
+
+        /* Bootstrap modals: smaller, rounded, smooth */
+        .modal-content {
+            border: 0 !important;
+            border-radius: 18px !important;
+            box-shadow: 0 18px 50px rgba(33, 37, 41, .20) !important;
+            overflow: hidden;
+        }
+
+        .modal-header {
+            padding: .85rem 1.1rem;
+        }
+
+        .modal-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+        }
+
+        .modal-body {
+            padding: 1rem 1.1rem;
+        }
+
+        .modal-footer {
+            padding: .7rem 1.1rem;
+            gap: 6px;
+        }
+
+        .modal-backdrop.show {
+            opacity: .35;
+        }
+
+        .modal.fade .modal-dialog {
+            transform: translateY(14px) scale(.97);
+            transition: transform .22s ease-out;
+        }
+
+        .modal.show .modal-dialog {
+            transform: none;
+        }
+
+        @@media (min-width: 576px) {
+            .modal-dialog.modal-md {
+                --bs-modal-width: 440px;
+                max-width: 440px;
+            }
+
+            .modal-dialog.modal-lg {
+                --bs-modal-width: 620px;
+            }
+        }
+
+        .sg-rec-dot {
+            display: inline-block;
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: #dc3545;
+            margin-left: 4px;
+            vertical-align: middle;
+            animation: sgBlink 1s infinite;
+        }
+
+        @@keyframes sgBlink {
+            50% {
+                opacity: .25;
+            }
+        }
+    </style>
+
+    <style id="sg-mobile-header">
+        /* Mobile header: "Hi Customer" first, then the profile photo with an orange ring (same as Dashboard) */
+        @@media (max-width: 768px) {
+            .mobile-top .dropdown,
+            .mobile-top-header .dropdown {
+                display: flex !important;
+                align-items: center !important;
+                gap: 10px !important;
+            }
+
+            .mobile-customer-label,
+            .mobile-greeting-text,
+            .mobile-customer-greeting {
+                order: -1 !important;
+                display: inline-block !important;
+                margin: 0 !important;
+                color: #212529 !important;
+                font-size: .9rem !important;
+                font-weight: 700 !important;
+                line-height: 1 !important;
+                white-space: nowrap !important;
+            }
+
+            .mobile-top .profile-thumb,
+            .mobile-top-header .profile-thumb,
+            .mobile-profile-trigger,
+            .mobile-profile-image {
+                width: 44px !important;
+                height: 44px !important;
+                min-width: 44px !important;
+                min-height: 44px !important;
+                padding: 0 !important;
+                border-radius: 50% !important;
+                object-fit: cover !important;
+                display: block !important;
+                border: 2px solid #f0a43c !important;
+                background: #fff !important;
+                box-sizing: content-box !important;
+                cursor: pointer;
+            }
+
+            .mobile-profile-btn {
+                width: auto !important;
+                height: auto !important;
+                min-width: 0 !important;
+                min-height: 0 !important;
+                padding: 0 !important;
+                border: 0 !important;
+                border-radius: 50% !important;
+                background: transparent !important;
+                box-shadow: none !important;
+                display: flex !important;
+            }
+        }
+    </style>
+
+    <style id="sg-logout-card">
+        .logout-modal-card {
+            border-radius: 18px !important;
+            animation: sgFadeOnly .2s ease-out;
+        }
+
+        @@keyframes sgFadeOnly {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+    </style>
+
+</head>
+
+<body>
+    <div class="sidebar" id="sidebar">
+        <img src="@Url.Content("~/images/Logo.png")"
+             class="logo"
+             width="60"
+             height="60"
+             decoding="async"
+             alt="ServiceGo"
+             onclick="window.location.href='@homeUrl'" />
+
+        <div class="nav">
+            <a href="@dashboardUrl">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 19.5z" /><path d="M9 21v-6h6v6" /></svg>
+                <span>Dashboard</span>
+            </a>
+            <a href="@historyUrl">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5v5l3 2" /><path d="M4.5 12H2.8" /></svg>
+                <span>History</span>
+            </a>
+            <a href="@messagesUrl">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v7A2.5 2.5 0 0 1 17.5 15H10l-5 4v-4.5A2.5 2.5 0 0 1 3 12z" /><path d="M7.5 8h9M7.5 11h6" /></svg>
+                <span>Messages</span>
+            </a>
+            <a href="@notificationsUrl">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 8.5h18C21 16 18 16 18 9z" /><path d="M10 20h4" /></svg>
+                <span>Notifications</span>
+            </a>
+            <a href="@logoutUrl" class="active" aria-current="page">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4" /><path d="M13 8l4 4-4 4M17 12H8" /></svg>
+                <span>Logout</span>
+            </a>
+        </div>
+    </div>
+
+    <div class="mobile-top">
+        <img src="@Url.Content("~/images/Logo.png")"
+             class="mobile-logo"
+             width="45"
+             height="45"
+             decoding="async"
+             alt="ServiceGo"
+             onclick="window.location.href='@homeUrl'" />
+
+        <div class="dropdown">
+            <span class="mobile-customer-label">Hi Customer</span>
+            <img src="@profileImageUrl"
+                 class="mobile-profile-image"
+                 width="44"
+                 height="44"
+                 loading="eager"
+                 decoding="async"
+                 fetchpriority="high"
+                 onerror="this.onerror=null;this.src='@Url.Content("~/images/Profile icon.png")';"
+                 alt="Customer profile"
+                 role="button"
+                 tabindex="0"
+                 aria-label="Open profile menu"
+                 aria-expanded="false"
+                 aria-controls="customerMobileMenu" />
+
+            <ul class="dropdown-menu" id="customerMobileMenu">
+                <li>
+                    <a class="dropdown-item" href="@dashboardUrl">
+                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 19.5z" /><path d="M9 21v-6h6v6" /></svg>
+                        Dashboard
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" href="@historyUrl">
+                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5v5l3 2" /></svg>
+                        History
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" href="@messagesUrl">
+                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v7A2.5 2.5 0 0 1 17.5 15H10l-5 4v-4.5A2.5 2.5 0 0 1 3 12z" /><path d="M7.5 8h9M7.5 11h6" /></svg>
+                        Messages
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" href="@notificationsUrl">
+                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 8.5h18C21 16 18 16 18 9z" /><path d="M10 20h4" /></svg>
+                        Notifications
+                    </a>
+                </li>
+                <li><hr class="dropdown-divider" /></li>
+                <li>
+                    <a class="dropdown-item text-danger" href="@logoutUrl">
+                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4" /><path d="M13 8l4 4-4 4M17 12H8" /></svg>
+                        Logout
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="main">
+        <div class="logout-backdrop"></div>
+
+        <div class="logout-modal-card"
+             role="dialog"
+             aria-modal="true"
+             aria-labelledby="logoutTitle">
+            <div class="logout-modal-icon" aria-hidden="true">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4" /><path d="M13 8l4 4-4 4M17 12H8" /></svg>
+            </div>
+            <h1 id="logoutTitle" style="font-size:22px;line-height:1.2;margin:0 0 7px;color:#222;font-weight:700;">Logout</h1>
+            <p>Are you sure you want to log out?</p>
+
+            <form method="post" action="@logoutConfirmedUrl">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="logout-yes">Yes Logout</button>
+                <button type="button" class="logout-cancel" id="logoutCancel">Cancel</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        (() => {
+            const profile = document.querySelector('.mobile-profile-image');
+            const menu = document.getElementById('customerMobileMenu');
+            const cancel = document.getElementById('logoutCancel');
+
+            if (profile && menu) {
+                const closeMenu = () => {
+                    menu.classList.remove('show');
+                    profile.setAttribute('aria-expanded', 'false');
+                };
+
+                const toggleMenu = (event) => {
+                    event.stopPropagation();
+                    const open = menu.classList.toggle('show');
+                    profile.setAttribute('aria-expanded', open ? 'true' : 'false');
+                };
+
+                profile.addEventListener('click', toggleMenu);
+                profile.addEventListener('keydown', event => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        toggleMenu(event);
+                    }
+                    if (event.key === 'Escape') closeMenu();
+                });
+
+                document.addEventListener('click', event => {
+                    if (!menu.contains(event.target) && event.target !== profile) closeMenu();
+                }, { passive: true });
+            }
+
+            if (cancel) {
+                cancel.addEventListener('click', () => {
+                    window.location.href = '@homeUrl';
+                });
+            }
+        })();
+    </script>
+</body>
+</html>

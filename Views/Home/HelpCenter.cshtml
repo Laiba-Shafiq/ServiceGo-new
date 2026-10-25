@@ -1,0 +1,970 @@
+﻿@{
+    Layout = null;
+    ViewBag.Title = "ServiceGo - Help Center";
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ServiceGo - Help Center</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" />
+    <link rel="icon" href="@Url.Content("~/images/Logo.png")" type="image/x-icon" />
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        :root {
+            --orange: #d97600;
+            --orange-light: #ffb74d;
+            --orange-soft: #fff5e8;
+            --purple: #6336a8;
+            --ink: #242424;
+            --muted: #70747b;
+            --bg: #f7f7f8;
+            --white: #fff;
+            --line: #e8e8eb;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            margin: 0;
+            font-family: "Poppins", sans-serif;
+            color: var(--ink);
+            background: var(--bg);
+        }
+
+        a {
+            color: inherit;
+        }
+
+        /* Header */
+        .site-header {
+            background: #fff;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .header-inner {
+            width: min(1160px, calc(100% - 40px));
+            min-height: 82px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .brand {
+            display: inline-flex;
+            align-items: center;
+            text-decoration: none;
+        }
+
+            .brand img {
+                width: 62px;
+                height: 62px;
+                object-fit: contain;
+            }
+
+        .back-home {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 15px;
+            border: 1px solid #eadfd1;
+            border-radius: 9px;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            color: #555;
+            background: #fff;
+            transition: .2s ease;
+        }
+
+            .back-home:hover {
+                color: var(--orange);
+                background: var(--orange-soft);
+                border-color: #f0c88f;
+            }
+
+        /* Hero */
+        .hero {
+            background: linear-gradient(180deg, #fff 0%, #fffaf4 100%);
+            border-bottom: 1px solid var(--line);
+            padding: 58px 20px 55px;
+            text-align: center;
+        }
+
+        .hero-inner {
+            width: min(850px, 100%);
+            margin: 0 auto;
+        }
+
+        .hero-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 7px 12px;
+            border: 1px solid #f0dfc7;
+            border-radius: 999px;
+            color: var(--orange);
+            background: var(--orange-soft);
+            font-size: 11px;
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+
+        .hero h1 {
+            margin: 0;
+            font-size: clamp(32px, 5vw, 48px);
+            line-height: 1.15;
+            letter-spacing: -.7px;
+        }
+
+        .hero p {
+            width: min(720px, 100%);
+            margin: 14px auto 0;
+            color: var(--muted);
+            font-size: 14px;
+            line-height: 1.8;
+        }
+
+        /* Main */
+        .page {
+            width: min(1160px, calc(100% - 40px));
+            margin: 48px auto 70px;
+        }
+
+        .section-heading {
+            margin-bottom: 22px;
+        }
+
+            .section-heading h2 {
+                margin: 0;
+                font-size: 25px;
+                letter-spacing: -.3px;
+            }
+
+            .section-heading p {
+                margin: 6px 0 0;
+                color: var(--muted);
+                font-size: 13px;
+            }
+
+        /* Help topics */
+        .topic-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+        }
+
+        .topic-card {
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 15px;
+            padding: 22px;
+            box-shadow: 0 5px 18px rgba(0,0,0,.035);
+            transition: .2s ease;
+        }
+
+            .topic-card:hover {
+                transform: translateY(-2px);
+                border-color: #e5d5c1;
+                box-shadow: 0 10px 25px rgba(0,0,0,.06);
+            }
+
+        .topic-icon {
+            width: 45px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            background: var(--orange-soft);
+            color: var(--orange);
+            font-size: 20px;
+            margin-bottom: 14px;
+        }
+
+        .topic-card h3 {
+            margin: 0 0 7px;
+            font-size: 17px;
+        }
+
+        .topic-card p {
+            margin: 0;
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.65;
+        }
+
+        .topic-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            margin-top: 14px;
+            color: var(--orange);
+            text-decoration: none;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+            .topic-link:hover {
+                text-decoration: underline;
+            }
+
+        /* Details */
+        .details {
+            margin-top: 58px;
+        }
+
+        .detail-section {
+            scroll-margin-top: 25px;
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 15px;
+            margin-bottom: 13px;
+            overflow: hidden;
+        }
+
+        .detail-head {
+            display: flex;
+            align-items: center;
+            gap: 13px;
+            padding: 18px 21px;
+            border-bottom: 1px solid #f0f0f2;
+        }
+
+            .detail-head .mini-icon {
+                width: 38px;
+                height: 38px;
+                flex: 0 0 38px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 10px;
+                background: var(--orange-soft);
+                color: var(--orange);
+            }
+
+            .detail-head h3 {
+                margin: 0;
+                font-size: 16px;
+            }
+
+        .detail-body {
+            padding: 19px 22px 21px;
+        }
+
+            .detail-body p {
+                margin: 0 0 10px;
+                color: #64676d;
+                font-size: 13px;
+                line-height: 1.7;
+            }
+
+            .detail-body ul {
+                margin: 8px 0 0;
+                padding-left: 20px;
+            }
+
+            .detail-body li {
+                margin-bottom: 7px;
+                color: #55585f;
+                font-size: 13px;
+                line-height: 1.55;
+            }
+
+        /* How it works */
+        .how-it-works {
+            margin-top: 58px;
+        }
+
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 14px;
+        }
+
+        .step {
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            padding: 21px;
+        }
+
+        .step-number {
+            width: 34px;
+            height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: var(--orange);
+            color: #fff;
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .step h4 {
+            margin: 0 0 6px;
+            font-size: 15px;
+        }
+
+        .step p {
+            margin: 0;
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.65;
+        }
+
+        /* FAQ */
+        .faq-section {
+            margin-top: 58px;
+        }
+
+        .faq {
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            margin-bottom: 9px;
+            overflow: hidden;
+        }
+
+        .faq-question {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            padding: 16px 19px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+            .faq-question:hover {
+                color: var(--orange);
+            }
+
+        .plus {
+            color: var(--orange);
+            font-size: 20px;
+            transition: transform .2s ease;
+        }
+
+        .faq-answer {
+            display: none;
+            padding: 0 19px 17px;
+            color: #686b72;
+            font-size: 12.5px;
+            line-height: 1.7;
+        }
+
+        .faq.active .faq-answer {
+            display: block;
+        }
+
+        .faq.active .plus {
+            transform: rotate(45deg);
+        }
+
+        /* Contact */
+        .contact-section {
+            margin-top: 58px;
+        }
+
+        .contact-card {
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 15px;
+            padding: 24px;
+            display: flex;
+            align-items: center;
+            gap: 17px;
+        }
+
+        .contact-icon {
+            width: 46px;
+            height: 46px;
+            flex: 0 0 46px;
+            border-radius: 12px;
+            background: var(--orange-soft);
+            color: var(--orange);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 19px;
+        }
+
+        .contact-content {
+            flex: 1;
+        }
+
+            .contact-content h3 {
+                margin: 0 0 4px;
+                font-size: 17px;
+            }
+
+            .contact-content p {
+                margin: 0;
+                color: var(--muted);
+                font-size: 12.5px;
+                line-height: 1.65;
+            }
+
+        .email-link {
+            color: var(--orange);
+            font-weight: 600;
+            text-decoration: none;
+            font-size: 12.5px;
+        }
+
+            .email-link:hover {
+                text-decoration: underline;
+            }
+
+        .contact-button {
+            flex: 0 0 auto;
+            background: var(--orange);
+            color: #fff;
+            border-radius: 9px;
+            padding: 10px 15px;
+            text-decoration: none;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+            .contact-button:hover {
+                background: #b86400;
+            }
+
+        /* Footer */
+        footer {
+            border-top: 1px solid var(--line);
+            background: #fff;
+        }
+
+        .footer-inner {
+            width: min(1160px, calc(100% - 40px));
+            min-height: 66px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+            color: #777;
+            font-size: 11px;
+        }
+
+        .footer-brand {
+            display: inline-flex;
+            align-items: center;
+            text-decoration: none;
+        }
+
+            .footer-brand img {
+                width: 38px;
+                height: 38px;
+                object-fit: contain;
+            }
+
+        /* Responsive */
+        @@media (max-width: 800px) {
+            .header-inner,
+            .footer-inner {
+                width: min(100% - 28px, 1160px);
+            }
+
+            .header-inner {
+                min-height: 70px;
+            }
+
+            .brand img {
+                width: 54px;
+                height: 54px;
+            }
+
+            .page {
+                width: min(100% - 28px, 1160px);
+                margin-top: 36px;
+            }
+
+            .topic-grid,
+            .steps {
+                grid-template-columns: 1fr;
+            }
+
+            .contact-card,
+            .footer-inner {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .contact-card {
+                align-items: flex-start;
+            }
+
+            .contact-button {
+                width: 100%;
+                text-align: center;
+            }
+        }
+
+        @@media (max-width: 480px) {
+            .back-home {
+                padding: 8px 11px;
+                font-size: 11px;
+            }
+
+            .hero {
+                padding: 45px 17px;
+            }
+
+                .hero h1 {
+                    font-size: 31px;
+                }
+
+                .hero p {
+                    font-size: 12.5px;
+                }
+
+            .topic-card,
+            .detail-body {
+                padding: 18px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Single clean Help Center header. No Service / Contact / Privacy navigation. -->
+    <header class="site-header">
+        <div class="header-inner">
+            <a href="@Url.Action("Index", "Home")" class="brand" aria-label="ServiceGo Home">
+                <img src="@Url.Content("~/images/Logo.png")" alt="ServiceGo" />
+            </a>
+
+            <a href="@Url.Action("Index", "Home")" class="back-home">
+                <i class="bi bi-arrow-left"></i>
+                Back to Home
+            </a>
+        </div>
+    </header>
+
+    <!-- Proper Help Center introduction. No search box. -->
+    <section class="hero">
+        <div class="hero-inner">
+            <div class="hero-label">
+                <i class="bi bi-life-preserver"></i>
+                ServiceGo Help Center
+            </div>
+
+            <h1>How can we help you?</h1>
+
+            <p>
+                Find clear instructions for using ServiceGo.
+                Choose a topic below to learn what to do, how the process works,
+                and where to manage your account, bookings, providers and complaints.
+            </p>
+        </div>
+    </section>
+
+    <main class="page">
+
+        <!-- Clickable topic index -->
+        <section>
+            <div class="section-heading">
+                <h2>Help Topics</h2>
+                <p>Choose the topic you need help with.</p>
+            </div>
+
+            <div class="topic-grid">
+
+                <article class="topic-card">
+                    <div class="topic-icon"><i class="bi bi-person"></i></div>
+                    <h3>Customer Help</h3>
+                    <p>Account creation, finding providers, bookings, booking history, ratings and complaints.</p>
+                    <a class="topic-link" href="#customer-help">View details <i class="bi bi-arrow-right"></i></a>
+                </article>
+
+                <article class="topic-card">
+                    <div class="topic-icon"><i class="bi bi-tools"></i></div>
+                    <h3>Service Provider Help</h3>
+                    <p>Provider registration, verification, documents, booking requests, rescheduling and feedback.</p>
+                    <a class="topic-link" href="#provider-help">View details <i class="bi bi-arrow-right"></i></a>
+                </article>
+
+                <article class="topic-card">
+                    <div class="topic-icon"><i class="bi bi-person-check"></i></div>
+                    <h3>Registration & Verification</h3>
+                    <p>Learn the registration and verification process for customers and service providers.</p>
+                    <a class="topic-link" href="#registration-help">View details <i class="bi bi-arrow-right"></i></a>
+                </article>
+
+                <article class="topic-card">
+                    <div class="topic-icon"><i class="bi bi-calendar-check"></i></div>
+                    <h3>Booking & Rescheduling</h3>
+                    <p>Learn how to create a booking and manage available rescheduling options.</p>
+                    <a class="topic-link" href="#booking-help">View details <i class="bi bi-arrow-right"></i></a>
+                </article>
+
+                <article class="topic-card">
+                    <div class="topic-icon"><i class="bi bi-x-circle"></i></div>
+                    <h3>Cancellation Policy</h3>
+                    <p>Understand the allowed cancellation period and how provider cancellations are recorded.</p>
+                    <a class="topic-link" href="#cancellation-help">View details <i class="bi bi-arrow-right"></i></a>
+                </article>
+
+                <article class="topic-card">
+                    <div class="topic-icon"><i class="bi bi-wallet2"></i></div>
+                    <h3>Wallet & Payment</h3>
+                    <p>Understand wallet balances, applicable charges, payment slips and transaction records.</p>
+                    <a class="topic-link" href="#wallet-help">View details <i class="bi bi-arrow-right"></i></a>
+                </article>
+
+                <article class="topic-card">
+                    <div class="topic-icon"><i class="bi bi-exclamation-triangle"></i></div>
+                    <h3>Complaints & Support</h3>
+                    <p>Learn how customers and providers can submit complaints and how Admin reviews them.</p>
+                    <a class="topic-link" href="#complaints-help">View details <i class="bi bi-arrow-right"></i></a>
+                </article>
+
+                <article class="topic-card">
+                    <div class="topic-icon"><i class="bi bi-shield-lock"></i></div>
+                    <h3>Account & Security</h3>
+                    <p>Keep your account information safe and use the available account recovery options.</p>
+                    <a class="topic-link" href="#security-help">View details <i class="bi bi-arrow-right"></i></a>
+                </article>
+
+            </div>
+        </section>
+
+        <!-- Full details -->
+        <section class="details">
+            <div class="section-heading">
+                <h2>Detailed Guides</h2>
+                <p>Step-by-step information for each ServiceGo help topic.</p>
+            </div>
+
+            <article class="detail-section" id="customer-help">
+                <div class="detail-head">
+                    <div class="mini-icon"><i class="bi bi-person"></i></div>
+                    <h3>Customer Help</h3>
+                </div>
+                <div class="detail-body">
+                    <p>Learn how to create an account, find service providers, book services and manage your bookings.</p>
+                    <ul>
+                        <li>Create and verify your account.</li>
+                        <li>Search providers by city and service category.</li>
+                        <li>View provider profiles, ratings and feedback.</li>
+                        <li>Book a required service.</li>
+                        <li>View booking status and history.</li>
+                        <li>Reschedule or cancel a booking when allowed.</li>
+                        <li>Submit ratings and feedback after service completion.</li>
+                        <li>Submit a complaint when required.</li>
+                    </ul>
+                </div>
+            </article>
+
+            <article class="detail-section" id="provider-help">
+                <div class="detail-head">
+                    <div class="mini-icon"><i class="bi bi-tools"></i></div>
+                    <h3>Service Provider Help</h3>
+                </div>
+                <div class="detail-body">
+                    <p>Learn how to register as a service provider and manage customer service requests.</p>
+                    <ul>
+                        <li>Create a service provider account.</li>
+                        <li>Verify your registered email address.</li>
+                        <li>Complete the provider registration form.</li>
+                        <li>Upload the required verification documents.</li>
+                        <li>Wait for Admin approval.</li>
+                        <li>View and manage customer booking requests.</li>
+                        <li>Accept or reject booking requests.</li>
+                        <li>Manage reschedule requests.</li>
+                        <li>View ratings and customer feedback.</li>
+                        <li>Submit complaints when required.</li>
+                    </ul>
+                </div>
+            </article>
+
+            <article class="detail-section" id="registration-help">
+                <div class="detail-head">
+                    <div class="mini-icon"><i class="bi bi-person-check"></i></div>
+                    <h3>Registration & Verification</h3>
+                </div>
+                <div class="detail-body">
+                    <p>Follow the registration process according to your selected account type.</p>
+                    <ul>
+                        <li>Select Customer or Service Provider during Sign Up.</li>
+                        <li>Enter your name, email and password.</li>
+                        <li>Verify your email using the verification link.</li>
+                        <li>Service providers complete an additional registration form.</li>
+                        <li>Provider documents are reviewed by the Admin.</li>
+                        <li>Approved providers can access the provider dashboard.</li>
+                    </ul>
+                </div>
+            </article>
+
+            <article class="detail-section" id="booking-help">
+                <div class="detail-head">
+                    <div class="mini-icon"><i class="bi bi-calendar-check"></i></div>
+                    <h3>Booking & Rescheduling</h3>
+                </div>
+                <div class="detail-body">
+                    <p>Learn how to create and manage your service bookings.</p>
+                    <ul>
+                        <li>Search for a suitable provider.</li>
+                        <li>Open the provider profile.</li>
+                        <li>Select Book Service.</li>
+                        <li>Enter the required booking information.</li>
+                        <li>Wait for the provider to accept or reject the request.</li>
+                        <li>Manage rescheduling when required.</li>
+                        <li>Check your booking status through your account.</li>
+                    </ul>
+                </div>
+            </article>
+
+            <article class="detail-section" id="cancellation-help">
+                <div class="detail-head">
+                    <div class="mini-icon"><i class="bi bi-x-circle"></i></div>
+                    <h3>Cancellation Policy</h3>
+                </div>
+                <div class="detail-body">
+                    <p>Customers can cancel an accepted booking according to the cancellation time allowed by ServiceGo.</p>
+                    <ul>
+                        <li>A customer can cancel an accepted booking up to two hours before the scheduled service time.</li>
+                        <li>After the allowed cancellation time, the cancellation option is no longer available.</li>
+                        <li>If a customer cancels within the allowed time, the applicable provider charge can be returned to the provider wallet according to the system policy.</li>
+                        <li>If a provider cancels an accepted booking, the cancellation is recorded by the system.</li>
+
+                    </ul>
+                </div>
+            </article>
+
+            <article class="detail-section" id="wallet-help">
+                <div class="detail-head">
+                    <div class="mini-icon"><i class="bi bi-wallet2"></i></div>
+                    <h3>Wallet & Payment</h3>
+                </div>
+                <div class="detail-body">
+                    <p>ServiceGo uses a wallet system for managing applicable provider charges and payment records.</p>
+                    <ul>
+                        <li>Providers can view their wallet balance.</li>
+                        <li>Applicable charges are recorded in the wallet.</li>
+                        <li>Payment slips can be uploaded when required.</li>
+                        <li>Wallet transactions can be managed through the wallet section.</li>
+                        <li>Service charges between customer and provider are handled offline.</li>
+                    </ul>
+                </div>
+            </article>
+
+            <article class="detail-section" id="complaints-help">
+                <div class="detail-head">
+                    <div class="mini-icon"><i class="bi bi-exclamation-triangle"></i></div>
+                    <h3>Complaints & Support</h3>
+                </div>
+                <div class="detail-body">
+                    <p>Users can report serious issues through the complaint section.</p>
+                    <ul>
+                        <li>Customers can submit complaints about service providers.</li>
+                        <li>Service providers can submit complaints about customers.</li>
+                        <li>Admin reviews submitted complaints.</li>
+                        <li>Warnings may be issued for minor issues.</li>
+                        <li>Accounts may be blocked for repeated or serious violations.</li>
+                    </ul>
+                </div>
+            </article>
+
+            <article class="detail-section" id="security-help">
+                <div class="detail-head">
+                    <div class="mini-icon"><i class="bi bi-shield-lock"></i></div>
+                    <h3>Account & Security</h3>
+                </div>
+                <div class="detail-body">
+                    <p>Keep your account information secure and up to date.</p>
+                    <ul>
+                        <li>Use a valid email address during registration.</li>
+                        <li>Keep your password private.</li>
+                        <li>Use Forgot Password if you cannot remember your password.</li>
+                        <li>Logout after completing your session.</li>
+                        <li>Provide correct information during registration and booking.</li>
+                    </ul>
+                </div>
+            </article>
+        </section>
+
+        <!-- How ServiceGo Works -->
+        <section class="how-it-works">
+            <div class="section-heading">
+                <h2>How ServiceGo Works</h2>
+                <p>Follow these simple steps to use ServiceGo.</p>
+            </div>
+
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <h4>Sign Up</h4>
+                    <p>Create a Customer or Service Provider account using your basic information.</p>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <h4>Verify</h4>
+                    <p>Verify your email address. Providers also complete the required registration process.</p>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <h4>Find a Provider</h4>
+                    <p>Search for a service provider by city and service category.</p>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <h4>Book a Service</h4>
+                    <p>Select a provider and submit your service booking request.</p>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">5</div>
+                    <h4>Manage Booking</h4>
+                    <p>Track your booking, reschedule or cancel according to the available options.</p>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">6</div>
+                    <h4>Rate & Feedback</h4>
+                    <p>After service completion, provide a rating and feedback about the provider.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- FAQ -->
+        <section class="faq-section">
+            <div class="section-heading">
+                <h2>Frequently Asked Questions</h2>
+                <p>Quick answers to common questions.</p>
+            </div>
+
+            <div class="faq">
+                <div class="faq-question" onclick="toggleFAQ(this)">
+                    <span>Do I need an account to book a service?</span>
+                    <span class="plus">+</span>
+                </div>
+                <div class="faq-answer">
+                    Yes. Customers must be logged in to submit a booking request.
+                    Users without an account can create one through the Sign Up option.
+                </div>
+            </div>
+
+            <div class="faq">
+                <div class="faq-question" onclick="toggleFAQ(this)">
+                    <span>How can I find a service provider?</span>
+                    <span class="plus">+</span>
+                </div>
+                <div class="faq-answer">
+                    Go to Explore Providers, select your city and choose the required
+                    service category. Available providers will be displayed according to your search.
+                </div>
+            </div>
+
+            <div class="faq">
+                <div class="faq-question" onclick="toggleFAQ(this)">
+                    <span>How does provider verification work?</span>
+                    <span class="plus">+</span>
+                </div>
+                <div class="faq-answer">
+                    The provider first verifies the registered email address and then completes
+                    the provider registration form. The Admin reviews the submitted information
+                    and documents before approving the provider account.
+                </div>
+            </div>
+
+            <div class="faq">
+                <div class="faq-question" onclick="toggleFAQ(this)">
+                    <span>Can I cancel an accepted booking?</span>
+                    <span class="plus">+</span>
+                </div>
+                <div class="faq-answer">
+                    Yes. A customer can cancel an accepted booking up to two hours before the
+                    scheduled service time. After that, the cancellation option is disabled.
+                </div>
+            </div>
+
+            <div class="faq">
+                <div class="faq-question" onclick="toggleFAQ(this)">
+                    <span>What happens if a provider cancels a booking?</span>
+                    <span class="plus">+</span>
+                </div>
+                <div class="faq-answer">
+                    The cancellation is recorded by the system. Repeated provider cancellations
+                    can be reviewed by the Admin.
+                </div>
+            </div>
+
+            <div class="faq">
+                <div class="faq-question" onclick="toggleFAQ(this)">
+                    <span>How can I submit a complaint?</span>
+                    <span class="plus">+</span>
+                </div>
+                <div class="faq-answer">
+                    Users can submit a complaint through the Complaint section.
+                    The Admin reviews complaints and takes appropriate action according to the situation.
+                </div>
+            </div>
+        </section>
+
+        <!-- Contact: short, normal page section instead of a long black banner -->
+        <section class="contact-section">
+            <div class="section-heading">
+                <h2>Need More Help?</h2>
+                <p>If your question is not covered above, contact the ServiceGo support team.</p>
+            </div>
+
+            <div class="contact-card">
+                <div class="contact-icon">
+                    <i class="bi bi-envelope"></i>
+                </div>
+
+                <div class="contact-content">
+                    <h3>Contact ServiceGo Support</h3>
+                    <p>Send your question or issue directly to the support team.</p>
+                    <a href="mailto:servicego888@gmail.com" class="email-link">servicego888@gmail.com</a>
+                </div>
+
+                <a href="mailto:servicego888@gmail.com" class="contact-button">
+                    Contact Support
+                </a>
+            </div>
+        </section>
+
+    </main>
+
+    <footer>
+        <div class="footer-inner">
+            <a href="@Url.Action("Index", "Home")" class="footer-brand" aria-label="ServiceGo Home">
+                <img src="@Url.Content("~/images/Logo.png")" alt="ServiceGo" />
+            </a>
+            <span>© 2026 ServiceGo. All Rights Reserved.</span>
+        </div>
+    </footer>
+
+    <script>
+        function toggleFAQ(element) {
+            const faq = element.parentElement;
+            faq.classList.toggle("active");
+        }
+    </script>
+
+</body>
+</html>

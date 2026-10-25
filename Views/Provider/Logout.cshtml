@@ -1,0 +1,655 @@
+﻿@{
+    Layout = null;
+    ViewBag.Title = "Logout";
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ServiceGo - Logout</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" />
+    <link rel="icon" href="@Url.Content("~/images/Logo.png")" type="image/x-icon" />
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+            *:focus {
+                outline: none !important;
+            }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f2f2f2;
+            margin: 0;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        /* Mobile dropdown */
+
+        .mobile-dropdown-menu {
+            width: 175px !important;
+            min-width: 175px !important;
+            max-width: 175px !important;
+            padding: 0 !important;
+            margin-top: 8px !important;
+            border: 1px solid #d9d9d9 !important;
+            border-radius: 8px !important;
+            overflow: hidden !important;
+            background: #ffffff !important;
+            box-shadow: 0 5px 14px rgba(0, 0, 0, .18) !important;
+        }
+
+            .mobile-dropdown-menu .dropdown-item {
+                display: flex !important;
+                align-items: center !important;
+                min-height: 44px !important;
+                padding: 9px 16px !important;
+                margin: 0 !important;
+                font-size: 18px !important;
+                line-height: 1.35 !important;
+                font-weight: 700 !important;
+                color: #292929 !important;
+                white-space: nowrap !important;
+                border-radius: 0 !important;
+            }
+
+                .mobile-dropdown-menu .dropdown-item i {
+                    font-size: 17px !important;
+                    min-width: 22px !important;
+                    margin-right: 8px !important;
+                    color: inherit !important;
+                }
+
+                .mobile-dropdown-menu .dropdown-item:hover {
+                    background-color: #fff3df !important;
+                    color: #d97600 !important;
+                }
+
+                .mobile-dropdown-menu .dropdown-item.active,
+                .mobile-dropdown-menu .dropdown-item:active {
+                    background-color: #f7e6c8 !important;
+                    color: #d97600 !important;
+                    font-weight: 700 !important;
+                }
+
+            .mobile-dropdown-menu .dropdown-divider {
+                margin: 0 !important;
+                border-top: 1px solid #dedede !important;
+                opacity: 1 !important;
+            }
+
+            .mobile-dropdown-menu .text-danger {
+                color: #dc3545 !important;
+            }
+
+                .mobile-dropdown-menu .text-danger i {
+                    color: #dc3545 !important;
+                }
+
+        /* Mobile header */
+
+        .mobile-top {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 60px;
+            background-color: #ffffff;
+            z-index: 1200;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 15px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, .08);
+        }
+
+            .mobile-top img.logo {
+                height: 40px;
+                width: 40px;
+                background: #fff;
+                border-radius: 5px;
+                object-fit: contain;
+                cursor: pointer;
+            }
+
+            .mobile-top img.profile-thumb {
+                height: 40px;
+                width: 40px;
+                border-radius: 50%;
+                border: 2px solid #f0ad4e;
+                cursor: pointer;
+                object-fit: cover;
+            }
+
+        /* Desktop sidebar */
+
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 80px;
+            height: 100vh;
+            background-color: #d97600;
+            transition: width 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 1040;
+        }
+
+            .sidebar:hover {
+                width: 240px;
+                box-shadow: 4px 0 25px rgba(240, 173, 78, 0.5);
+            }
+
+            .sidebar img.logo {
+                width: 60px;
+                height: 60px;
+                margin: 20px 0;
+                border-radius: 10%;
+                background: #fff;
+                cursor: pointer;
+                object-fit: contain;
+                border: 2px solid #fff;
+            }
+
+
+        .provider-greeting {
+            color: #fff;
+            font-size: 15px;
+            font-weight: 700;
+            white-space: nowrap;
+            text-align: center;
+            margin: -6px 0 6px;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .sidebar:hover .provider-greeting {
+            opacity: 1;
+        }
+
+        @@media (max-width: 768px) {
+            .provider-greeting {
+                display: none;
+            }
+        }
+
+        .sidebar .nav {
+            width: 100%;
+            margin-top: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+            .sidebar .nav a {
+                display: flex;
+                align-items: center;
+                color: #fff;
+                padding: 12px 20px;
+                text-decoration: none;
+                border-radius: 10px;
+                width: 90%;
+                margin-bottom: 5px;
+                transition: background-color .2s ease, color .2s ease;
+            }
+
+                .sidebar .nav a i {
+                    font-size: 1.4rem;
+                    min-width: 25px;
+                    margin-right: 15px;
+                }
+
+            .sidebar .nav span {
+                opacity: 0;
+                white-space: nowrap;
+                transition: opacity 0.2s ease;
+            }
+
+        .sidebar:hover .nav span {
+            opacity: 1;
+        }
+
+        .sidebar .nav a.active,
+        .sidebar .nav a:hover {
+            background-color: #ffb74d !important;
+            color: #fff !important;
+            font-weight: 600;
+        }
+
+        /* Main area */
+
+        .main {
+            min-height: 100vh;
+            margin-left: 80px;
+            width: calc(100% - 80px);
+            padding: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: margin-left 0.3s ease;
+            position: relative;
+        }
+
+        .sidebar:hover ~ .main {
+            margin-left: 240px;
+            width: calc(100% - 240px);
+        }
+
+        /* Logout card */
+
+        .logout-card {
+            background: #ffffff;
+            padding: 28px 26px;
+            border-radius: 18px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, .12);
+            text-align: center;
+            width: 340px;
+            max-width: calc(100vw - 32px);
+            position: relative;
+            z-index: 1100;
+        }
+
+            .logout-card h3 {
+                color: #222;
+                font-size: 22px;
+                font-weight: 700;
+                margin: 0 0 8px;
+            }
+
+            .logout-card p {
+                color: #666;
+                margin: 0 0 20px;
+                font-size: 14px;
+            }
+
+        .logout-buttons {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+        }
+
+        .btn-confirm,
+        .btn-cancel {
+            flex: 1;
+            min-height: 42px;
+            padding: 10px 12px;
+            border-radius: 9px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: .2s ease;
+        }
+
+        .btn-confirm {
+            background-color: #d97600;
+            color: #fff;
+            border: 1px solid #d97600;
+        }
+
+            .btn-confirm:hover {
+                background-color: #c86d00;
+                border-color: #c86d00;
+            }
+
+        .btn-cancel {
+            background-color: #fff;
+            color: #444;
+            border: 1px solid #bbb;
+        }
+
+            .btn-cancel:hover {
+                background-color: #f5f5f5;
+                color: #222;
+            }
+
+        /*
+                 * Dark light overlay
+                 * Keeps sidebar/layout visible but puts focus on popup
+                 */
+
+        .logout-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, .18);
+            z-index: 1050;
+        }
+
+        /* Mobile */
+
+        @@media (max-width: 768px) {
+
+            .sidebar {
+                display: none !important;
+            }
+
+            .mobile-top {
+                display: flex !important;
+            }
+
+            .main {
+                margin-left: 0 !important;
+                width: 100vw !important;
+                min-height: 100vh;
+                padding: 80px 15px 20px !important;
+            }
+
+            .sidebar:hover ~ .main {
+                margin-left: 0 !important;
+                width: 100vw !important;
+            }
+
+            .logout-card {
+                width: 300px;
+                padding: 25px 20px;
+            }
+
+                .logout-card h3 {
+                    font-size: 21px;
+                }
+
+            .logout-buttons {
+                gap: 8px;
+            }
+        }
+
+        /*
+                 * Mobile profile dropdown
+                 * Same style as provider dashboard / history
+                 */
+        @@media (max-width: 768px) {
+            .mobile-top .dropdown-menu, .mobile-dropdown-menu {
+                width: 175px !important;
+                min-width: 175px !important;
+                max-width: 175px !important;
+                padding: 0 !important;
+                margin-top: 8px !important;
+                border: 1px solid #d9d9d9 !important;
+                border-radius: 8px !important;
+                overflow: hidden !important;
+                background: #ffffff !important;
+                box-shadow: 0 5px 14px rgba(0,0,0,.18) !important;
+            }
+
+                .mobile-top .dropdown-menu .dropdown-item,
+                .mobile-dropdown-menu .dropdown-item {
+                    display: flex !important;
+                    align-items: center !important;
+                    min-height: 44px !important;
+                    padding: 9px 16px !important;
+                    margin: 0 !important;
+                    font-size: 18px !important;
+                    line-height: 1.35 !important;
+                    font-weight: 700 !important;
+                    color: #292929 !important;
+                    white-space: nowrap !important;
+                    border-radius: 0 !important;
+                }
+
+                    .mobile-top .dropdown-menu .dropdown-item i,
+                    .mobile-dropdown-menu .dropdown-item i {
+                        font-size: 17px !important;
+                        min-width: 22px !important;
+                        margin-right: 8px !important;
+                    }
+
+                    .mobile-top .dropdown-menu .dropdown-item:hover,
+                    .mobile-dropdown-menu .dropdown-item:hover {
+                        background: #fff3df !important;
+                        color: #d97600 !important;
+                    }
+
+                    .mobile-top .dropdown-menu .dropdown-item.active,
+                    .mobile-top .dropdown-menu .dropdown-item:active,
+                    .mobile-dropdown-menu .dropdown-item.active,
+                    .mobile-dropdown-menu .dropdown-item:active {
+                        background: #f7e6c8 !important;
+                        color: #d97600 !important;
+                        font-weight: 700 !important;
+                    }
+
+                .mobile-top .dropdown-menu .dropdown-divider,
+                .mobile-dropdown-menu .dropdown-divider {
+                    margin: 0 !important;
+                    border-top: 1px solid #dedede !important;
+                    opacity: 1 !important;
+                }
+
+                .mobile-top .dropdown-menu .text-danger,
+                .mobile-dropdown-menu .text-danger {
+                    color: #dc3545 !important;
+                }
+        }</style>
+
+    <style id="servicego-caret-fix">
+        /* Keep the text caret only where the user can actually type. */
+        body, body * {
+            caret-color: transparent !important;
+        }
+
+        input, textarea, select, [contenteditable="true"], [contenteditable=""] {
+            caret-color: auto !important;
+        }
+
+            input[type="button"], input[type="submit"], input[type="reset"], input[type="checkbox"], input[type="radio"], input[type="file"], select {
+                caret-color: transparent !important;
+            }
+    </style>
+
+    <style id="servicego-unified-provider-navigation">
+        /* ServiceGo unified provider navigation — visual/layout only */
+        .sidebar .nav a {
+            background: transparent !important;
+            color: #fff !important;
+        }
+
+            .sidebar .nav a.active {
+                background-color: #ffb74d !important;
+                color: #fff !important;
+                font-weight: 600 !important;
+            }
+
+                .sidebar .nav a.active i {
+                    color: #fff !important;
+                }
+
+            .sidebar .nav a:hover:not(.active) {
+                background: transparent !important;
+                color: #fff !important;
+            }
+
+        @@media (max-width: 768px) {
+            .mobile-top {
+                height: 70px !important;
+                min-height: 70px !important;
+                padding: 0 15px !important;
+            }
+
+                .mobile-top .logo {
+                    width: 40px !important;
+                    height: 40px !important;
+                    object-fit: contain !important;
+                }
+
+                .mobile-top .profile-thumb {
+                    width: 40px !important;
+                    height: 40px !important;
+                    object-fit: cover !important;
+                    border-radius: 50% !important;
+                    border: 2px solid #d97600 !important;
+                    cursor: pointer !important;
+                }
+
+                .mobile-top .dropdown-menu.mobile-dropdown-menu {
+                    width: 205px !important;
+                    min-width: 205px !important;
+                    max-width: 205px !important;
+                    padding: 8px !important;
+                    margin-top: 8px !important;
+                    border: 1px solid #eee !important;
+                    border-radius: 14px !important;
+                    background: #fff !important;
+                    box-shadow: 0 14px 35px rgba(0,0,0,.14) !important;
+                    overflow: hidden !important;
+                }
+
+                    .mobile-top .dropdown-menu.mobile-dropdown-menu .dropdown-item {
+                        display: flex !important;
+                        align-items: center !important;
+                        min-height: 42px !important;
+                        padding: 9px 12px !important;
+                        margin: 0 !important;
+                        gap: 10px !important;
+                        border-radius: 10px !important;
+                        font-size: 16px !important;
+                        line-height: 1.35 !important;
+                        font-weight: 600 !important;
+                        white-space: nowrap !important;
+                        color: #333 !important;
+                    }
+
+                        .mobile-top .dropdown-menu.mobile-dropdown-menu .dropdown-item i {
+                            width: 20px !important;
+                            min-width: 20px !important;
+                            margin: 0 !important;
+                            text-align: center !important;
+                            color: #d97600 !important;
+                            font-size: 17px !important;
+                        }
+
+                        .mobile-top .dropdown-menu.mobile-dropdown-menu .dropdown-item.active {
+                            background: #fff3df !important;
+                            color: #d97600 !important;
+                            font-weight: 700 !important;
+                        }
+
+                            .mobile-top .dropdown-menu.mobile-dropdown-menu .dropdown-item.active i {
+                                color: #d97600 !important;
+                            }
+
+                        .mobile-top .dropdown-menu.mobile-dropdown-menu .dropdown-item.text-danger,
+                        .mobile-top .dropdown-menu.mobile-dropdown-menu .dropdown-item.text-danger i {
+                            color: #dc3545 !important;
+                        }
+
+                    .mobile-top .dropdown-menu.mobile-dropdown-menu .dropdown-divider {
+                        margin: 4px 0 !important;
+                        border-top: 1px solid #dedede !important;
+                        opacity: 1 !important;
+                    }
+        }
+
+        body, body * {
+            caret-color: transparent !important;
+        }
+
+        input, textarea, select, [contenteditable="true"], [contenteditable=""] {
+            caret-color: auto !important;
+        }
+
+            input[type="button"], input[type="submit"], input[type="reset"],
+            input[type="checkbox"], input[type="radio"], input[type="file"], select {
+                caret-color: transparent !important;
+            }
+    </style>
+</head>
+
+<body>
+
+    <!-- Mobile header -->
+
+    <div class="mobile-top">
+        <a href="@Url.Action("Index", "Home")" aria-label="ServiceGo Home">
+            <img src="@Url.Content("~/images/Logo.png")" class="logo" alt="ServiceGo" />
+        </a>
+
+        <div class="dropdown">
+            <img src="@Url.Content("~/images/Profile icon.png")"
+                 class="profile-thumb dropdown-toggle"
+                 data-bs-toggle="dropdown"
+                 aria-expanded="false"
+                 alt="Profile" />
+
+            <ul class="dropdown-menu dropdown-menu-end mobile-dropdown-menu">
+                <li><a class="dropdown-item" href="@Url.Action("Dashboard", "Provider")"><i class="bi bi-house-door"></i>Dashboard</a></li>
+                <li><a class="dropdown-item" href="@Url.Action("Profile", "Provider")"><i class="bi bi-person"></i>Profile</a></li>
+                <li><a class="dropdown-item" href="@Url.Action("Messages", "Provider")"><i class="bi bi-chat-dots"></i>Messages</a></li>
+                <li><a class="dropdown-item" href="@Url.Action("History", "Provider")"><i class="bi bi-clock-history"></i>History</a></li>
+                <li><a class="dropdown-item" href="@Url.Action("Notifications", "Provider")"><i class="bi bi-bell"></i>Notifications</a></li>
+                <li><hr class="dropdown-divider" /></li>
+                <li><a class="dropdown-item text-danger active" href="@Url.Action("Logout", "Provider")"><i class="bi bi-box-arrow-right"></i>Logout</a></li>
+            </ul>
+        </div>
+    </div>
+
+
+    <!-- Desktop sidebar -->
+
+    <div class="sidebar">
+        <a href="@Url.Action("Index", "Home")" aria-label="ServiceGo Home">
+            <img src="@Url.Content("~/images/Logo.png")" class="logo" alt="ServiceGo" />
+        </a>
+        <div class="provider-greeting">Hi Provider</div>
+        <div class="nav">
+            <a href="@Url.Action("Dashboard", "Provider")"><i class="bi bi-house-door"></i><span>Dashboard</span></a>
+            <a href="@Url.Action("Profile", "Provider")"><i class="bi bi-person"></i><span>Profile</span></a>
+            <a href="@Url.Action("Messages", "Provider")"><i class="bi bi-chat-dots"></i><span>Messages</span></a>
+            <a href="@Url.Action("History", "Provider")"><i class="bi bi-clock-history"></i><span>History</span></a>
+            <a href="@Url.Action("Notifications", "Provider")"><i class="bi bi-bell"></i><span>Notifications</span></a>
+            <a href="@Url.Action("Logout", "Provider")" class="active"><i class="bi bi-box-arrow-right"></i><span>Logout</span></a>
+        </div>
+    </div>
+
+    <div class="main">
+
+        <!-- Overlay -->
+        <div class="logout-overlay"></div>
+
+        <!-- Confirmation Card -->
+        <div class="logout-card">
+
+            <h3>Logout</h3>
+
+            <p>
+                Are you sure you want to log out from your account?
+            </p>
+
+            <form method="post"
+                  action="@Url.Action("LogoutConfirmed", "Provider")">
+
+                @Html.AntiForgeryToken()
+
+                <div class="logout-buttons">
+
+                    <button type="submit"
+                            class="btn-confirm">
+                        Logout
+                    </button>
+
+                    <button type="button"
+                            class="btn-cancel"
+                            onclick="window.location.href='@Url.Action("Dashboard", "Provider")'">
+                        Cancel
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+
+</body>
+</html>

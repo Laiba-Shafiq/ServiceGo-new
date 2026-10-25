@@ -1,0 +1,178 @@
+﻿@{
+    Layout = null;
+    ViewBag.Title = "Terms and Conditions";
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ServiceGo - Terms & Conditions</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" />
+    <link rel="icon" href="@Url.Content("~/images/Logo.png")" type="image/x-icon" />
+
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f8f9fa;
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .terms-container {
+            background: #fff;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            padding: 45px;
+            margin-top: 20px;
+            margin-bottom: 50px;
+        }
+
+        .brand-logo {
+            height: 55px;
+            object-fit: contain;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+            .brand-logo:hover {
+                transform: scale(1.05);
+            }
+
+        h2 {
+            color: #d97600;
+            font-weight: 700;
+            font-size: 1.8rem;
+        }
+
+        h5 {
+            color: #b86400;
+            font-weight: 600;
+            margin-top: 30px;
+            margin-bottom: 12px;
+            font-size: 1.1rem;
+            border-left: 3px solid #f0ad4e;
+            padding-left: 10px;
+        }
+
+        .alert-custom {
+            background-color: #fff3cd;
+            border-left: 5px solid #ffb74d;
+            color: #664d03;
+            border-radius: 8px;
+        }
+
+        .btn-back {
+            background-color: #d97600 !important;
+            color: #fff !important;
+            font-weight: 500;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 20px;
+            transition: 0.2s;
+        }
+
+            .btn-back:hover {
+                background-color: #b86400 !important;
+            }
+
+        ul {
+            padding-left: 20px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        /* Keep the text caret visible only where typing is possible. */
+        body {
+            caret-color: transparent;
+        }
+
+        input,
+        textarea,
+        select,
+        [contenteditable="true"] {
+            caret-color: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container mt-4">
+        <div class="row justify-content-center">
+            <div class="col-lg-9 col-md-11">
+
+                <div class="d-flex justify-content-between align-items-center px-2 mb-2">
+                    <a href="@Url.Action("Index", "Home")">
+                        <img src="@Url.Content("~/images/Logo.png")" alt="ServiceGo Logo" class="brand-logo">
+                    </a>
+
+                    <a href="@Url.Action("Index", "Home")" class="btn btn-sm btn-back shadow-sm">
+                        <i class="bi bi-house-door me-1"></i> Back to Home
+                    </a>
+                </div>
+
+                <div class="terms-container">
+                    <div class="text-center border-bottom pb-3 mb-4">
+                        <h2>Terms &amp; Conditions</h2>
+                        <p class="text-muted mb-1">Last Updated: October 2026</p>
+                    </div>
+
+                    <p class="lead" style="font-size: 1rem; color: #555;">By accessing or registering with <strong>ServiceGo</strong>, you agree to comply with and be bound by the following terms and conditions. Please read them carefully before using the platform.</p>
+
+                    <h5>1. Platform Role</h5>
+                    <p>ServiceGo is a digital platform that connects customers who need home services with service providers. ServiceGo does not employ the service providers and is not present during the actual execution of the work.</p>
+
+                    <div class="alert alert-custom p-3 my-3 shadow-sm">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        <strong>Important Payment Policy:</strong> Service charges are <strong>NOT</strong> paid through ServiceGo. All pricing, service rates and payments for the work are agreed and settled directly (offline) between the Customer and the Service Provider. The only money handled inside the platform is the Provider Wallet described in Section 4.
+                    </div>
+
+                    <h5>2. User Responsibility &amp; Account Safety</h5>
+                    <ul>
+                        <li><strong>Accurate Information:</strong> Users must provide correct and genuine information. Providers must submit a valid CNIC (front and back) and their professional details, which are reviewed by the Admin before the account is approved. Accounts with fake names or false documents may be rejected or blocked by the Admin.</li>
+                        <li><strong>Profile &amp; Location:</strong> Customers must keep their phone number, city and permanent location correct in their profile, because this information is used to match them with providers and to carry out the service.</li>
+                        <li><strong>Account Security:</strong> You are responsible for keeping your login details private and for all activity that takes place under your account.</li>
+                        <li><strong>Respectful Communication:</strong> The in-app chat and voice messages must be used only for matters related to the booking. Abusive, threatening or inappropriate messages are not allowed.</li>
+                    </ul>
+
+                    <h5>3. Bookings, Cancellation &amp; Rescheduling</h5>
+                    <ul>
+                        <li><strong>Booking Requests:</strong> A customer sends a booking request to a provider. The provider may accept or reject it. A booking moves through the stages Pending, Accepted and Completed.</li>
+                        <li><strong>Expired Requests:</strong> A Pending booking that is not accepted before its scheduled date and time expires automatically.</li>
+                        <li><strong>Cancellation:</strong> A Pending booking can be cancelled at any time. An Accepted booking can be cancelled only until 2 hours before the booking time. After that, it can no longer be cancelled.</li>
+                        <li><strong>Rescheduling:</strong> A new date and time can be requested only for Pending bookings. The change takes effect only when the other party accepts it; until then the original date and time remain unchanged. A rejected reschedule request does not change the booking.</li>
+                        <li><strong>Completion &amp; Rating:</strong> The provider marks the job as completed after the work is done. The customer can then rate the provider.</li>
+                    </ul>
+
+                    <h5>4. Provider Wallet &amp; Platform Commission</h5>
+                    <ul>
+                        <li><strong>Wallet:</strong> Providers add money to their ServiceGo wallet by submitting a payment receipt. The money is added after the Admin reviews and approves the request.</li>
+                        <li><strong>Commission:</strong> ServiceGo charges a fixed platform commission of <strong>Rs. 10</strong> per accepted booking, which is deducted from the provider's wallet when the booking is accepted.</li>
+                        <li><strong>Balance Required:</strong> A provider needs enough wallet balance to accept a booking request.</li>
+                        <li><strong>Refund:</strong> If a customer cancels an Accepted booking (within the allowed cancellation time), the Rs. 10 commission is returned to the provider's wallet.</li>
+                    </ul>
+
+                    <h5>5. Complaint Management &amp; Discipline</h5>
+                    <p>In case of misconduct, incomplete work, or communication problems, both Customers and Providers can use the <strong>Complaints Management System</strong> inside their dashboard. The Admin reviews complaints and may send a warning notification, or temporarily or permanently block an account, depending on the outcome of the review.</p>
+
+                    <h5>6. Limitation of Liability</h5>
+                    <p>Services are carried out in person at the customer's chosen location and payments for the work are settled offline between the customer and the provider. Therefore, ServiceGo is not responsible for damage to property, personal disputes, or payment disagreements that happen while a service is being carried out.</p>
+
+                    <h5>7. Changes to Terms</h5>
+                    <p>ServiceGo may update these Terms &amp; Conditions at any time. By continuing to use the customer or provider dashboard after an update, you accept the revised terms.</p>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

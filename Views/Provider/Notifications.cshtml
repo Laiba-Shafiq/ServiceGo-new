@@ -1,0 +1,2043 @@
+﻿@model List<ServiceGo.Models.Notification>
+
+@{
+    Layout = null;
+
+
+    var providerProfileImage = ViewBag.ProviderProfileImage as string ?? string.Empty;
+    var profileImageUrl = string.IsNullOrWhiteSpace(providerProfileImage)
+        ? Url.Content("~/images/Profile icon.png")
+        : Url.Content(providerProfileImage);
+
+    var providerUnreadCount = ViewBag.UnreadCount as int? ?? 0;
+
+}
+
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Provider - Notifications</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="icon" href="@Url.Content("~/images/Logo.png")" type="image/x-icon">
+
+    <style>
+        /*
+         * Servicego provider notifications
+         * All CSS merged into this cshtml
+         */
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            min-height: 100%;
+        }
+
+        body {
+            font-family: "Poppins", sans-serif;
+            background-color: #f2f2f2;
+            overflow-x: hidden;
+        }
+
+        /* Mobile menu button */
+
+        .mobile-menu-btn {
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            z-index: 2000;
+            background: #f0ad4e;
+            border: none;
+            color: #fff;
+            font-size: 1.8rem;
+            padding: 8px 12px;
+            border-radius: 10px;
+            display: none;
+        }
+
+        /* Sidebar */
+
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 80px !important;
+            min-width: 80px !important;
+            height: 100vh !important;
+            background-color: #d97600 !important;
+            transition: width 0.3s ease, box-shadow 0.3s ease !important;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow: hidden;
+            z-index: 1040 !important;
+        }
+
+            .sidebar:hover,
+            .sidebar:focus-within {
+                width: 240px !important;
+                box-shadow: 4px 0 25px rgba(240, 173, 78, 0.3) !important;
+            }
+
+            .sidebar img.logo {
+                width: 60px;
+                height: 60px;
+                margin: 20px 0;
+                border-radius: 10%;
+                background: #fff;
+                cursor: pointer;
+                object-fit: contain;
+                border: 2px solid #fff;
+                transition: transform 0.3s;
+            }
+
+                .sidebar img.logo:hover {
+                    transform: scale(1.05);
+                }
+
+        .provider-nav-greeting {
+            color: #fff;
+            font-size: 15px;
+            font-weight: 700;
+            white-space: nowrap;
+            margin: -4px 0 8px;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .sidebar:hover .provider-nav-greeting {
+            opacity: 1;
+        }
+
+
+        .sidebar .nav {
+            width: 100% !important;
+            margin-top: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+            .sidebar .nav a {
+                display: flex;
+                align-items: center;
+                color: #fff;
+                padding: 12px 20px !important;
+                text-decoration: none;
+                border-radius: 10px !important;
+                width: 90% !important;
+                margin-bottom: 6px !important;
+                transition: all 0.3s;
+                gap: 0 !important;
+                background: transparent !important;
+            }
+
+                .sidebar .nav a i {
+                    font-size: 1.4rem !important;
+                    margin-right: 15px !important;
+                    min-width: 25px !important;
+                    text-align: center !important;
+                }
+
+                /* Only active page highlighted */
+                .sidebar .nav a:hover:not(.active) {
+                    background: transparent !important;
+                    transform: translateX(5px);
+                }
+
+                .sidebar .nav a.active {
+                    background: #ffb74d !important;
+                    color: #fff !important;
+                    font-weight: 600;
+                }
+
+            .sidebar .nav span {
+                opacity: 0 !important;
+                transition: opacity 0.2s ease !important;
+            }
+
+        .sidebar:hover .nav span,
+        .sidebar:focus-within .nav span {
+            opacity: 1 !important;
+        }
+
+        /* Main content */
+
+        .main {
+            min-height: 100vh;
+            margin-left: 80px !important;
+            width: calc(100% - 80px) !important;
+            padding: 42px 48px 55px;
+            transition: margin-left 0.3s ease, width 0.3s ease !important;
+            box-sizing: border-box !important;
+        }
+
+        .sidebar:hover ~ .main,
+        .sidebar:focus-within ~ .main {
+            margin-left: 240px !important;
+            width: calc(100% - 240px) !important;
+        }
+
+        .page-container {
+            width: 100%;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        h4 {
+            font-weight: 700;
+            color: #000;
+        }
+
+        .page-title {
+            margin-bottom: 25px;
+        }
+
+        /* Notification cards */
+
+        .notif-card {
+            width: 100%;
+            min-width: 0;
+            word-break: break-word;
+            background: #fff;
+            border-radius: 15px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+            .notif-card:hover {
+                transform: translateY(-3px);
+                box-shadow: 0 6px 15px rgba(240, 173, 78, 0.3);
+            }
+
+            .notif-card.unread {
+                border-left: 4px solid #f0ad4e;
+                background-color: #fffdf8 !important;
+            }
+
+            /* Notification icon */
+
+            .notif-card .notif-icon {
+                width: 44px !important;
+                height: 44px !important;
+                min-width: 44px !important;
+                flex: 0 0 44px !important;
+                margin-right: 14px !important;
+                border-radius: 50% !important;
+                background: #fff3df !important;
+                color: #d97600 !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                font-size: 1.15rem !important;
+            }
+
+            .notif-card.unread .notif-icon {
+                background: #ffe4b8 !important;
+            }
+
+            .notif-card .notif-icon i {
+                line-height: 1 !important;
+            }
+
+        /* Notification text */
+
+        .notif-text {
+            flex: 1;
+            min-width: 0;
+        }
+
+            .notif-text p {
+                margin: 0;
+                color: #555;
+                font-size: 15px;
+                overflow-wrap: anywhere;
+            }
+
+        .notif-title {
+            font-weight: 600;
+            font-size: 0.95rem;
+            margin-bottom: 2px;
+        }
+
+        .notif-time {
+            font-size: 0.9rem;
+            color: #999;
+        }
+
+        /* Footer */
+
+        footer {
+            text-align: center;
+            color: #777;
+            font-size: 0.9rem;
+            margin-top: 40px;
+            overflow-wrap: anywhere;
+        }
+
+        /* Mobile header */
+
+        .mobile-top,
+        .mobile-top-header {
+            display: none !important;
+        }
+
+        .mobile-profile-trigger {
+            object-fit: cover;
+            border: 2px solid #f0a43c !important;
+            cursor: pointer;
+        }
+
+        .mobile-profile-btn {
+            border: 2px solid #f0a43c !important;
+            border-radius: 50% !important;
+            background: #fff !important;
+        }
+
+            .mobile-profile-btn::after {
+                display: none !important;
+            }
+
+        /* Dropdown */
+
+        .dropdown-item.active,
+        .dropdown-item:active {
+            background-color: #fff3e0 !important;
+            color: #d97600 !important;
+            font-weight: 600;
+        }
+
+        .dropdown-item:hover {
+            background-color: #fff8f0;
+            color: #f0ad4e;
+        }
+
+        /* Caret fix */
+
+        html,
+        body,
+        body * {
+            caret-color: transparent !important;
+        }
+
+        input,
+        textarea,
+        [contenteditable="true"],
+        [contenteditable=""] {
+            caret-color: transparent !important;
+        }
+
+        /* Notification status / filters */
+
+        .sidebar .nav a .sidebar-notification-badge {
+            display: inline-flex !important;
+            align-items: center;
+            justify-content: center;
+            min-width: 22px;
+            height: 22px;
+            padding: 0 7px;
+            margin-left: auto;
+            border-radius: 999px;
+            background: #fff !important;
+            color: #d97600 !important;
+            font-size: .70rem;
+            font-weight: 800;
+            line-height: 1;
+            opacity: 1 !important;
+            white-space: nowrap;
+        }
+
+        .notification-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 22px;
+        }
+
+        .notification-heading {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+            .notification-heading h4 {
+                margin: 0;
+            }
+
+        .notification-unread-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 13px;
+            border-radius: 999px;
+            background: #fff;
+            border: 1px solid #ececec;
+            color: #555;
+            font-size: .82rem;
+            font-weight: 600;
+            box-shadow: 0 3px 12px rgba(0,0,0,.05);
+            white-space: nowrap;
+        }
+
+            .notification-unread-pill .count {
+                min-width: 23px;
+                height: 23px;
+                padding: 0 6px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 999px;
+                background: #fff3e0;
+                color: #d97600;
+                font-weight: 700;
+            }
+
+        .notification-filters {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(150px, 1fr));
+            gap: 7px;
+            padding: 7px;
+            margin: 0 auto 24px;
+            width: min(100%, 900px);
+            background: #fff;
+            border: 1px solid #eee;
+            border-radius: 16px;
+            box-shadow: 0 4px 18px rgba(0,0,0,.05);
+        }
+
+        .notification-filter {
+            min-height: 54px;
+            border: 0;
+            border-radius: 12px;
+            background: transparent;
+            color: #666;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: all .18s ease;
+        }
+
+            .notification-filter:hover {
+                background: #fafafa;
+                color: #d97600;
+            }
+
+            .notification-filter.active {
+                background: #fff3e0;
+                color: #d97600;
+            }
+
+            .notification-filter .filter-count {
+                min-width: 23px;
+                height: 23px;
+                padding: 0 6px;
+                border-radius: 999px;
+                background: #f1f1f1;
+                color: #777;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                font-size: .78rem;
+                font-weight: 700;
+            }
+
+            .notification-filter.active .filter-count {
+                background: #d97600;
+                color: #fff;
+            }
+
+        .notif-card.read {
+            background: #fff;
+            border-left: 4px solid transparent;
+        }
+
+        .notif-card.unread {
+            border-left: 4px solid #d97600;
+            background: #fffaf3 !important;
+        }
+
+        .notif-status-dot {
+            width: 8px;
+            height: 8px;
+            min-width: 8px;
+            border-radius: 50%;
+            background: #d97600;
+            margin-top: 7px;
+            box-shadow: 0 0 0 3px rgba(217,118,0,.10);
+        }
+
+            .notif-status-dot.read-dot {
+                visibility: hidden;
+            }
+
+        .notif-card.unread .notif-title {
+            font-weight: 750;
+        }
+
+        .notif-card.read .notif-title {
+            font-weight: 600;
+        }
+
+        .notification-empty-filter {
+            display: none;
+        }
+
+        /* Notification interaction */
+
+        /* Clickable notifications: light orange + pointer + arrow */
+        .notification-main .notif-card {
+            background: #fff8ee !important;
+            border-left: 4px solid #f0ad4e !important;
+        }
+
+            .notification-main .notif-card::after {
+                content: "\2192";
+                position: absolute;
+                right: 16px;
+                top: 50%;
+                transform: translateY(-50%);
+                font-size: 20px;
+                font-weight: 700;
+                color: #d97600;
+            }
+
+        /* Non-clickable notifications: plain white + no arrow */
+        .notification-view-only .notif-card {
+            background: #fff !important;
+            border-left: 4px solid transparent !important;
+        }
+
+            .notification-view-only .notif-card::after {
+                content: "\2192";
+                position: absolute;
+                right: 16px;
+                top: 50%;
+                transform: translateY(-50%);
+                color: #9ca3af;
+                font-size: 1.15rem;
+                font-weight: 600;
+                pointer-events: none;
+            }
+
+        /*
+         * A clickable notification stays clickable after opening,
+         * but once it is read it must look exactly like a view-only card.
+         */
+        .notification-main .notif-card.read {
+            background: #fff !important;
+            border-left: 4px solid transparent !important;
+        }
+
+            .notification-main .notif-card.read::after {
+                content: "\2192";
+                position: absolute;
+                right: 16px;
+                top: 50%;
+                transform: translateY(-50%);
+                color: #d97706;
+                font-size: 1.35rem;
+                font-weight: 700;
+                pointer-events: none;
+            }
+
+        .notification-row {
+            position: relative;
+            width: 100%;
+            margin-bottom: 14px;
+        }
+
+        .notification-main {
+            display: block;
+            width: 100%;
+            min-width: 0;
+            color: inherit;
+            text-decoration: none !important;
+            cursor: pointer !important;
+        }
+
+            .notification-main .notif-card {
+                width: 100%;
+                min-height: 108px;
+                margin-bottom: 0 !important;
+                padding-right: 58px !important;
+                cursor: pointer !important;
+                position: relative;
+            }
+
+        .notification-view-only {
+            width: 100%;
+            min-width: 0;
+            cursor: default !important;
+        }
+
+            .notification-view-only .notif-card {
+                width: 100%;
+                min-height: 108px;
+                margin-bottom: 0 !important;
+                padding-right: 58px !important;
+                cursor: default !important;
+                position: relative;
+            }
+
+        /* Small orange delete button sits INSIDE the card's top-right corner. */
+        .notification-dismiss-form {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 5;
+            margin: 0;
+        }
+
+        .notification-dismiss {
+            width: 32px;
+            height: 32px;
+            border: 1px solid #f2c58d;
+            border-radius: 10px;
+            background: #fff7ec;
+            color: #d97600;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(217,118,0,.10);
+            transition: transform .18s ease, background .18s ease, color .18s ease, box-shadow .18s ease;
+        }
+
+            .notification-dismiss:hover,
+            .notification-dismiss:focus-visible {
+                background: #d97600;
+                color: #fff;
+                border-color: #d97600;
+                transform: translateY(-1px);
+                box-shadow: 0 4px 10px rgba(217,118,0,.22);
+                outline: none;
+            }
+
+            .notification-dismiss i {
+                font-size: .9rem;
+                pointer-events: none;
+            }
+
+        .notification-row .notif-card,
+        .notif-card,
+        .notif-item,
+        .notification-card {
+            user-select: text !important;
+        }
+
+        .notification-view-only,
+        .notification-view-only.notif-item {
+            cursor: default !important;
+        }
+
+
+        /* Mobile responsive */
+
+        @@media (max-width: 768px) {
+            .notification-header {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .notification-filters {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .notification-row {
+                margin-bottom: 12px;
+            }
+
+            .notification-main .notif-card,
+            .notification-view-only .notif-card {
+                min-height: 100px;
+                padding-right: 50px !important;
+            }
+
+            .notification-dismiss-form {
+                top: 8px;
+                right: 8px;
+            }
+
+            .notification-dismiss {
+                width: 30px;
+                height: 30px;
+                border-radius: 9px;
+            }
+
+            .page-title > div {
+                width: 100%;
+            }
+
+                .page-title > div form {
+                    flex: 1 1 0;
+                }
+
+                .page-title > div button {
+                    width: 100%;
+                }
+            /* Hide desktop sidebar */
+            .sidebar {
+                display: none !important;
+            }
+            /* Mobile header */
+            .mobile-top,
+            .mobile-top-header {
+                height: 70px !important;
+                min-height: 70px !important;
+                padding: 0 15px !important;
+                background: #fff !important;
+                position: fixed !important;
+                top: 0 !important;
+                left: 0 !important;
+                right: 0 !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: space-between !important;
+                z-index: 3000 !important;
+                box-sizing: border-box !important;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, .08) !important;
+            }
+
+                .mobile-top > .dropdown,
+                .mobile-top-header > .dropdown,
+                .mobile-profile-dropdown {
+                    position: relative !important;
+                    z-index: 3010 !important;
+                }
+
+                .mobile-logo,
+                .mobile-top .mobile-logo,
+                .mobile-top .logo,
+                .mobile-top-header .mobile-logo {
+                    width: 45px !important;
+                    height: 45px !important;
+                    min-width: 45px !important;
+                    min-height: 45px !important;
+                    object-fit: contain !important;
+                    border-radius: 8px !important;
+                    cursor: pointer !important;
+                }
+            /* Profile button */
+            .mobile-profile-btn {
+                width: 48px !important;
+                height: 48px !important;
+                min-width: 48px !important;
+                min-height: 48px !important;
+                padding: 0 !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                box-shadow: none !important;
+            }
+
+                .mobile-profile-btn .profile-thumb,
+                .profile-thumb,
+                .mobile-profile-trigger,
+                .mobile-top .profile-thumb,
+                .mobile-top-header .profile-thumb {
+                    width: 44px !important;
+                    height: 44px !important;
+                    min-width: 44px !important;
+                    min-height: 44px !important;
+                    border-radius: 50% !important;
+                    object-fit: cover !important;
+                    display: block !important;
+                    border: 0 !important;
+                    background: #fff !important;
+                }
+
+            .mobile-profile-trigger {
+                border: 2px solid #f0a43c !important;
+            }
+            /* Mobile dropdown */
+            .mobile-profile-menu,
+            .mobile-dropdown-menu,
+            .provider-mobile-menu,
+            .mobile-top .dropdown-menu,
+            .mobile-top-header .dropdown-menu {
+                width: 192px !important;
+                min-width: 192px !important;
+                max-width: 192px !important;
+                margin-top: 8px !important;
+                padding: 6px 0 !important;
+                border: 1px solid #ddd !important;
+                border-radius: 9px !important;
+                background: #fff !important;
+                box-shadow: 0 5px 16px rgba(0, 0, 0, .18) !important;
+                overflow: hidden !important;
+                box-sizing: border-box !important;
+                z-index: 3020 !important;
+            }
+
+                .mobile-profile-menu .dropdown-item,
+                .mobile-dropdown-menu .dropdown-item,
+                .provider-mobile-menu .dropdown-item,
+                .mobile-top .dropdown-menu .dropdown-item,
+                .mobile-top-header .dropdown-menu .dropdown-item {
+                    width: 100% !important;
+                    min-height: 48px !important;
+                    height: 48px !important;
+                    padding: 10px 16px !important;
+                    margin: 0 !important;
+                    display: flex !important;
+                    align-items: center !important;
+                    gap: 12px !important;
+                    border-radius: 0 !important;
+                    font-size: 16px !important;
+                    line-height: 1.2 !important;
+                    font-weight: 700 !important;
+                    white-space: nowrap !important;
+                    color: #2f2f2f !important;
+                    background: #fff !important;
+                    box-sizing: border-box !important;
+                }
+
+                    .mobile-profile-menu .dropdown-item i,
+                    .mobile-dropdown-menu .dropdown-item i,
+                    .provider-mobile-menu .dropdown-item i,
+                    .mobile-top .dropdown-menu .dropdown-item i,
+                    .mobile-top-header .dropdown-menu .dropdown-item i {
+                        width: 20px !important;
+                        min-width: 20px !important;
+                        margin: 0 !important;
+                        text-align: center !important;
+                        font-size: 18px !important;
+                        color: #444 !important;
+                    }
+
+                    .mobile-profile-menu .dropdown-item:hover,
+                    .mobile-dropdown-menu .dropdown-item:hover,
+                    .provider-mobile-menu .dropdown-item:hover,
+                    .mobile-top .dropdown-menu .dropdown-item:hover,
+                    .mobile-top-header .dropdown-menu .dropdown-item:hover,
+                    .mobile-profile-menu .dropdown-item.active,
+                    .mobile-dropdown-menu .dropdown-item.active,
+                    .provider-mobile-menu .dropdown-item.active,
+                    .mobile-top .dropdown-menu .dropdown-item.active,
+                    .mobile-top-header .dropdown-menu .dropdown-item.active {
+                        background: #fff3e0 !important;
+                        color: #d97600 !important;
+                    }
+
+                        .mobile-profile-menu .dropdown-item:hover i,
+                        .mobile-dropdown-menu .dropdown-item:hover i,
+                        .provider-mobile-menu .dropdown-item:hover i,
+                        .mobile-top .dropdown-menu .dropdown-item:hover i,
+                        .mobile-top-header .dropdown-menu .dropdown-item:hover i,
+                        .mobile-profile-menu .dropdown-item.active i,
+                        .mobile-dropdown-menu .dropdown-item.active i,
+                        .provider-mobile-menu .dropdown-item.active i,
+                        .mobile-top .dropdown-menu .dropdown-item.active i,
+                        .mobile-top-header .dropdown-menu .dropdown-item.active i {
+                            color: #d97600 !important;
+                        }
+
+                .mobile-profile-menu .dropdown-divider,
+                .mobile-dropdown-menu .dropdown-divider,
+                .provider-mobile-menu .dropdown-divider,
+                .mobile-top .dropdown-menu .dropdown-divider,
+                .mobile-top-header .dropdown-menu .dropdown-divider {
+                    margin: 0 !important;
+                    border-top: 1px solid #ddd !important;
+                    opacity: 1 !important;
+                }
+
+                .mobile-profile-menu .logout-item,
+                .mobile-dropdown-menu .text-danger,
+                .provider-mobile-menu .logout-item,
+                .mobile-top .dropdown-menu .text-danger,
+                .mobile-top-header .dropdown-menu .text-danger,
+                .mobile-profile-menu .logout-item i,
+                .mobile-dropdown-menu .text-danger i,
+                .provider-mobile-menu .logout-item i,
+                .mobile-top .dropdown-menu .text-danger i,
+                .mobile-top-header .dropdown-menu .text-danger i {
+                    color: #dc3545 !important;
+                }
+            /* Mobile main content */
+
+            .main {
+                margin-left: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                min-height: 100vh;
+                box-sizing: border-box !important;
+                padding: 82px 12px 25px !important;
+                overflow-x: hidden !important;
+            }
+
+            .sidebar:hover ~ .main,
+            .sidebar:focus-within ~ .main {
+                margin-left: 0 !important;
+                width: 100% !important;
+            }
+
+            .page-container {
+                width: 100% !important;
+                max-width: 100% !important;
+                margin-left: 0 !important;
+                margin-right: 0 !important;
+                box-sizing: border-box !important;
+            }
+
+            .page-title {
+                font-size: 1.15rem;
+                margin-bottom: 20px !important;
+            }
+            /* Full width cards */
+            .page-container > .history-card,
+            .page-container > .complaint-card,
+            .page-container > .rating-card,
+            .page-container > .request-card,
+            .page-container > .profile-card,
+            .notif-card {
+                width: 100% !important;
+                max-width: 100% !important;
+                min-width: 0 !important;
+                box-sizing: border-box !important;
+            }
+            /* Notification card mobile */
+            .notif-card {
+                display: flex !important;
+                align-items: flex-start !important;
+                padding: 14px !important;
+                margin-bottom: 12px !important;
+                border-radius: 12px !important;
+                gap: 0 !important;
+            }
+
+                .notif-card .notif-icon {
+                    flex: 0 0 34px !important;
+                    width: 34px !important;
+                    height: 34px !important;
+                    min-width: 34px !important;
+                    margin-right: 10px !important;
+                    font-size: 1rem !important;
+                    text-align: center;
+                }
+
+            .notif-text {
+                flex: 1 1 auto !important;
+                min-width: 0 !important;
+            }
+
+            .notif-title {
+                font-size: .92rem;
+            }
+
+            .notif-text p {
+                overflow-wrap: anywhere;
+            }
+
+            .notif-text .small {
+                font-size: .84rem !important;
+                line-height: 1.45;
+            }
+
+            footer {
+                margin-top: 30px !important;
+                font-size: .75rem;
+                line-height: 1.45;
+            }
+
+            .mobile-top .dropdown-menu {
+                min-width: 190px;
+                margin-top: 6px !important;
+            }
+            /* Other provider-page shared elements */
+            .history-card,
+            .complaint-card,
+            .rating-card,
+            .request-card,
+            .profile-card {
+                min-width: 0 !important;
+                box-sizing: border-box !important;
+            }
+
+            .info-grid,
+            .complaint-grid {
+                width: 100% !important;
+                max-width: 100% !important;
+                box-sizing: border-box !important;
+            }
+
+            img,
+            video,
+            iframe {
+                max-width: 100%;
+            }
+        }
+
+        /* Very small mobile */
+
+        @@media (max-width: 420px) {
+
+            .mobile-top,
+            .mobile-top-header {
+                padding-left: 10px !important;
+                padding-right: 10px !important;
+            }
+
+                .mobile-logo,
+                .mobile-top .mobile-logo {
+                    width: 42px !important;
+                    height: 42px !important;
+                    min-width: 42px !important;
+                    min-height: 42px !important;
+                }
+
+            .mobile-profile-btn {
+                width: 46px !important;
+                height: 46px !important;
+                min-width: 46px !important;
+                min-height: 46px !important;
+            }
+
+                .mobile-profile-btn .profile-thumb,
+                .profile-thumb,
+                .mobile-profile-trigger {
+                    width: 42px !important;
+                    height: 42px !important;
+                    min-width: 42px !important;
+                    min-height: 42px !important;
+                }
+
+            .main {
+                padding-left: 10px !important;
+                padding-right: 10px !important;
+            }
+
+            .notif-card {
+                padding: 12px !important;
+            }
+
+                .notif-card .notif-icon {
+                    flex-basis: 30px !important;
+                    width: 30px !important;
+                    height: 30px !important;
+                    min-width: 30px !important;
+                    font-size: 1.15rem !important;
+                }
+
+            .mobile-profile-menu,
+            .mobile-dropdown-menu,
+            .provider-mobile-menu,
+            .mobile-top .dropdown-menu {
+                width: 192px !important;
+                min-width: 192px !important;
+                max-width: 192px !important;
+            }
+        }
+
+        /* Desktop only */
+
+        @@media (min-width: 769px) {
+            .mobile-top,
+            .mobile-top-header {
+                display: none !important;
+            }
+        }
+    </style>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        function showProviderAlert(message, icon = "error", title = "") {
+            if (window.Swal) {
+                return Swal.fire({
+                    icon: icon,
+                    title: title || (icon === "success" ? "Done" : "Notice"),
+                    text: String(message || ""),
+                    confirmButtonText: "OK",
+                    confirmButtonColor: "#d97600",
+                    buttonsStyling: true,
+                    customClass: { popup: "servicego-swal-popup" }
+                });
+            }
+            return Promise.resolve();
+        }
+    </script>
+
+    <style id="sg-popup-theme">
+        /* Compact, soft popups (SweetAlert2) */
+        body .swal2-container {
+            padding: 12px;
+        }
+
+            body .swal2-container .swal2-popup {
+                width: min(340px, calc(100vw - 32px));
+                padding: 22px 20px 18px !important;
+                border-radius: 20px !important;
+                box-shadow: 0 18px 50px rgba(33, 37, 41, .20) !important;
+                font-family: inherit !important;
+            }
+
+        .swal2-icon {
+            zoom: .72;
+            margin: .2em auto .7em !important;
+        }
+
+        .swal2-title {
+            font-size: 1.12rem !important;
+            font-weight: 700 !important;
+            color: #212529 !important;
+            padding: 0 !important;
+            margin: 0 0 .3rem !important;
+        }
+
+        .swal2-html-container {
+            font-size: .9rem !important;
+            line-height: 1.5 !important;
+            color: #6c757d !important;
+            margin: .2rem 0 0 !important;
+            padding: 0 .2em !important;
+        }
+
+        .swal2-actions {
+            margin-top: 1.1rem !important;
+            gap: 8px;
+        }
+
+        .swal2-styled {
+            border-radius: 12px !important;
+            padding: .55rem 1.2rem !important;
+            min-width: 92px;
+            font-size: .9rem !important;
+            font-weight: 600 !important;
+            box-shadow: none !important;
+        }
+
+            .swal2-styled.swal2-confirm {
+                background-color: #d97600 !important;
+            }
+
+            .swal2-styled.swal2-cancel {
+                background-color: #e9ecef !important;
+                color: #495057 !important;
+            }
+
+            .swal2-styled:focus {
+                box-shadow: 0 0 0 3px rgba(217, 118, 0, .25) !important;
+            }
+
+        .swal2-popup.swal2-show {
+            animation: sgPopIn .22s ease-out !important;
+        }
+
+        .swal2-popup.swal2-hide {
+            animation: sgPopOut .15s ease-in !important;
+        }
+
+        @@keyframes sgPopIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px) scale(.96);
+            }
+
+            to {
+                opacity: 1;
+                transform: none;
+            }
+        }
+
+        @@keyframes sgPopOut {
+            from {
+                opacity: 1;
+                transform: none;
+            }
+
+            to {
+                opacity: 0;
+                transform: translateY(6px) scale(.97);
+            }
+        }
+
+        /* Bootstrap modals: smaller, rounded, smooth */
+        .modal-content {
+            border: 0 !important;
+            border-radius: 18px !important;
+            box-shadow: 0 18px 50px rgba(33, 37, 41, .20) !important;
+            overflow: hidden;
+        }
+
+        .modal-header {
+            padding: .85rem 1.1rem;
+        }
+
+        .modal-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+        }
+
+        .modal-body {
+            padding: 1rem 1.1rem;
+        }
+
+        .modal-footer {
+            padding: .7rem 1.1rem;
+            gap: 6px;
+        }
+
+        .modal-backdrop.show {
+            opacity: .35;
+        }
+
+        .modal.fade .modal-dialog {
+            transform: translateY(14px) scale(.97);
+            transition: transform .22s ease-out;
+        }
+
+        .modal.show .modal-dialog {
+            transform: none;
+        }
+
+        @@media (min-width: 576px) {
+            .modal-dialog.modal-md {
+                --bs-modal-width: 440px;
+                max-width: 440px;
+            }
+
+            .modal-dialog.modal-lg {
+                --bs-modal-width: 620px;
+            }
+        }
+
+        .sg-rec-dot {
+            display: inline-block;
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: #dc3545;
+            margin-left: 4px;
+            vertical-align: middle;
+            animation: sgBlink 1s infinite;
+        }
+
+        @@keyframes sgBlink {
+            50% {
+                opacity: .25;
+            }
+        }
+    </style>
+
+    <style id="sg-provider-mobile-header">
+        /* Mobile header: "Hi Provider" first, then the profile photo centered inside an orange round ring */
+        @@media (max-width: 768px) {
+            .mobile-provider-area,
+            .mobile-top .dropdown,
+            .mobile-top-header .dropdown {
+                display: flex !important;
+                align-items: center !important;
+                gap: 10px !important;
+            }
+
+                .mobile-provider-area > .dropdown {
+                    gap: 0 !important;
+                }
+
+            .mobile-provider-greeting {
+                order: -1 !important;
+                display: inline-block !important;
+                margin: 0 !important;
+                color: #d97600 !important;
+                font-size: 15px !important;
+                font-weight: 700 !important;
+                line-height: 1 !important;
+                white-space: nowrap !important;
+            }
+
+            .mobile-top .profile-thumb,
+            .mobile-top-header .profile-thumb,
+            .mobile-top img.profile-thumb,
+            .mobile-profile-trigger {
+                box-sizing: border-box !important;
+                width: 44px !important;
+                height: 44px !important;
+                min-width: 44px !important;
+                min-height: 44px !important;
+                max-width: 44px !important;
+                max-height: 44px !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                border: 2px solid #d97600 !important;
+                border-radius: 50% !important;
+                object-fit: cover !important;
+                object-position: center !important;
+                aspect-ratio: 1 / 1 !important;
+                display: block !important;
+                background: #fff !important;
+                cursor: pointer;
+            }
+
+                .profile-thumb.dropdown-toggle::after,
+                .mobile-profile-trigger::after {
+                    display: none !important;
+                }
+        }
+    </style>
+</head>
+
+<body>
+
+
+    <!-- Desktop sidebar -->
+
+    <div class="sidebar" id="sidebar">
+
+        <img src="@Url.Content("~/images/Logo.png")"
+             class="logo"
+             alt="ServiceGo"
+             onclick="window.location.href='@Url.Action("Index", "Home")'">
+
+        <div class="provider-nav-greeting">Hi Provider</div>
+
+        <div class="nav">
+
+            <a href="@Url.Action("Dashboard", "Provider")">
+                <i class="bi bi-house-door"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="@Url.Action("Profile", "Provider")"> <i class="bi bi-person"></i> <span>Profile</span> </a>
+
+            <a href="@Url.Action("History", "Provider")">
+                <i class="bi bi-clock-history"></i>
+                <span>History</span>
+            </a>
+
+            <a href="@Url.Action("Messages", "Provider")">
+                <i class="bi bi-chat-dots"></i>
+                <span>Messages</span>
+            </a>
+
+            <a href="@Url.Action("Notifications", "Provider")"
+               class="active">
+                <i class="bi bi-bell"></i>
+                <span>Notifications</span>
+                <span class="sidebar-notification-badge">@providerUnreadCount</span>
+            </a>
+
+            <a href="@Url.Action("Logout", "Provider")">
+                <i class="bi bi-box-arrow-right"></i>
+                <span>Logout</span>
+            </a>
+
+        </div>
+    </div>
+
+    <!-- Mobile header -->
+
+    <div class="mobile-top d-flex justify-content-between align-items-center">
+
+        <img src="@Url.Content("~/images/Logo.png")"
+             class="mobile-logo"
+             alt="ServiceGo"
+             onclick="window.location.href='@Url.Action("Index", "Home")'">
+
+        <div class="dropdown">
+
+            <span class="mobile-provider-greeting">Hi Provider</span>
+
+            <img src="@profileImageUrl"
+                 onerror="this.onerror=null;this.src='@Url.Content("~/images/Profile icon.png")';"
+                 class="rounded-circle mobile-profile-trigger"
+                 id="mobileProviderProfileImage"
+                 alt="Profile"
+                 width="40"
+                 height="40"
+                 data-bs-toggle="dropdown"
+                 aria-expanded="false">
+
+            <ul class="dropdown-menu dropdown-menu-end mobile-profile-menu shadow">
+
+                <li>
+                    <a class="dropdown-item"
+                       href="@Url.Action("Dashboard", "Provider")">
+                        <i class="bi bi-house-door"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+
+                <li>
+                    <a class="dropdown-item"
+                       href="@Url.Action("History", "Provider")">
+                        <i class="bi bi-clock-history"></i>
+                        <span>History</span>
+                    </a>
+                </li>
+
+                <li>
+                    <a class="dropdown-item"
+                       href="@Url.Action("Messages", "Provider")">
+                        <i class="bi bi-chat-dots"></i>
+                        <span>Messages</span>
+                    </a>
+                </li>
+
+                <li>
+                    <a class="dropdown-item active d-flex align-items-center"
+                       href="@Url.Action("Notifications", "Provider")">
+                        <i class="bi bi-bell"></i>
+                        <span>Notifications</span>
+                        <span class="badge rounded-pill text-bg-warning ms-auto">@providerUnreadCount</span>
+                    </a>
+                </li>
+
+                <li>
+                    <hr class="dropdown-divider">
+                </li>
+
+                <li>
+                    <a class="dropdown-item text-danger"
+                       href="@Url.Action("Logout", "Provider")">
+                        <i class="bi bi-box-arrow-right"></i>
+                        <span>Logout</span>
+                    </a>
+                </li>
+
+            </ul>
+        </div>
+    </div>
+
+    <!-- Main content -->
+
+    <main class="main">
+
+        <div class="page-container">
+
+            <div class="notification-header page-title">
+                <div class="notification-heading">
+                    <h4>
+                        <i class="bi bi-bell-fill text-warning"></i>
+                        Notifications
+                    </h4>
+                    <span class="notification-unread-pill">
+                        <span class="count">@(ViewBag.UnreadCount as int? ?? 0)</span>
+                        Unread
+                    </span>
+                </div>
+
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    @if (Model != null && Model.Count > 0)
+                    {
+                        <form method="post"
+                              action="@Url.Action("MarkAllNotificationsRead", "Provider")"
+                              class="m-0 notification-mark-read-form">
+                            @Html.AntiForgeryToken()
+                            <button type="submit"
+                                    class="btn btn-sm btn-outline-warning fw-semibold"
+                                    title="Mark all notifications as read">
+                                <i class="bi bi-check2-all me-1"></i>
+                                Mark as Read
+                            </button>
+                        </form>
+
+                        <form method="post"
+                              action="@Url.Action("ClearNotifications", "Provider")"
+                              class="m-0 notification-clear-form">
+                            @Html.AntiForgeryToken()
+                            <button type="submit"
+                                    class="btn btn-sm btn-outline-secondary fw-semibold"
+                                    title="Clear all notifications">
+                                <i class="bi bi-trash3 me-1"></i>
+                                Clear Notifications
+                            </button>
+                        </form>
+                    }
+                </div>
+            </div>
+
+            <div class="notification-filters" role="tablist" aria-label="Notification filters">
+                <button type="button" class="notification-filter active" data-filter="all" role="tab" aria-selected="true">
+                    <span>All</span>
+                    <span class="filter-count">@(ViewBag.TotalCount as int? ?? (Model?.Count ?? 0))</span>
+                </button>
+                <button type="button" class="notification-filter" data-filter="unread" role="tab" aria-selected="false">
+                    <span>Unread</span>
+                    <span class="filter-count">@(ViewBag.UnreadCount as int? ?? 0)</span>
+                </button>
+            </div>
+
+            @if (Model != null && Model.Count > 0)
+            {
+                foreach (var item in Model)
+                {
+                    string statusDotClass = item.IsRead ? "read-dot" : string.Empty;
+                    string readAttribute = item.IsRead ? "true" : "false";
+                    string notificationType = item.NotificationType ?? string.Empty;
+
+                    string iconClass = "bi-bell-fill";
+
+                    string iconSource =
+                    (item.IconClass ?? string.Empty).ToLowerInvariant();
+
+                    string typeSource =
+                    notificationType.ToLowerInvariant();
+
+                    if (iconSource.Contains("microphone") ||
+                    typeSource.Contains("voice"))
+                    {
+                        iconClass = "bi-mic-fill";
+                    }
+                    else if (iconSource.Contains("calendar-x") ||
+                    typeSource.Contains("cancel"))
+                    {
+                        iconClass = "bi-calendar-x-fill";
+                    }
+                    else if (iconSource.Contains("calendar") ||
+                    typeSource.Contains("reschedule") ||
+                    typeSource.Contains("schedule"))
+                    {
+                        iconClass = "bi-calendar-event-fill";
+                    }
+                    else if (iconSource.Contains("check") ||
+                    typeSource.Contains("accept") ||
+                    typeSource.Contains("complete"))
+                    {
+                        iconClass = "bi-check-circle-fill";
+                    }
+                    else if (iconSource.Contains("xmark") ||
+                    iconSource.Contains("times") ||
+                    typeSource.Contains("reject"))
+                    {
+                        iconClass = "bi-x-circle-fill";
+                    }
+                    else if (iconSource.Contains("exclamation") ||
+                    typeSource.Contains("warning") ||
+                    typeSource.Contains("complaint"))
+                    {
+                        iconClass = "bi-exclamation-triangle-fill";
+                    }
+                    else if (iconSource.Contains("comment") ||
+                    iconSource.Contains("message") ||
+                    typeSource.Contains("message"))
+                    {
+                        iconClass = "bi-chat-dots-fill";
+                    }
+                    else if (iconSource.StartsWith("bi-"))
+                    {
+                        iconClass = iconSource;
+                    }
+
+                    var notificationTitleSource = (item.Title ?? string.Empty).ToLowerInvariant();
+                    var notificationTypeSource = (item.NotificationType ?? string.Empty).ToLowerInvariant();
+                    var notificationMessageSource = (item.Message ?? string.Empty).ToLowerInvariant();
+
+                    // Rating notifications are only displayed to the provider and are never clickable,
+                    // because there is no provider page that this notification could open.
+                    bool isRatingNotification =
+                    notificationTitleSource.Contains("rating") ||
+                    notificationTitleSource.Contains("rated") ||
+                    notificationTypeSource.Contains("rating") ||
+                    notificationTypeSource.Contains("rated") ||
+                    notificationMessageSource.Contains("rating") ||
+                    notificationMessageSource.Contains("rated") ||
+                    notificationMessageSource.Contains("review");
+
+                    var clickableNotificationIds =
+                    ViewBag.ClickableNotificationIds as System.Collections.Generic.HashSet<int> ??
+                    new System.Collections.Generic.HashSet<int>();
+
+                    bool isClickableNotification =
+                    clickableNotificationIds.Contains(item.NotificationId);
+
+                    if (isClickableNotification)
+                    {
+                        <div class="notification-row notif-item" data-id="@item.NotificationId" data-read="@readAttribute" data-clickable="true">
+                            <a href="@Url.Action("OpenNotification", "Provider", new { id = item.NotificationId })"
+                               class="notification-main"
+                               aria-label="Open notification">
+                                <div class="notif-card shadow-sm p-3 bg-white rounded d-flex align-items-start @(!item.IsRead ? "unread" : "read")">
+                                    <span class="notif-status-dot @statusDotClass" aria-hidden="true"></span>
+                                    <div class="notif-icon fs-4 text-warning me-3">
+                                        <i class="@iconClass"></i>
+                                    </div>
+
+                                    <div class="notif-text w-100">
+                                        @if (!string.IsNullOrEmpty(item.Title))
+                                        {
+                                            <div class="notif-title text-dark">
+                                                @item.Title
+                                            </div>
+                                        }
+
+                                        <p class="mb-1 text-secondary small">
+                                            @Html.Raw(item.Message)
+                                        </p>
+
+                                        <p class="notif-time text-muted extra-small mb-0"
+                                           style="font-size: 0.75rem;">
+                                            @item.Timestamp.ToString("dd MMM yyyy, hh:mm tt")
+                                        </p>
+                                    </div>
+                                </div>
+                            </a>
+
+                            <form method="post"
+                                  action="@Url.Action("DismissNotification", "Provider")"
+                                  class="notification-dismiss-form m-0">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@item.NotificationId" />
+                                <button type="submit"
+                                        class="notification-dismiss"
+                                        title="Remove notification"
+                                        aria-label="Remove notification">
+                                    <i class="bi bi-trash3-fill"></i>
+                                </button>
+                            </form>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="notification-row notif-item" data-id="@item.NotificationId" data-read="@readAttribute" data-clickable="false">
+                            <div class="notification-view-only">
+                                <div class="notif-card shadow-sm p-3 bg-white rounded d-flex align-items-start @(!item.IsRead ? "unread" : "read")">
+                                    <span class="notif-status-dot @statusDotClass" aria-hidden="true"></span>
+                                    <div class="notif-icon fs-4 text-warning me-3">
+                                        <i class="@iconClass"></i>
+                                    </div>
+                                    <div class="notif-text w-100">
+                                        @if (!string.IsNullOrEmpty(item.Title))
+                                        {
+                                            <div class="notif-title text-dark">@item.Title</div>
+                                        }
+                                        <p class="mb-1 text-secondary small">@Html.Raw(item.Message)</p>
+                                        <p class="notif-time text-muted extra-small mb-0" style="font-size: 0.75rem;">@item.Timestamp.ToString("dd MMM yyyy, hh:mm tt")</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <form method="post"
+                                  action="@Url.Action("DismissNotification", "Provider")"
+                                  class="notification-dismiss-form m-0">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@item.NotificationId" />
+                                <button type="submit"
+                                        class="notification-dismiss"
+                                        title="Remove notification"
+                                        aria-label="Remove notification">
+                                    <i class="bi bi-trash3-fill"></i>
+                                </button>
+                            </form>
+                        </div>
+                    }
+                }
+            }
+            else
+            {
+                <div class="alert alert-light text-center p-4 shadow-sm">
+
+                    <i class="bi bi-bell-slash fs-2 text-muted"></i>
+
+                    <p class="text-muted mt-2 mb-0">
+                        No notifications found.
+                    </p>
+
+                </div>
+            }
+
+            <div id="notificationFilterEmpty" class="notification-empty-filter alert alert-light text-center p-4 shadow-sm">
+                <i class="bi bi-check2-circle fs-2 text-muted"></i>
+                <p class="text-muted mt-2 mb-0">No unread notifications.</p>
+            </div>
+
+            <!-- Load more -->
+            <div class="text-center mt-3 mb-4"
+                 id="notificationsLoadMoreWrap"
+                 hidden
+                 data-has-more="@(ViewBag.HasMoreNotifications == true ? "true" : "false")"
+                 data-url="@Url.Action("Notifications", "Provider")">
+
+                <button type="button"
+                        id="notificationsLoadMore"
+                        class="btn btn-outline-warning px-4 py-2 fw-semibold">
+                    Load More
+                </button>
+
+            </div>
+
+            <!-- Footer -->
+
+            <footer class="mt-5 text-center text-muted">
+                Stay updated with your latest service alerts —
+                ServiceGo © @DateTime.Now.Year
+            </footer>
+
+        </div>
+    </main>
+
+    <!-- Bootstrap JS -->
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Notification load more -->
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const filterButtons =
+                document.querySelectorAll(".notification-filter");
+            const getItems = function () {
+                return Array.from(document.querySelectorAll(".notif-item"));
+            };
+            const loadMore =
+                document.getElementById("notificationsLoadMore");
+            const loadMoreWrap =
+                document.getElementById("notificationsLoadMoreWrap");
+            const emptyFilter =
+                document.getElementById("notificationFilterEmpty");
+
+            const pageSize = 15;
+            let activeFilter = "all";
+            let visibleCount = pageSize;
+
+            // Server state: notifications are fetched 15 at a time.
+            let serverTotal = @(ViewBag.TotalCount as int? ?? (Model?.Count ?? 0));
+            let serverUnread = @(ViewBag.UnreadCount as int? ?? 0);
+            let hasMoreOnServer =
+                !!loadMoreWrap && loadMoreWrap.dataset.hasMore === "true";
+            let isLoadingMore = false;
+
+            function getFilteredItems() {
+                return getItems().filter(function (item) {
+                    return activeFilter === "all" ||
+                           item.dataset.read !== "true";
+                });
+            }
+
+            function updateCountDisplays() {
+                const unreadCount = serverUnread;
+
+                document.querySelectorAll(".notification-unread-pill .count, .sidebar-notification-badge").forEach(function (el) {
+                    el.textContent = unreadCount;
+                });
+
+                document.querySelectorAll(".notification-filter").forEach(function (button) {
+                    const count = button.querySelector(".filter-count");
+                    if (!count) return;
+
+                    if ((button.dataset.filter || "all") === "unread") {
+                        count.textContent = unreadCount;
+                    } else {
+                        count.textContent = serverTotal;
+                    }
+                });
+            }
+
+            function showNoNotificationsMessage() {
+                const notificationRows = document.querySelectorAll(".notif-item");
+                const existingEmpty = document.querySelector(".page-container > .alert.alert-light");
+
+                if (notificationRows.length === 0 && !existingEmpty) {
+                    const empty = document.createElement("div");
+                    empty.className = "alert alert-light text-center p-4 shadow-sm";
+                    empty.innerHTML =
+                        '<i class="bi bi-bell-slash fs-2 text-muted"></i>' +
+                        '<p class="text-muted mt-2 mb-0">No notifications found.</p>';
+
+                    const filterEmpty = document.getElementById("notificationFilterEmpty");
+                    if (filterEmpty) {
+                        filterEmpty.parentNode.insertBefore(empty, filterEmpty);
+                    }
+                }
+            }
+
+            function updateNotifications() {
+                const filtered = getFilteredItems();
+                const currentVisibleCount =
+                    Math.min(visibleCount, filtered.length);
+
+                getItems().forEach(function (item) {
+                    item.hidden = true;
+                });
+
+                filtered
+                    .slice(0, currentVisibleCount)
+                    .forEach(function (item) {
+                        item.hidden = false;
+                    });
+
+                if (emptyFilter) {
+                    emptyFilter.hidden =
+                        !(activeFilter === "unread" &&
+                          filtered.length === 0);
+                }
+
+                if (!loadMoreWrap || !loadMore) return;
+
+                // Button is shown while there is anything left to show
+                // either already-loaded rows that are still hidden,
+                // or more notifications waiting on the server.
+                const canRevealMore = filtered.length > currentVisibleCount;
+
+                loadMoreWrap.hidden = !(canRevealMore || hasMoreOnServer);
+                loadMore.disabled = isLoadingMore;
+                loadMore.textContent = isLoadingMore ? "Loading..." : "Load More";
+            }
+
+            filterButtons.forEach(function (button) {
+                button.addEventListener("click", function () {
+                    activeFilter = button.dataset.filter || "all";
+                    visibleCount = pageSize;
+
+                    filterButtons.forEach(function (other) {
+                        const active = other === button;
+
+                        other.classList.toggle("active", active);
+                        other.setAttribute(
+                            "aria-selected",
+                            active ? "true" : "false"
+                        );
+                    });
+
+                    updateNotifications();
+                });
+            });
+
+            if (loadMore) {
+                loadMore.addEventListener("click", async function () {
+                    if (isLoadingMore) return;
+
+                    const filtered = getFilteredItems();
+
+                    // 1) Rows already loaded but hidden -> reveal next 15.
+                    if (filtered.length > visibleCount) {
+                        visibleCount = Math.min(
+                            visibleCount + pageSize,
+                            filtered.length
+                        );
+                        updateNotifications();
+                        return;
+                    }
+
+                    // 2) Nothing hidden -> fetch the next 15 from the server.
+                    if (!hasMoreOnServer) return;
+
+                    isLoadingMore = true;
+                    updateNotifications();
+
+                    try {
+                        const existingIds = new Set(
+                            getItems().map(function (row) { return row.dataset.id; })
+                        );
+
+                        const take = getItems().length + pageSize;
+
+                        const response = await fetch(
+                            loadMoreWrap.dataset.url + "?take=" + take,
+                            {
+                                method: "GET",
+                                credentials: "same-origin",
+                                cache: "no-store",
+                                headers: { "X-Requested-With": "XMLHttpRequest" }
+                            }
+                        );
+
+                        if (!response.ok) {
+                            throw new Error("Unable to load more notifications.");
+                        }
+
+                        const doc = new DOMParser().parseFromString(
+                            await response.text(),
+                            "text/html"
+                        );
+
+                        const anchor =
+                            document.getElementById("notificationFilterEmpty");
+
+                        let added = 0;
+
+                        doc.querySelectorAll(".notif-item").forEach(function (row) {
+                            if (existingIds.has(row.dataset.id)) return;
+
+                            anchor.parentNode.insertBefore(
+                                document.importNode(row, true),
+                                anchor
+                            );
+                            added++;
+                        });
+
+                        const newWrap =
+                            doc.getElementById("notificationsLoadMoreWrap");
+
+                        hasMoreOnServer =
+                            added > 0 &&
+                            !!newWrap &&
+                            newWrap.dataset.hasMore === "true";
+
+                        // Show everything that has been loaded so far.
+                        visibleCount = Math.max(
+                            visibleCount,
+                            getFilteredItems().length
+                        );
+                    } catch (error) {
+                        console.error(error);
+
+                        if (window.Swal) {
+                            Swal.fire(
+                                "Error",
+                                "Could not load more notifications. Please try again.",
+                                "error"
+                            );
+                        }
+                    } finally {
+                        isLoadingMore = false;
+                        updateNotifications();
+                    }
+                });
+            }
+
+            document.addEventListener("submit", async function (event) {
+                const deleteForm = event.target.closest(".notification-dismiss-form");
+                const clearForm = event.target.closest(".notification-clear-form");
+                const markReadForm = event.target.closest(".notification-mark-read-form");
+
+                if (!deleteForm && !clearForm && !markReadForm) return;
+
+                event.preventDefault();
+
+                const form = deleteForm || clearForm || markReadForm;
+
+                if (deleteForm || clearForm) {
+                    const confirmation = await Swal.fire({
+                        icon: 'warning',
+                        title: deleteForm ? 'Delete notification?' : 'Clear notifications?',
+                        text: deleteForm
+                            ? 'This notification will be removed.'
+                            : 'All notifications will be removed.',
+                        showCancelButton: true,
+                        confirmButtonText: deleteForm ? 'Delete' : 'Clear All',
+                        cancelButtonText: 'Cancel',
+                        confirmButtonColor: '#d97600',
+                        cancelButtonColor: '#6c757d',
+                        reverseButtons: true
+                    });
+
+                    if (!confirmation.isConfirmed) return;
+                }
+
+                const formData = new FormData(form);
+                const button = form.querySelector("button[type=\"submit\"]");
+
+                if (button) {
+                    button.disabled = true;
+                }
+
+                try {
+                    const response = await fetch(form.action, {
+                        method: "POST",
+                        body: formData,
+                        headers: {
+                            "X-Requested-With": "XMLHttpRequest"
+                        }
+                    });
+
+                    const result = await response.json();
+
+                    if (!response.ok || !result.success) {
+                        throw new Error(result.message || "Unable to update notifications.");
+                    }
+
+                    if (deleteForm) {
+                        const row = deleteForm.closest(".notif-item");
+                        if (row) {
+                            if (row.dataset.read !== "true") {
+                                serverUnread = Math.max(0, serverUnread - 1);
+                            }
+                            serverTotal = Math.max(0, serverTotal - 1);
+                            row.remove();
+                        }
+
+                        updateCountDisplays();
+                        showNoNotificationsMessage();
+                        if (document.querySelectorAll(".notif-item").length === 0) {
+                            document.querySelectorAll(".notification-clear-form, .notification-mark-read-form").forEach(function (actionForm) {
+                                actionForm.remove();
+                            });
+                        }
+                        updateNotifications();
+                    } else if (clearForm) {
+                        document.querySelectorAll(".notif-item").forEach(function (item) {
+                            item.remove();
+                        });
+
+                        serverTotal = 0;
+                        serverUnread = 0;
+                        hasMoreOnServer = false;
+
+                        document.querySelectorAll(".notification-clear-form, .notification-mark-read-form").forEach(function (actionForm) {
+                            actionForm.remove();
+                        });
+
+                        updateCountDisplays();
+                        showNoNotificationsMessage();
+                        updateNotifications();
+                    } else if (markReadForm) {
+                        document.querySelectorAll(".notif-item").forEach(function (item) {
+                            item.dataset.read = "true";
+
+                            const card = item.querySelector(".notif-card");
+                            if (card) {
+                                card.classList.remove("unread");
+                                card.classList.add("read");
+                            }
+                        });
+
+                        markReadForm.remove();
+                        serverUnread = 0;
+
+                        // Keep all notifications visible after "Mark as Read".
+                        // If the user was on the Unread filter, switch to All
+                        // instead of making the notifications disappear.
+                        activeFilter = "all";
+                        visibleCount = pageSize;
+
+                        filterButtons.forEach(function (other) {
+                            const active =
+                                (other.dataset.filter || "all") === "all";
+
+                            other.classList.toggle("active", active);
+                            other.setAttribute(
+                                "aria-selected",
+                                active ? "true" : "false"
+                            );
+                        });
+
+                        updateCountDisplays();
+                        updateNotifications();
+                    }
+                } catch (error) {
+                    console.error(error);
+                    if (button) {
+                        button.disabled = false;
+                    }
+                    showProviderAlert(error.message || "Unable to update notifications.");
+                }
+            });
+
+            updateCountDisplays();
+            updateNotifications();
+        });
+    </script>
+
+
+</body>
+</html>

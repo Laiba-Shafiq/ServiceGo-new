@@ -1,0 +1,3762 @@
+﻿@model IEnumerable<ServiceGo.Models.Register>
+@using System.Text.Json
+
+@{
+	Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<title>ServicesGo - Active Providers Deep Review</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+	<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+	<link rel="icon"
+		  href="@Url.Content("~/images/Logo.png")"
+		  type="image/x-icon" />
+
+	<style>
+		* {
+			margin: 0;
+			padding: 0;
+			box-sizing: border-box;
+			font-family: 'Poppins', sans-serif;
+		}
+
+		body {
+			background: #f5f7fb;
+			display: flex;
+			overflow-x: hidden;
+		}
+
+		/* Mobile header */
+		.mobile-header {
+			display: none;
+			width: 100%;
+			height: 60px;
+			background: linear-gradient(135deg, #ffb45e, #ff7f36);
+			position: fixed;
+			top: 0;
+			left: 0;
+			z-index: 150;
+			padding: 0 20px;
+			align-items: center;
+			justify-content: space-between;
+			color: white;
+			box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+		}
+
+		.menu-toggle-btn {
+			background: none;
+			border: none;
+			color: white;
+			font-size: 22px;
+			cursor: pointer;
+		}
+
+		.mobile-brand {
+			font-size: 18px;
+			font-weight: 700;
+		}
+
+		/* Sidebar base */
+		.sidebar {
+			width: 260px;
+			height: 100vh;
+			position: fixed;
+			left: 0;
+			top: 0;
+			background: linear-gradient(180deg, #ffb45e, #ff7f36);
+			color: white;
+			display: flex;
+			flex-direction: column;
+			justify-content: space-between;
+			padding: 25px 0;
+			z-index: 200;
+			transition: transform 0.3s ease;
+		}
+
+		.brand {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			padding: 0 25px;
+			font-size: 22px;
+			font-weight: 700;
+			margin-bottom: 25px;
+		}
+
+			.brand img {
+				width: 36px;
+				border-radius: 4px;
+			}
+
+		.sidebar ul {
+			list-style: none;
+		}
+
+			.sidebar ul li {
+				width: 100%;
+				display: block;
+			}
+
+				.sidebar ul li a,
+				.sidebar .dropdown-toggle {
+					display: flex !important;
+					align-items: center;
+					justify-content: space-between;
+					padding: 14px 25px;
+					color: white;
+					text-decoration: none;
+					font-size: 15px;
+					opacity: 0.9;
+					cursor: pointer;
+					transition: all 0.2s ease;
+					width: 100%;
+					box-sizing: border-box;
+				}
+
+		.toggle-left {
+			display: flex;
+			align-items: center;
+		}
+
+		.sidebar ul li a i,
+		.sidebar .toggle-left i {
+			width: 20px;
+			margin-right: 12px;
+			text-align: center;
+		}
+
+		.sidebar ul li a:hover,
+		.sidebar .dropdown-toggle:hover {
+			background: rgba(255, 255, 255, 0.15);
+			opacity: 1;
+		}
+
+		/* Sidebar close button */
+		.sidebar-close-btn {
+			display: none;
+			position: absolute;
+			top: 18px;
+			right: 15px;
+			width: 36px;
+			height: 36px;
+			border: none;
+			border-radius: 50%;
+			background: rgba(255,255,255,0.18);
+			color: white;
+			font-size: 20px;
+			cursor: pointer;
+			align-items: center;
+			justify-content: center;
+			z-index: 205;
+		}
+
+			.sidebar-close-btn:hover {
+				background: rgba(255,255,255,0.30);
+			}
+
+		/* Dropdown mechanism */
+		.dropdown-item {
+			position: relative;
+		}
+
+		.arrow-icon {
+			font-size: 12px;
+			transition: transform 0.3s ease;
+		}
+
+		.submenu {
+			list-style: none;
+			background: rgba(0, 0, 0, 0.08);
+			max-height: 0;
+			overflow: hidden;
+			transition: max-height 0.3s ease-in-out;
+			padding: 0;
+		}
+
+			.submenu li {
+				display: block;
+				width: 100%;
+			}
+
+				.submenu li a {
+					display: block !important;
+					padding: 10px 25px 10px 57px !important;
+					font-size: 14px;
+					opacity: 0.85;
+				}
+
+		.dropdown-item.open .submenu {
+			max-height: 160px;
+		}
+
+		.dropdown-item.open .arrow-icon {
+			transform: rotate(180deg);
+		}
+
+		/* Logout */
+		.logout a {
+			display: flex;
+			align-items: center;
+			color: white;
+			text-decoration: none;
+			font-size: 15px;
+			opacity: 0.9;
+			padding: 0 25px;
+		}
+
+			.logout a i {
+				width: 20px;
+				margin-right: 12px;
+			}
+
+		.logout {
+			padding-top: 20px;
+			border-top: 1px solid rgba(255, 255, 255, 0.2);
+		}
+
+		/* Main panel layout */
+		.main-content {
+			margin-left: 260px;
+			padding: 40px;
+			width: calc(100% - 260px);
+			min-height: 100vh;
+			transition: all 0.3s ease;
+		}
+
+		.page-header-row {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			margin-bottom: 25px;
+			gap: 15px;
+		}
+
+		.page-title {
+			font-size: 26px;
+			font-weight: 600;
+			color: #1e293b;
+		}
+
+		/* Table */
+		.table-container {
+			background: white;
+			border-radius: 12px;
+			padding: 20px;
+			box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+			width: 100%;
+			border: 1px solid rgba(0,0,0,0.02);
+		}
+
+		table {
+			width: 100%;
+			border-collapse: collapse;
+		}
+
+		th {
+			background: #f8fafc;
+			color: #64748b;
+			font-size: 13px;
+			font-weight: 600;
+			padding: 15px;
+			border-bottom: 2px solid #edf2f7;
+			text-transform: uppercase;
+			text-align: left;
+			white-space: nowrap;
+		}
+
+		td {
+			padding: 15px;
+			color: #334155;
+			border-bottom: 1px solid #edf2f7;
+			vertical-align: middle !important;
+			text-align: left;
+			white-space: nowrap !important;
+		}
+
+		.badge-active {
+			background: #d1fae5;
+			color: #065f46;
+			font-weight: 600;
+			padding: 6px 14px;
+			border-radius: 5px;
+			font-size: 12px;
+			display: inline-block !important;
+		}
+
+		.btn-view {
+			background: #e0f2fe;
+			color: #0369a1;
+			padding: 8px 16px;
+			border: none;
+			border-radius: 6px;
+			cursor: pointer;
+			font-weight: 600;
+			font-size: 14px;
+			display: inline-flex !important;
+			align-items: center;
+			justify-content: center;
+			gap: 6px;
+			transition: all 0.2s;
+		}
+
+			.btn-view:hover {
+				background: #bae6fd;
+			}
+
+		/* Search */
+		.search-container {
+			position: relative;
+			width: 320px;
+		}
+
+			.search-container input {
+				width: 100%;
+				padding: 12px 16px 12px 45px;
+				border: 1px solid #e2e8f0;
+				border-radius: 8px;
+				font-size: 14px;
+				color: #334155;
+				background-color: #ffffff;
+				box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+				outline: none;
+				transition: all 0.2s ease-in-out;
+			}
+
+				.search-container input:focus {
+					border-color: #ff7f36;
+					box-shadow: 0 0 0 3px rgba(255, 127, 54, 0.15);
+				}
+
+		.search-icon {
+			position: absolute;
+			left: 16px;
+			top: 50%;
+			transform: translateY(-50%);
+			color: #94a3b8;
+			font-size: 15px;
+		}
+
+		/* Modal */
+		.review-provider-btn {
+			cursor: pointer !important;
+			pointer-events: auto !important;
+		}
+
+		.modal {
+			display: none;
+			position: fixed;
+			z-index: 1000;
+			left: 0;
+			top: 0;
+			width: 100%;
+			height: 100%;
+			background-color: rgba(0,0,0,0.5);
+			justify-content: center;
+			align-items: center;
+			padding: 15px;
+		}
+
+		.modal-content {
+			background-color: white;
+			padding: 35px;
+			max-width: 1100px;
+			width: 100%;
+			box-shadow: 0 20px 45px rgba(0,0,0,0.2);
+			position: relative;
+			max-height: 90vh;
+			overflow-y: auto;
+			border-radius: 16px;
+		}
+
+		.modal-close-x {
+			position: absolute;
+			top: 20px;
+			right: 25px;
+			font-size: 26px;
+			color: #94a3b8;
+			cursor: pointer;
+		}
+
+		.section-title {
+			font-size: 14px;
+			color: #ff7f36;
+			font-weight: 700;
+			text-transform: uppercase;
+			margin: 25px 0 12px 0;
+			border-bottom: 2px solid #fed7aa;
+			padding-bottom: 6px;
+			letter-spacing: 0.5px;
+		}
+
+		.info-grid {
+			display: grid;
+			grid-template-columns: repeat(3, 1fr);
+			gap: 16px;
+			background: #f8fafc;
+			padding: 18px;
+			border-radius: 10px;
+			border: 1px solid #e2e8f0;
+		}
+
+		.info-item {
+			display: flex;
+			flex-direction: column;
+		}
+
+		.info-label {
+			font-size: 12px;
+			color: #64748b;
+			font-weight: 600;
+		}
+
+		.info-value {
+			font-size: 14px;
+			color: #1e293b;
+			font-weight: 600;
+			margin-top: 3px;
+			word-break: break-word;
+		}
+
+		.media-flex {
+			display: flex;
+			gap: 15px;
+			margin-top: 10px;
+			flex-wrap: wrap;
+		}
+
+		.media-card {
+			flex: 1;
+			min-width: 190px;
+			background: #f8fafc;
+			border: 1px solid #e2e8f0;
+			border-radius: 10px;
+			padding: 12px;
+			text-align: center;
+		}
+
+			.media-card span {
+				font-size: 11px;
+				font-weight: 700;
+				color: #334155;
+				display: block;
+				margin-bottom: 8px;
+				white-space: nowrap;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				text-transform: uppercase;
+			}
+
+		.zoom-box {
+			position: relative;
+			width: 100%;
+			height: 140px;
+			background: #f1f5f9;
+			border-radius: 6px;
+			overflow: hidden;
+			cursor: pointer;
+			border: 2px dashed #cbd5e1;
+			transition: all 0.2s;
+		}
+
+			.zoom-box:hover {
+				border-color: #ff7f36;
+			}
+
+			.zoom-box img {
+				width: 100%;
+				height: 100%;
+				object-fit: cover;
+			}
+
+		.zoom-overlay-text {
+			position: absolute;
+			bottom: 0;
+			left: 0;
+			width: 100%;
+			background: rgba(255, 127, 54, 0.95);
+			color: white;
+			font-size: 11px;
+			padding: 4px 0;
+			opacity: 0;
+			transition: opacity 0.2s;
+		}
+
+		.zoom-box:hover .zoom-overlay-text {
+			opacity: 1;
+		}
+
+		.service-video-block {
+			background: #f8fafc;
+			border: 1px solid #e2e8f0;
+			border-radius: 10px;
+			padding: 15px;
+			margin-bottom: 12px;
+		}
+
+			.service-video-block video {
+				width: 100%;
+				max-height: 250px;
+				background: #000;
+				border-radius: 6px;
+				margin-top: 8px;
+			}
+
+		/* Google map */
+		.google-map-container {
+			display: none;
+			margin-top: 15px;
+			background: #f8fafc;
+			border: 1px solid #e2e8f0;
+			border-radius: 10px;
+			padding: 15px;
+		}
+
+		.google-map-iframe {
+			width: 100%;
+			height: 250px;
+			border: 0;
+			border-radius: 8px;
+			display: block;
+		}
+
+		.days-flex {
+			display: flex;
+			gap: 8px;
+			flex-wrap: wrap;
+			margin-top: 5px;
+		}
+
+		.day-badge {
+			background: #e2e8f0;
+			color: #475569;
+			padding: 4px 12px;
+			border-radius: 20px;
+			font-size: 13px;
+			font-weight: 600;
+		}
+
+			.day-badge.active {
+				background: #ff7f36;
+				color: white;
+			}
+
+		.pop-footer-buttons {
+			display: flex;
+			justify-content: center;
+			gap: 20px;
+			margin-top: 35px;
+		}
+
+		.pop-btn-block {
+			background: #dc2626;
+			color: white;
+			padding: 14px 50px;
+			border-radius: 8px;
+			font-weight: 600;
+			border: none;
+			cursor: pointer;
+			font-size: 14px;
+			transition: background 0.2s;
+		}
+
+			.pop-btn-block:hover {
+				background: #b91c1c;
+			}
+
+		/* Lightbox */
+		.lightbox {
+			display: none;
+			position: fixed;
+			z-index: 2000;
+			left: 0;
+			top: 0;
+			width: 100%;
+			height: 100%;
+			background-color: rgba(0, 0, 0, 0.9);
+			justify-content: center;
+			align-items: center;
+			cursor: zoom-out;
+		}
+
+			.lightbox img {
+				max-width: 85%;
+				max-height: 85vh;
+				border-radius: 8px;
+				box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+				border: 4px solid white;
+				transform: scale(0.95);
+				transition: transform 0.2s ease;
+			}
+
+			.lightbox.show img {
+				transform: scale(1);
+			}
+
+		.lightbox-close {
+			position: absolute;
+			top: 30px;
+			right: 40px;
+			color: white;
+			font-size: 40px;
+			cursor: pointer;
+		}
+
+		/* Sidebar overlay */
+		.sidebar-overlay {
+			display: none;
+			position: fixed;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			background: rgba(0,0,0,0.4);
+			z-index: 100;
+		}
+
+		/* Mobile */
+		@@media (max-width: 992px) {
+
+			.mobile-header {
+				display: flex;
+			}
+
+			.sidebar {
+				transform: translateX(-100%);
+				top: 0;
+				height: 100vh;
+			}
+
+				.sidebar.active {
+					transform: translateX(0);
+				}
+
+			.sidebar-close-btn {
+				display: flex;
+			}
+
+			.main-content {
+				margin-left: 0;
+				width: 100%;
+				padding: 85px 20px 20px 20px;
+			}
+
+			.sidebar-overlay.active {
+				display: block;
+			}
+
+			table, thead, tbody, th, td, tr {
+				display: block;
+				width: 100%;
+			}
+
+			thead {
+				display: none;
+			}
+
+			.table-container {
+				padding: 15px;
+				background: transparent;
+				box-shadow: none;
+				border: none;
+			}
+
+			table tbody tr {
+				background: white;
+				border-radius: 12px;
+				padding: 20px;
+				box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+				border: 1px solid rgba(0,0,0,0.05);
+				margin-bottom: 20px;
+				box-sizing: border-box;
+			}
+
+				table tbody tr td {
+					display: flex !important;
+					justify-content: space-between;
+					align-items: center;
+					padding: 12px 0 !important;
+					border-bottom: 1px solid #f1f5f9;
+					white-space: normal !important;
+					font-size: 14px;
+				}
+
+					table tbody tr td:last-child {
+						border-bottom: none;
+						padding-bottom: 0 !important;
+					}
+
+					table tbody tr td::before {
+						content: attr(data-label);
+						font-weight: 600;
+						color: #64748b;
+						text-transform: uppercase;
+						font-size: 13px;
+						letter-spacing: 0.3px;
+					}
+
+			.btn-view {
+				width: auto;
+			}
+		}
+
+		@@media (max-width: 768px) {
+
+			.page-header-row {
+				flex-direction: column;
+				align-items: flex-start;
+			}
+
+			.search-container {
+				width: 100%;
+			}
+
+			.info-grid {
+				grid-template-columns: repeat(2, 1fr);
+			}
+
+			.modal-content {
+				padding: 20px;
+			}
+
+			.google-map-iframe {
+				height: 220px;
+			}
+		}
+
+		@@media (max-width: 576px) {
+
+			.page-title {
+				font-size: 22px;
+			}
+
+			.info-grid {
+				grid-template-columns: 1fr;
+			}
+
+			.pop-btn-block {
+				width: 100%;
+				text-align: center;
+			}
+
+			.media-card {
+				min-width: 100%;
+			}
+
+			.google-map-iframe {
+				height: 210px;
+			}
+		}
+	</style>
+
+	<style id="servicego-admin-caret-fix">
+		body, body * {
+			caret-color: transparent !important;
+		}
+
+		input, textarea, select, [contenteditable="true"], [contenteditable=""] {
+			caret-color: auto !important;
+		}
+
+			input[type="button"], input[type="submit"], input[type="reset"],
+			input[type="checkbox"], input[type="radio"], input[type="file"], select {
+				caret-color: transparent !important;
+			}
+	</style>
+
+	<style id="servicego-admin-logo-fix">
+		.servicego-home-logo {
+			display: inline-block;
+			text-decoration: none;
+			cursor: default;
+		}
+
+			.servicego-home-logo img {
+				cursor: default;
+			}
+	</style>
+
+	<style id="servicego-no-direct-block-fix">
+		#popBlockActionBtn, #btnBlock {
+			display: none !important;
+		}
+	</style>
+	<style id="servicego-table-overflow-fix">
+		/* Keep long provider data inside its table cell. */
+		.table-container {
+			overflow-x: auto;
+		}
+
+			.table-container table {
+				width: 100%;
+				table-layout: fixed;
+			}
+
+				.table-container table th:nth-child(1),
+				.table-container table td:nth-child(1) {
+					width: 13%;
+				}
+
+				.table-container table th:nth-child(2),
+				.table-container table td:nth-child(2) {
+					width: 17%;
+				}
+
+				.table-container table th:nth-child(3),
+				.table-container table td:nth-child(3) {
+					width: 27%;
+				}
+
+				.table-container table th:nth-child(4),
+				.table-container table td:nth-child(4) {
+					width: 15%;
+				}
+
+				.table-container table th:nth-child(5),
+				.table-container table td:nth-child(5) {
+					width: 13%;
+				}
+
+				.table-container table th:last-child,
+				.table-container table td:last-child {
+					width: 15%;
+				}
+
+				.table-container table td[data-label="Primary Skills"] {
+					white-space: normal !important;
+					overflow-wrap: anywhere;
+					word-break: break-word;
+					line-height: 1.5;
+				}
+
+				.table-container table td[data-label="Actions"],
+				.table-container table td[data-label="Action"] {
+					white-space: nowrap !important;
+					overflow: visible;
+				}
+
+				.table-container table .btn-view {
+					max-width: 100%;
+					white-space: nowrap;
+					flex-shrink: 0;
+				}
+
+		@@media (max-width: 767px) {
+			.table-container {
+				overflow-x: visible;
+			}
+
+				.table-container table {
+					table-layout: auto;
+				}
+
+					.table-container table td[data-label="Primary Skills"] {
+						min-width: 0;
+						max-width: 100%;
+					}
+
+					.table-container table td[data-label="Actions"],
+					.table-container table td[data-label="Action"] {
+						width: 100% !important;
+						min-width: 0;
+					}
+
+					.table-container table .btn-view {
+						max-width: 100%;
+					}
+		}</style>
+	<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+
+	<style id="servicego-no-overlap-fix">
+		/* Prevent long provider names/skills from ever overlapping adjacent columns. */
+		.table-container {
+			width: 100%;
+			overflow-x: auto;
+		}
+
+			.table-container table {
+				width: 100%;
+				table-layout: fixed;
+			}
+
+				.table-container table th:nth-child(1),
+				.table-container table td:nth-child(1) {
+					width: 12%;
+				}
+
+				.table-container table th:nth-child(2),
+				.table-container table td:nth-child(2) {
+					width: 23%;
+				}
+
+				.table-container table th:nth-child(3),
+				.table-container table td:nth-child(3) {
+					width: 25%;
+				}
+
+				.table-container table th:nth-child(4),
+				.table-container table td:nth-child(4) {
+					width: 15%;
+				}
+
+				.table-container table th:nth-child(5),
+				.table-container table td:nth-child(5) {
+					width: 10%;
+				}
+
+				.table-container table th:nth-child(6),
+				.table-container table td:nth-child(6) {
+					width: 15%;
+				}
+
+				.table-container table td[data-label="Provider ID"] {
+					white-space: nowrap !important;
+				}
+
+				.table-container table td[data-label="Full Name"] {
+					white-space: normal !important;
+					overflow-wrap: anywhere;
+					word-break: break-word;
+					line-height: 1.45;
+				}
+
+					.table-container table td[data-label="Full Name"] strong {
+						display: block;
+						max-width: 100%;
+						white-space: normal !important;
+						overflow-wrap: anywhere;
+						word-break: break-word;
+					}
+
+				.table-container table td[data-label="Primary Skills"] {
+					white-space: normal !important;
+					overflow-wrap: anywhere;
+					word-break: break-word;
+					line-height: 1.5;
+				}
+
+				.table-container table td[data-label="City Location"] {
+					white-space: normal !important;
+					overflow-wrap: anywhere;
+					word-break: break-word;
+					line-height: 1.45;
+				}
+
+				.table-container table td[data-label="Status"],
+				.table-container table td[data-label="Actions"],
+				.table-container table td[data-label="Action"] {
+					white-space: nowrap !important;
+				}
+
+				.table-container table .btn-view {
+					max-width: 100%;
+					white-space: nowrap;
+				}
+
+		@@media (max-width: 767px) {
+			.table-container {
+				overflow-x: visible;
+			}
+
+				.table-container table {
+					table-layout: auto;
+				}
+
+					.table-container table th,
+					.table-container table td {
+						width: auto !important;
+					}
+		}
+	</style>
+
+	<style id="servicego-unified-ui">
+		/*
+						 * ServicesGo - unified mobile layout + popups (shared by all admin pages)
+						 * Only look & feel is changed here. No page logic is touched.
+						 */
+		:root {
+			--sg-orange: #ff7f36;
+			--sg-orange-2: #ffb45e;
+			--sg-ink: #1d2939;
+			--sg-muted: #64748b;
+			--sg-line: #e8ecf2;
+			--sg-pad: 24px;
+		}
+
+		@@keyframes sgFade {
+			from {
+				opacity: 0;
+			}
+
+			to {
+				opacity: 1;
+			}
+		}
+
+		@@keyframes sgPop {
+			from {
+				opacity: 0;
+				transform: translateY(18px) scale(.97);
+			}
+
+			to {
+				opacity: 1;
+				transform: none;
+			}
+		}
+
+		@@keyframes sgSheet {
+			from {
+				transform: translateY(100%);
+			}
+
+			to {
+				transform: none;
+			}
+		}
+
+		/* Sidebar: highlight the page you are on */
+		.sidebar ul li a.sg-current {
+			background: rgba(255,255,255,.22) !important;
+			opacity: 1 !important;
+			font-weight: 600;
+			box-shadow: inset 4px 0 0 #fff;
+		}
+
+		/* Load more button */
+		button.servicego-load-more {
+			border: 1.5px solid var(--sg-orange-2);
+			background: #fff;
+			color: #e8690f;
+			font-weight: 600;
+			font-size: 14px;
+			border-radius: 12px;
+			padding: 11px 24px;
+			font-family: inherit;
+			cursor: pointer;
+			transition: background .2s ease, color .2s ease;
+		}
+
+			button.servicego-load-more:hover {
+				background: var(--sg-orange);
+				border-color: var(--sg-orange);
+				color: #fff;
+			}
+
+		/* Popups (all pages) */
+		.modal {
+			background: rgba(15,23,42,.62) !important;
+			-webkit-backdrop-filter: blur(4px);
+			backdrop-filter: blur(4px);
+			animation: sgFade .2s ease;
+		}
+
+		.modal-content {
+			border-radius: 22px !important;
+			padding: 26px var(--sg-pad) var(--sg-pad) !important;
+			box-shadow: 0 30px 80px rgba(15,23,42,.35) !important;
+			animation: sgPop .25s cubic-bezier(.2,.8,.2,1);
+			overscroll-behavior: contain;
+			scrollbar-width: thin;
+		}
+
+		.modal-title {
+			font-size: 21px !important;
+			font-weight: 600 !important;
+			color: var(--sg-ink) !important;
+			margin-bottom: 18px !important;
+		}
+
+		/* close (x) button */
+		.modal-close-x,
+		.close-modal {
+			position: absolute !important;
+			top: 14px !important;
+			right: 14px !important;
+			width: 38px;
+			height: 38px;
+			display: flex !important;
+			align-items: center;
+			justify-content: center;
+			border-radius: 50%;
+			background: #f2f4f7;
+			color: #667085 !important;
+			font-size: 17px !important;
+			line-height: 1;
+			cursor: pointer;
+			z-index: 5;
+			transition: background .2s ease, color .2s ease;
+		}
+
+		.close-modal {
+			font-size: 24px !important;
+		}
+
+			.modal-close-x:hover,
+			.close-modal:hover {
+				background: #fff1e6;
+				color: var(--sg-orange) !important;
+			}
+
+		/* section headings inside review popups */
+		.modal-content .section-title {
+			font-size: 15px !important;
+			color: var(--sg-ink) !important;
+			text-transform: none !important;
+			letter-spacing: 0 !important;
+			border-bottom: 0 !important;
+			border-left: 4px solid var(--sg-orange);
+			padding: 2px 0 2px 10px !important;
+			margin: 24px 0 12px !important;
+		}
+
+		.modal-content .info-grid {
+			background: #fafbfc !important;
+			border: 1px solid #eef0f3 !important;
+			border-radius: 14px !important;
+		}
+
+		.modal-content .info-label {
+			font-size: 12px;
+			color: var(--sg-muted);
+			font-weight: 500;
+		}
+
+		.modal-content .info-value {
+			color: var(--sg-ink);
+		}
+
+		.modal-content .media-card,
+		.modal-content .service-video-block,
+		.modal-content .google-map-container {
+			border-radius: 14px !important;
+			border-color: #eef0f3 !important;
+		}
+
+		.modal-content .zoom-box {
+			border-radius: 10px;
+		}
+
+		.modal-content .pop-row {
+			border-bottom-color: #f1f4f8;
+		}
+
+		.modal-content .pop-label {
+			color: var(--sg-muted);
+			font-weight: 500;
+		}
+
+		.modal-content img {
+			border-radius: 14px;
+		}
+
+		/* wallet popup input */
+		.actual-amount-box {
+			background: #fff8f2;
+			border: 1px solid #ffe3cc;
+			border-radius: 14px;
+			padding: 14px;
+		}
+
+		.actual-amount-input-wrap {
+			border-radius: 10px !important;
+		}
+
+			.actual-amount-input-wrap:focus-within {
+				border-color: var(--sg-orange) !important;
+				box-shadow: 0 0 0 3px rgba(255,127,54,.15);
+			}
+
+		/* popup footer buttons: stay visible while the popup scrolls */
+		.pop-footer-buttons,
+		.modal-actions {
+			position: sticky;
+			bottom: 0;
+			z-index: 4;
+			margin: 26px calc(-1 * var(--sg-pad)) calc(-1 * var(--sg-pad)) !important;
+			padding: 14px var(--sg-pad) max(16px, env(safe-area-inset-bottom));
+			background: #fff;
+			border-top: 1px solid #eef0f3;
+			gap: 12px !important;
+		}
+
+			.pop-btn-block,
+			.pop-btn-close,
+			.pop-btn-approve,
+			.pop-btn-reject,
+			.modal-actions .btn {
+				border-radius: 12px !important;
+				padding: 12px 24px !important;
+				min-height: 46px;
+				min-width: 130px;
+				font-family: inherit;
+				font-weight: 600 !important;
+				font-size: 14px !important;
+				transition: transform .15s ease, filter .15s ease;
+			}
+
+				.pop-btn-block:active,
+				.pop-btn-close:active,
+				.pop-btn-approve:active,
+				.pop-btn-reject:active,
+				.modal-actions .btn:active {
+					transform: scale(.97);
+				}
+
+		/* SweetAlert2 popups (every confirm / success / error) */
+		.swal2-container {
+			-webkit-backdrop-filter: blur(3px);
+			backdrop-filter: blur(3px);
+		}
+
+		.swal2-popup {
+			border-radius: 22px !important;
+			padding: 26px 22px 22px !important;
+			font-family: 'Poppins', sans-serif !important;
+			box-shadow: 0 30px 80px rgba(15,23,42,.35) !important;
+		}
+
+		.swal2-title {
+			font-size: 21px !important;
+			font-weight: 600 !important;
+			color: var(--sg-ink) !important;
+			padding: .3em 0 0 !important;
+		}
+
+		.swal2-html-container {
+			font-size: 14px !important;
+			line-height: 1.55;
+			color: #667085 !important;
+		}
+
+		.swal2-actions {
+			width: 100%;
+			gap: 10px;
+			flex-wrap: nowrap !important;
+			margin-top: 1.4em !important;
+		}
+
+		.swal2-styled {
+			flex: 1 1 0;
+			margin: 0 !important;
+			border-radius: 12px !important;
+			padding: 12px 14px !important;
+			font-size: 14px !important;
+			font-weight: 600 !important;
+			box-shadow: none !important;
+		}
+
+			.swal2-styled:focus {
+				box-shadow: 0 0 0 3px rgba(255,127,54,.25) !important;
+			}
+
+		/* scroll lock while a popup is open */
+		html.sg-modal-open,
+		html.sg-modal-open body {
+			overflow: hidden !important;
+		}
+
+		@@media (prefers-reduced-motion: reduce) {
+			.modal, .modal-content {
+				animation: none !important;
+			}
+		}
+
+		/* PHONE LAYOUT (same on every page) */
+		@@media (max-width: 768px) {
+			:root {
+				--sg-pad: 16px;
+			}
+			/* top bar */
+			.mobile-header {
+				height: 58px !important;
+				padding: 0 14px !important;
+				box-shadow: 0 4px 18px rgba(255,127,54,.28) !important;
+			}
+
+			.mobile-brand {
+				font-size: 18px !important;
+				font-weight: 700 !important;
+			}
+
+			.menu-toggle-btn {
+				width: 42px;
+				height: 42px;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				border-radius: 12px !important;
+				font-size: 21px !important;
+			}
+
+				.menu-toggle-btn:active {
+					background: rgba(255,255,255,.2) !important;
+				}
+
+			.mobile-header > :last-child:not(.mobile-brand) {
+				width: 42px !important;
+				flex: 0 0 42px;
+			}
+			/* slide-in menu */
+			.sidebar {
+				width: 285px !important;
+				max-width: 84% !important;
+				box-shadow: 10px 0 30px rgba(15,23,42,.22) !important;
+			}
+
+			.sidebar-overlay {
+				background: rgba(15,23,42,.5) !important;
+			}
+			/* page frame */
+			.main-content {
+				padding: 76px 14px 28px !important;
+			}
+
+			.page-header-row,
+			.page-header {
+				display: flex !important;
+				flex-direction: column !important;
+				align-items: stretch !important;
+				gap: 12px !important;
+				margin-bottom: 16px !important;
+			}
+
+				.page-title,
+				.page-header h1,
+				.welcome-section h1 {
+					font-size: 22px !important;
+					line-height: 1.3 !important;
+				}
+
+			.search-container,
+			.search-box {
+				width: 100% !important;
+				max-width: none !important;
+			}
+
+				.search-container input,
+				.search-box input {
+					height: 46px !important;
+					font-size: 14px !important;
+					border-radius: 12px !important;
+				}
+
+				.search-container > i {
+					top: 50% !important;
+					transform: translateY(-50%) !important;
+				}
+			/* dashboard cards */
+			.metrics-grid .card {
+				min-width: 100% !important;
+				border-radius: 16px !important;
+			}
+			/* tables become cards (rows keep their own show/hide logic) */
+			.table-container {
+				background: transparent !important;
+				padding: 0 !important;
+				border: 0 !important;
+				box-shadow: none !important;
+				overflow: visible !important;
+			}
+
+				.table-container table,
+				.table-container tbody {
+					display: block !important;
+					width: 100% !important;
+					min-width: 0 !important;
+				}
+
+				.table-container thead {
+					display: none !important;
+				}
+
+				.table-container tbody tr {
+					width: 100% !important;
+					background: #fff !important;
+					border: 1px solid var(--sg-line) !important;
+					border-radius: 16px !important;
+					margin: 0 0 12px !important;
+					padding: 6px 14px !important;
+					box-shadow: 0 5px 16px rgba(16,24,40,.06) !important;
+				}
+
+				.table-container tbody td {
+					display: flex !important;
+					align-items: center;
+					justify-content: space-between;
+					gap: 12px;
+					width: 100% !important;
+					min-height: 44px;
+					padding: 11px 0 !important;
+					border: 0 !important;
+					border-bottom: 1px solid #f1f4f8 !important;
+					font-size: 13px !important;
+					text-align: right !important;
+					white-space: normal !important;
+					overflow-wrap: anywhere;
+					word-break: break-word;
+				}
+
+					.table-container tbody td:last-child {
+						border-bottom: 0 !important;
+					}
+
+					.table-container tbody td::before {
+						content: attr(data-label);
+						flex: 0 0 auto;
+						max-width: 42%;
+						margin-right: auto;
+						text-align: left;
+						color: var(--sg-muted);
+						font-size: 12px;
+						font-weight: 600;
+						text-transform: none !important;
+						letter-spacing: 0 !important;
+					}
+					/* action cell = one full-width button */
+					.table-container tbody td[data-label="Actions"],
+					.table-container tbody td[data-label="Action"],
+					.table-container tbody td:has(.btn-view) {
+						display: block !important;
+						padding: 12px 0 8px !important;
+					}
+
+						.table-container tbody td[data-label="Actions"]::before,
+						.table-container tbody td[data-label="Action"]::before,
+						.table-container tbody td:has(.btn-view)::before {
+							display: none !important;
+						}
+
+					.table-container tbody td .btn-view {
+						width: 100% !important;
+						max-width: 100% !important;
+						justify-content: center;
+						padding: 11px 14px !important;
+						font-size: 13px !important;
+						border-radius: 12px !important;
+					}
+					/* empty row */
+					.table-container tbody td[colspan] {
+						display: block !important;
+						text-align: center !important;
+						padding: 26px 10px !important;
+					}
+
+						.table-container tbody td[colspan]::before {
+							display: none !important;
+						}
+
+				.table-container .badge,
+				.badge {
+					font-size: 11px !important;
+					padding: 5px 10px !important;
+					border-radius: 999px;
+				}
+
+			button.servicego-load-more {
+				width: 100%;
+				max-width: none;
+			}
+			/* complaints page: same card feel, readable sizes */
+			#complaintsTable tbody td,
+			#warningsTable tbody td {
+				font-size: 12.5px !important;
+			}
+
+				#complaintsTable tbody td::before {
+					font-size: 11px !important;
+					font-weight: 600 !important;
+					text-transform: none !important;
+					letter-spacing: 0 !important;
+					color: var(--sg-muted) !important;
+					flex: 0 0 auto !important;
+				}
+
+			#warningsTable,
+			#warningsTable tbody {
+				display: block;
+				width: 100%;
+			}
+
+				#warningsTable thead {
+					display: none;
+				}
+
+				#warningsTable tbody tr {
+					display: block;
+					background: #fff;
+					border: 1px solid var(--sg-line);
+					border-radius: 16px;
+					margin: 0 0 12px;
+					padding: 8px 12px;
+					box-shadow: 0 5px 16px rgba(16,24,40,.06);
+				}
+
+				#warningsTable tbody td {
+					display: flex;
+					align-items: center;
+					justify-content: space-between;
+					gap: 10px;
+					padding: 10px 4px;
+					border: 0;
+					border-bottom: 1px solid #f1f4f8;
+					text-align: right;
+				}
+
+					#warningsTable tbody td:last-child {
+						border-bottom: 0;
+					}
+
+					#warningsTable tbody td::before {
+						content: attr(data-label);
+						color: var(--sg-muted);
+						font-size: 11px;
+						font-weight: 600;
+						flex: 0 0 auto;
+					}
+
+					#warningsTable tbody td:first-child::before {
+						display: none;
+					}
+
+			.filter-btn {
+				font-size: 12px !important;
+			}
+			/* popups become bottom sheets */
+			.modal {
+				align-items: flex-end !important;
+				padding: 0 !important;
+			}
+
+			.modal-content {
+				width: 100% !important;
+				max-width: 100% !important;
+				max-height: 92vh !important;
+				border-radius: 24px 24px 0 0 !important;
+				padding: 22px var(--sg-pad) var(--sg-pad) !important;
+				animation: sgSheet .3s cubic-bezier(.2,.8,.2,1);
+			}
+
+				.modal-content::before {
+					content: "";
+					display: block;
+					width: 42px;
+					height: 4px;
+					border-radius: 4px;
+					background: #d0d5dd;
+					margin: -10px auto 16px;
+				}
+
+			.modal-close-x,
+			.close-modal {
+				top: 12px !important;
+				right: 12px !important;
+			}
+
+			.pop-footer-buttons,
+			.modal-actions {
+				margin-top: 22px !important;
+			}
+
+				.pop-btn-block,
+				.pop-btn-close,
+				.pop-btn-approve,
+				.pop-btn-reject,
+				.modal-actions .btn {
+					flex: 1 1 0 !important;
+					max-width: none !important;
+					min-width: 0;
+					width: auto;
+				}
+
+			.modal-content .info-grid {
+				grid-template-columns: repeat(2, 1fr) !important;
+			}
+		}
+
+		@@media (max-width: 576px) {
+			.modal-content .info-grid {
+				grid-template-columns: 1fr !important;
+			}
+			/* SweetAlert2 also slides up from the bottom on phones */
+			.swal2-container {
+				padding: 0 !important;
+			}
+
+				.swal2-container.swal2-center > .swal2-popup {
+					grid-column: 1 / -1 !important;
+					place-self: end stretch !important;
+					width: 100% !important;
+					max-width: 100% !important;
+					margin: 0 !important;
+					border-radius: 24px 24px 0 0 !important;
+					padding-bottom: calc(20px + env(safe-area-inset-bottom)) !important;
+				}
+		}
+	</style>
+
+</head>
+
+<body>
+
+	<!-- Mobile header -->
+	<div class="mobile-header">
+
+		<div class="ham-menu"
+			 id="hamMenu"
+			 style="cursor:pointer;">
+
+			<i class="fa-solid fa-bars"></i>
+
+		</div>
+
+		<div class="mobile-brand">
+			<span>ServicesGo</span>
+		</div>
+
+		<div style="width:22px;"></div>
+
+	</div>
+
+
+	<!-- Sidebar overlay -->
+	<div class="sidebar-overlay"
+		 id="sidebarOverlay">
+	</div>
+
+
+	<!-- Sidebar -->
+	<div class="sidebar"
+		 id="sidebar">
+
+		<button type="button"
+				class="sidebar-close-btn"
+				id="sidebarCloseBtn"
+				aria-label="Close Menu">
+
+			<i class="fa-solid fa-xmark"></i>
+
+		</button>
+
+
+		<div>
+
+			<div class="brand">
+
+				<span class="servicego-home-logo">
+
+					<img src="/images/Logo.png"
+						 alt="Logo" />
+
+				</span>
+
+				<span>ServicesGo</span>
+
+			</div>
+
+
+			<ul>
+
+				<li>
+
+					<a href="/Admin/Dashboard">
+
+						<span class="toggle-left">
+
+							<i class="fa-solid fa-house"></i>
+
+							<span>Dashboard</span>
+
+						</span>
+
+					</a>
+
+				</li>
+
+
+				<li class="dropdown-item">
+
+					<div class="dropdown-toggle">
+
+						<div class="toggle-left">
+
+							<i class="fa-solid fa-users"></i>
+
+							<span>Customers</span>
+
+						</div>
+
+						<i class="fa-solid fa-chevron-down arrow-icon"></i>
+
+					</div>
+
+
+					<ul class="submenu">
+
+						<li>
+							<a href="/Admin/ActiveCustomers">
+								Active
+							</a>
+						</li>
+
+						<li>
+							<a href="/Admin/BlockedCustomers">
+								Blocked
+							</a>
+						</li>
+
+					</ul>
+
+				</li>
+
+
+				<li class="dropdown-item open">
+
+					<div class="dropdown-toggle">
+
+						<div class="toggle-left">
+
+							<i class="fa-solid fa-user-gear"></i>
+
+							<span>Service Providers</span>
+
+						</div>
+
+						<i class="fa-solid fa-chevron-down arrow-icon"></i>
+
+					</div>
+
+
+					<ul class="submenu">
+
+						<li>
+							<a href="/Admin/ActiveProviders"
+							   class="active-link">
+								Active
+							</a>
+						</li>
+
+						<li>
+							<a href="/Admin/PendingProviders">
+								Pending
+							</a>
+						</li>
+
+						<li>
+							<a href="/Admin/BlockedProviders">
+								Blocked
+							</a>
+						</li>
+
+					</ul>
+
+				</li>
+
+
+				<li>
+
+					<a href="/Admin/Complaint">
+
+						<span class="toggle-left">
+
+							<i class="fa-solid fa-triangle-exclamation"></i>
+
+							<span>Complaints</span>
+
+						</span>
+
+					</a>
+
+				</li>
+
+
+				<li>
+
+					<a href="/Admin/WalletRequests">
+
+						<span class="toggle-left">
+
+							<i class="fa-solid fa-wallet"></i>
+
+							<span>Wallet Requests</span>
+
+						</span>
+
+					</a>
+
+				</li>
+
+			</ul>
+
+		</div>
+
+
+		<div class="logout">
+			<a href="@Url.Action("Logout", "Admin")">
+
+				<i class="fa-solid fa-right-from-bracket"></i>
+				<span>Logout</span>
+			</a>
+
+		</div>
+
+	</div>
+
+
+	<!-- Main content -->
+	<div class="main-content">
+
+		<div class="page-header-row">
+
+			<h1 class="page-title">
+				Active Providers
+			</h1>
+
+
+			<div class="search-container">
+
+				<i class="fa-solid fa-magnifying-glass search-icon"></i>
+
+				<input type="text"
+					   id="providerSearchInput"
+					   placeholder="Search by Name, Skill, City or ID..."
+					   onkeyup="filterProvidersTable()">
+
+			</div>
+
+		</div>
+
+
+		<div class="table-container">
+
+			<table>
+
+				<thead>
+
+					<tr>
+
+						<th>Provider ID</th>
+						<th>Full Name</th>
+						<th>Primary Skills</th>
+						<th>City Location</th>
+						<th>Status</th>
+						<th>Actions</th>
+
+					</tr>
+
+				</thead>
+
+
+				<tbody>
+
+					@foreach (var item in Model)
+					{
+
+						<tr>
+
+							<td data-label="Provider ID">
+								@(item.ProviderId?.StartsWith("PRO-", StringComparison.OrdinalIgnoreCase) == true
+															? item.ProviderId
+															: "PRO-" + item.ProviderId)
+						</td>
+
+
+							<td data-label="Full Name">
+								<strong>@item.Name</strong>
+							</td>
+
+
+							<td data-label="Primary Skills">
+								@item.SelectedServices
+							</td>
+
+
+							<td data-label="City Location">
+								@item.City
+							</td>
+
+
+							<td data-label="Status">
+
+								<span class="badge-active">
+									Active
+								</span>
+
+							</td>
+
+
+							<td data-label="Actions">
+
+								<!-- Review button -->
+								<button type="button"
+										class="btn-view review-provider-btn"
+										data-provider-id="@item.ProviderId"
+										data-name="@item.Name"
+										data-father-name="@item.FatherName"
+										data-cnic="@item.CNIC"
+										data-phone="@item.PhoneNumber"
+										data-city="@item.City"
+										data-local-address="@item.LocalAddress"
+										data-permanent-address="@item.PermanentAddress"
+										data-selected-services="@item.SelectedServices"
+										data-selected-service-types="@item.SelectedServiceTypes"
+										data-cnic-front="@item.CNICFrontPath"
+										data-cnic-back="@item.CNICBackPath"
+										data-profile="@item.ProfilePicPath"
+										data-certificate="@item.CertificatePath"
+										data-affidavit="@item.AffidavitPath"
+										data-available-days="@item.AvailableDays"
+										data-start-time="@item.StartTime"
+										data-end-time="@item.EndTime"
+										data-video="@item.VideoPath"
+										data-home-address="@item.HomeAddressInput"
+										data-home-lat="@item.HomeLat"
+										data-home-lng="@item.HomeLng"
+										data-shop-address="@item.ShopAddressInput"
+										data-shop-lat="@item.ShopLat"
+										data-shop-lng="@item.ShopLng">
+
+									<i class="fa-solid fa-eye"></i>
+
+									Review
+
+								</button>
+
+							</td>
+
+						</tr>
+
+										}
+
+				</tbody>
+
+			</table>
+
+		</div>
+
+	</div>
+
+
+	<!-- Deep review modal -->
+	<div id="deepReviewModal"
+		 class="modal">
+
+		<div class="modal-content">
+
+			<i class="fa-solid fa-xmark modal-close-x"
+			   onclick="closeDeepReviewModal()"></i>
+
+
+			<h2 style="font-size:24px; font-weight:600; color:#1e293b; margin-bottom:5px;">
+				Provider Live Profile View
+			</h2>
+
+
+			<p style="font-size:14px; color:#64748b; margin-bottom:15px;">
+				Monitor active profile parameters and records.
+			</p>
+
+
+			<!-- Personal details -->
+			<div class="section-title">
+				Personal Details
+			</div>
+
+
+			<div class="info-grid">
+
+				<div class="info-item">
+
+					<span class="info-label">
+						Full Name
+					</span>
+
+					<span class="info-value"
+						  id="valName">
+						N/A
+					</span>
+
+				</div>
+
+
+				<div class="info-item">
+
+					<span class="info-label">
+						Father Name
+					</span>
+
+					<span class="info-value"
+						  id="valFatherName">
+						N/A
+					</span>
+
+				</div>
+
+
+				<div class="info-item">
+
+					<span class="info-label">
+						Provider ID
+					</span>
+
+					<span class="info-value"
+						  id="valId"
+						  style="color:#ff7f36;">
+						N/A
+					</span>
+
+				</div>
+
+
+				<div class="info-item">
+
+					<span class="info-label">
+						CNIC Number
+					</span>
+
+					<span class="info-value"
+						  id="valCnic">
+						N/A
+					</span>
+
+				</div>
+
+
+				<div class="info-item">
+
+					<span class="info-label">
+						Phone Number
+					</span>
+
+					<span class="info-value"
+						  id="valPhone">
+						N/A
+					</span>
+
+				</div>
+
+
+				<div class="info-item">
+
+					<span class="info-label">
+						City
+					</span>
+
+					<span class="info-value"
+						  id="valCity">
+						N/A
+					</span>
+
+				</div>
+
+
+				<div class="info-item"
+					 id="localAddrWrapper">
+
+					<span class="info-label">
+						Local Address
+					</span>
+
+					<span class="info-value"
+						  id="valLocalAddress">
+						N/A
+					</span>
+
+				</div>
+
+
+				<div class="info-item"
+					 id="permAddrWrapper"
+					 style="grid-column: span 2;">
+
+					<span class="info-label">
+						Permanent Address
+					</span>
+
+					<span class="info-value"
+						  id="valPermanentAddress">
+						N/A
+					</span>
+
+				</div>
+
+			</div>
+
+
+			<!-- Professional details -->
+			<div class="section-title">
+				Professional Details
+			</div>
+
+
+			<div class="info-grid"
+				 style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+
+				<div class="info-item">
+
+					<span class="info-label">
+						Selected Services
+					</span>
+
+					<span class="info-value"
+						  id="valSkills"
+						  style="color:#ff7f36;">
+						N/A
+					</span>
+
+				</div>
+
+
+				<div class="info-item">
+
+					<span class="info-label">
+						Service Type
+					</span>
+
+					<span class="info-value"
+						  id="valType">
+						N/A
+					</span>
+
+				</div>
+
+			</div>
+
+
+			<!-- Documents -->
+			<div class="section-title">
+				Identity & Verification Documents (Click to Zoom)
+			</div>
+
+
+			<div class="media-flex">
+
+				<div class="media-card">
+
+					<span>CNIC Front Card</span>
+
+					<div class="zoom-box"
+						 onclick="zoomImage(this)">
+
+						<img id="imgCnicFront"
+							 src=""
+							 alt="CNIC Front">
+
+						<div class="zoom-overlay-text">
+
+							<i class="fa-solid fa-magnifying-glass-plus"></i>
+
+							Click to Zoom
+
+						</div>
+
+					</div>
+
+				</div>
+
+
+				<div class="media-card">
+
+					<span>CNIC Back Card</span>
+
+					<div class="zoom-box"
+						 onclick="zoomImage(this)">
+
+						<img id="imgCnicBack"
+							 src=""
+							 alt="CNIC Back">
+
+						<div class="zoom-overlay-text">
+
+							<i class="fa-solid fa-magnifying-glass-plus"></i>
+
+							Click to Zoom
+
+						</div>
+
+					</div>
+
+				</div>
+
+
+				<div class="media-card">
+
+					<span>Profile Photo</span>
+
+					<div class="zoom-box"
+						 onclick="zoomImage(this)">
+
+						<img id="imgProfilePhoto"
+							 src=""
+							 alt="Profile Face">
+
+						<div class="zoom-overlay-text">
+
+							<i class="fa-solid fa-magnifying-glass-plus"></i>
+
+							Click to Zoom
+
+						</div>
+
+					</div>
+
+				</div>
+
+
+				<div class="media-card">
+
+					<span>Certificate / Degree</span>
+
+					<div class="zoom-box"
+						 onclick="zoomImage(this)">
+
+						<img id="imgCertificate"
+							 src=""
+							 alt="Certificate File">
+
+						<div class="zoom-overlay-text">
+
+							<i class="fa-solid fa-magnifying-glass-plus"></i>
+
+							Click to Zoom
+
+						</div>
+
+					</div>
+
+				</div>
+
+
+				<div class="media-card">
+
+					<span>Affidavit</span>
+
+					<div class="zoom-box"
+						 onclick="zoomImage(this)">
+
+						<img id="imgAffidavit"
+							 src=""
+							 alt="Affidavit File">
+
+						<div class="zoom-overlay-text">
+
+							<i class="fa-solid fa-magnifying-glass-plus"></i>
+
+							Click to Zoom
+
+						</div>
+
+					</div>
+
+				</div>
+
+			</div>
+
+
+			<!-- Video -->
+			<div class="section-title">
+				Work Demonstration Videos
+			</div>
+
+
+			<div id="videosContainer">
+
+				<div class="service-video-block">
+
+					<span class="info-label"
+						  style="color:#1e293b; font-size:13px;">
+
+						<i class="fa-solid fa-video"></i>
+
+						Demonstration Video Preview:
+
+					</span>
+
+
+					<video id="providerWorkVideo"
+						   controls
+						   preload="none">
+
+						Your browser does not support the video tag.
+
+					</video>
+
+				</div>
+
+			</div>
+
+
+			<!-- Location -->
+			<div class="section-title">
+				Location Details
+			</div>
+
+
+			<!-- Home location -->
+			<div id="homeLocBlock"
+				 style="display:none; margin-bottom:15px;">
+
+				<span class="info-label">
+					Home Address
+				</span>
+
+
+				<p id="valHomeAddress"
+				   class="info-value"
+				   style="background:#f8fafc; padding:10px; border-radius:6px; border:1px solid #e2e8f0; margin-top:5px;">
+				</p>
+
+
+				<div id="homeMapContainer"
+					 class="google-map-container">
+
+					<iframe id="homeGoogleMap"
+							class="google-map-iframe"
+							src=""
+							allowfullscreen=""
+							loading="lazy"
+							referrerpolicy="no-referrer-when-downgrade">
+					</iframe>
+
+				</div>
+
+			</div>
+
+
+			<!-- Shop location -->
+			<div id="shopLocBlock"
+				 style="display:none; margin-bottom:15px;">
+
+				<span class="info-label">
+					Shop Address
+				</span>
+
+
+				<p id="valShopAddress"
+				   class="info-value"
+				   style="background:#f8fafc; padding:10px; border-radius:6px; border:1px solid #e2e8f0; margin-top:5px;">
+				</p>
+
+
+				<div id="shopMapContainer"
+					 class="google-map-container">
+
+					<iframe id="shopGoogleMap"
+							class="google-map-iframe"
+							src=""
+							allowfullscreen=""
+							loading="lazy"
+							referrerpolicy="no-referrer-when-downgrade">
+					</iframe>
+
+				</div>
+
+			</div>
+
+
+			<!-- Availability -->
+			<div class="section-title">
+				Availability Schedule
+			</div>
+
+
+			<div class="info-grid"
+				 id="scheduleGrid"
+				 style="grid-template-columns:2fr 1fr;">
+
+				<div class="info-item">
+
+					<span class="info-label">
+						Available Days
+					</span>
+
+
+					<div class="days-flex"
+						 id="daysContainer">
+
+						<div class="day-badge"
+							 id="day-Mon">
+							Mon
+						</div>
+
+						<div class="day-badge"
+							 id="day-Tue">
+							Tue
+						</div>
+
+						<div class="day-badge"
+							 id="day-Wed">
+							Wed
+						</div>
+
+						<div class="day-badge"
+							 id="day-Thu">
+							Thu
+						</div>
+
+						<div class="day-badge"
+							 id="day-Fri">
+							Fri
+						</div>
+
+						<div class="day-badge"
+							 id="day-Sat">
+							Sat
+						</div>
+
+						<div class="day-badge"
+							 id="day-Sun">
+							Sun
+						</div>
+
+					</div>
+
+				</div>
+
+
+				<div class="info-item">
+
+					<span class="info-label">
+						Available Time Window
+					</span>
+
+
+					<span class="info-value"
+						  id="valTime"
+						  style="background:#ff7f36; color:white; padding:6px 12px; border-radius:6px; width:fit-content; margin-top:5px;">
+						N/A
+					</span>
+
+				</div>
+
+			</div>
+
+
+			<!-- Block button -->
+			<div class="pop-footer-buttons">
+
+				<button type="button"
+						class="pop-btn-block"
+						id="btnBlock">
+
+					<i class="fa-solid fa-user-slash"></i>
+
+					Block Provider Account
+
+				</button>
+
+			</div>
+
+		</div>
+
+	</div>
+
+
+	<!-- Image lightbox -->
+	<div id="imageLightbox"
+		 class="lightbox"
+		 onclick="closeLightbox()">
+
+		<span class="lightbox-close">
+			×
+		</span>
+
+
+		<img id="lightboxTargetImg"
+			 src=""
+			 alt="Zoomed Asset">
+
+	</div>
+
+
+	<script>
+
+				/* Sidebar */
+
+				const hamMenu =
+					document.getElementById("hamMenu");
+
+				const sidebar =
+					document.getElementById("sidebar");
+
+				const sidebarOverlay =
+					document.getElementById("sidebarOverlay");
+
+				const sidebarCloseBtn =
+					document.getElementById("sidebarCloseBtn");
+
+
+				function openSidebar() {
+
+					if (sidebar) {
+						sidebar.classList.add("active");
+					}
+
+					if (sidebarOverlay) {
+						sidebarOverlay.classList.add("active");
+					}
+
+				}
+
+
+				function closeSidebar() {
+
+					if (sidebar) {
+						sidebar.classList.remove("active");
+					}
+
+					if (sidebarOverlay) {
+						sidebarOverlay.classList.remove("active");
+					}
+
+				}
+
+
+				function toggleSidebar() {
+
+					if (!sidebar) {
+						return;
+					}
+
+					if (sidebar.classList.contains("active")) {
+						closeSidebar();
+					}
+					else {
+						openSidebar();
+					}
+
+				}
+
+
+				if (hamMenu) {
+
+					hamMenu.addEventListener("click", function () {
+
+						toggleSidebar();
+
+					});
+
+				}
+
+
+				if (sidebarCloseBtn) {
+
+					sidebarCloseBtn.addEventListener("click", function () {
+
+						closeSidebar();
+
+					});
+
+				}
+
+
+				if (sidebarOverlay) {
+
+					sidebarOverlay.addEventListener("click", function () {
+
+						closeSidebar();
+
+					});
+
+				}
+
+
+				/* Safe value */
+
+				function safeValue(value) {
+
+					if (
+						value === null ||
+						value === undefined ||
+						value === "null" ||
+						value === "undefined"
+					) {
+
+						return "";
+
+					}
+
+					return String(value);
+
+				}
+
+
+				/*
+				 * Review buttons
+				 * IMPORTANT: No inline onclick.
+				 */
+
+				document.addEventListener("DOMContentLoaded", function () {
+
+					/* Dropdowns */
+
+					const dropdownToggles =
+						document.querySelectorAll(".dropdown-toggle");
+
+					dropdownToggles.forEach(function (toggle) {
+
+						toggle.addEventListener("click", function () {
+
+							this.parentElement.classList.toggle("open");
+
+						});
+
+					});
+
+
+					/* Review button */
+
+					const reviewButtons =
+						document.querySelectorAll(".review-provider-btn");
+
+
+					reviewButtons.forEach(function (button) {
+
+						button.addEventListener("click", function (event) {
+
+							event.preventDefault();
+							event.stopPropagation();
+
+
+							const startTime =
+								safeValue(this.dataset.startTime);
+
+							const endTime =
+								safeValue(this.dataset.endTime);
+
+
+							const timeWindow =
+								(startTime || endTime)
+									? startTime + " - " + endTime
+									: "";
+
+
+							openDeepReviewModal(
+
+								safeValue(this.dataset.providerId),
+
+								safeValue(this.dataset.name),
+
+								safeValue(this.dataset.fatherName),
+
+								safeValue(this.dataset.cnic),
+
+								safeValue(this.dataset.phone),
+
+								safeValue(this.dataset.city),
+
+								safeValue(this.dataset.localAddress),
+
+								safeValue(this.dataset.permanentAddress),
+
+								safeValue(this.dataset.selectedServices),
+
+								safeValue(this.dataset.selectedServiceTypes),
+
+								safeValue(this.dataset.cnicFront),
+
+								safeValue(this.dataset.cnicBack),
+
+								safeValue(this.dataset.profile),
+
+								safeValue(this.dataset.certificate),
+
+								safeValue(this.dataset.affidavit),
+
+								safeValue(this.dataset.availableDays),
+
+								timeWindow,
+
+								safeValue(this.dataset.video),
+
+								safeValue(this.dataset.homeAddress),
+
+								safeValue(this.dataset.homeLat),
+
+								safeValue(this.dataset.homeLng),
+
+								safeValue(this.dataset.shopAddress),
+
+								safeValue(this.dataset.shopLat),
+
+								safeValue(this.dataset.shopLng)
+
+							);
+
+						});
+
+					});
+
+
+		/* Block provider */
+
+					const blockButton =
+						document.getElementById("btnBlock");
+
+					if (blockButton) {
+						blockButton.onclick = async function () {
+							const idElement =
+								document.getElementById("valId");
+
+							if (!idElement) {
+								return;
+							}
+
+							const id =
+								idElement.innerText
+									.replace("PRO-", "")
+									.trim();
+
+							if (!id) {
+								await Swal.fire({
+									icon: "error",
+									title: "Missing Provider ID",
+									text: "Provider ID is missing.",
+									confirmButtonColor: "#d97600"
+								});
+								return;
+							}
+
+							const result = await Swal.fire({
+								title: "Block Provider?",
+								text: "Are you sure you want to BLOCK this provider?",
+								icon: "warning",
+								showCancelButton: true,
+								confirmButtonText: "Yes, Block",
+								cancelButtonText: "Cancel",
+								reverseButtons: true,
+								confirmButtonColor: "#d97600",
+								cancelButtonColor: "#6c757d"
+							});
+
+							if (!result.isConfirmed) return;
+
+							try {
+								const response = await fetch(
+									'/Admin/BlockProvider?id=' +
+									encodeURIComponent(id),
+									{ method: 'POST' }
+								);
+
+								if (!response.ok) {
+									throw new Error("Server error");
+								}
+
+								const data = await response.json();
+
+								if (data.success) {
+									await Swal.fire({
+										icon: "success",
+										title: "Blocked",
+										text: "Provider has been blocked.",
+										confirmButtonColor: "#d97600"
+									});
+
+									closeDeepReviewModal();
+									location.reload();
+								} else {
+									await Swal.fire({
+										icon: "error",
+										title: "Unable to Block",
+										text: data.message || "Something went wrong!",
+										confirmButtonColor: "#d97600"
+									});
+								}
+							} catch (error) {
+								console.error(error);
+
+								await Swal.fire({
+									icon: "error",
+									title: "Something went wrong",
+									text: "Something went wrong while blocking the provider.",
+									confirmButtonColor: "#d97600"
+								});
+							}
+						};
+					}
+
+
+					/* Responsive modal grid */
+
+					const checkModalGrid =
+						function () {
+
+							const localWrap =
+								document.getElementById(
+									"localAddrWrapper"
+								);
+
+							const permWrap =
+								document.getElementById(
+									"permAddrWrapper"
+								);
+
+							const schedGrid =
+								document.getElementById(
+									"scheduleGrid"
+								);
+
+
+							if (window.innerWidth <= 768) {
+
+								if (localWrap) {
+									localWrap.style.gridColumn =
+										"auto";
+								}
+
+								if (permWrap) {
+									permWrap.style.gridColumn =
+										"auto";
+								}
+
+								if (schedGrid) {
+									schedGrid.style.gridTemplateColumns =
+										"1fr";
+								}
+
+							}
+							else {
+
+								if (localWrap) {
+									localWrap.style.gridColumn =
+										"auto";
+								}
+
+								if (permWrap) {
+									permWrap.style.gridColumn =
+										"span 2";
+								}
+
+								if (schedGrid) {
+									schedGrid.style.gridTemplateColumns =
+										"2fr 1fr";
+								}
+
+							}
+
+						};
+
+
+					window.addEventListener(
+						"resize",
+						checkModalGrid
+					);
+
+					checkModalGrid();
+
+				});
+
+
+				/* Open deep review modal */
+
+				function openDeepReviewModal(
+					id,
+					name,
+					fatherName,
+					cnic,
+					phone,
+					city,
+					localAddr,
+					permAddr,
+					skills,
+					type,
+					cnicFrontSrc,
+					cnicBackSrc,
+					profileSrc,
+					certificateSrc,
+					affidavitSrc,
+					activeDays,
+					timeWindow,
+					videoSrc,
+					homeAddress,
+					hLat,
+					hLng,
+					shopAddress,
+					sLat,
+					sLng
+				) {
+
+					id = safeValue(id);
+					name = safeValue(name);
+					fatherName = safeValue(fatherName);
+					cnic = safeValue(cnic);
+					phone = safeValue(phone);
+					city = safeValue(city);
+					localAddr = safeValue(localAddr);
+					permAddr = safeValue(permAddr);
+					skills = safeValue(skills);
+					type = safeValue(type);
+					cnicFrontSrc = safeValue(cnicFrontSrc);
+					cnicBackSrc = safeValue(cnicBackSrc);
+					profileSrc = safeValue(profileSrc);
+					certificateSrc = safeValue(certificateSrc);
+					affidavitSrc = safeValue(affidavitSrc);
+					activeDays = safeValue(activeDays);
+					timeWindow = safeValue(timeWindow);
+					videoSrc = safeValue(videoSrc);
+					homeAddress = safeValue(homeAddress);
+					hLat = safeValue(hLat);
+					hLng = safeValue(hLng);
+					shopAddress = safeValue(shopAddress);
+					sLat = safeValue(sLat);
+					sLng = safeValue(sLng);
+
+
+					/* Provider ID */
+
+					let currentProviderId = id;
+
+
+					if (
+						currentProviderId.startsWith("PRO-")
+					) {
+
+						currentProviderId =
+							currentProviderId.replace(
+								"PRO-",
+								""
+							);
+
+					}
+
+
+					/* Personal data */
+
+					document.getElementById("valId").innerText =
+						"PRO-" + currentProviderId;
+
+					document.getElementById("valName").innerText =
+						name || "N/A";
+
+					document.getElementById("valFatherName").innerText =
+						fatherName || "N/A";
+
+					document.getElementById("valCnic").innerText =
+						cnic || "N/A";
+
+					document.getElementById("valPhone").innerText =
+						phone || "N/A";
+
+					document.getElementById("valCity").innerText =
+						city || "N/A";
+
+					document.getElementById("valLocalAddress").innerText =
+						localAddr || "N/A";
+
+					document.getElementById("valPermanentAddress").innerText =
+						permAddr || "N/A";
+
+					document.getElementById("valSkills").innerText =
+						skills || "N/A";
+
+					document.getElementById("valType").innerText =
+						type || "N/A";
+
+					document.getElementById("valTime").innerText =
+						timeWindow || "N/A";
+
+
+					/* Images */
+
+					document.getElementById("imgCnicFront").src =
+						cnicFrontSrc;
+
+					document.getElementById("imgCnicBack").src =
+						cnicBackSrc;
+
+					document.getElementById("imgProfilePhoto").src =
+						profileSrc;
+
+					sgSetDoc("imgCertificate", certificateSrc);
+
+					sgSetDoc("imgAffidavit", affidavitSrc);
+
+
+					/* Video */
+
+					const videoElement =
+						document.getElementById(
+							"providerWorkVideo"
+						);
+
+
+					if (videoElement) {
+
+						videoElement.pause();
+
+						videoElement.removeAttribute("src");
+
+						videoElement.load();
+
+
+						if (videoSrc) {
+
+							videoElement.src =
+								videoSrc;
+
+							videoElement.load();
+
+						}
+
+					}
+
+
+					/* Location - google maps */
+
+					const homeSection =
+						document.getElementById(
+							"homeLocBlock"
+						);
+
+					const shopSection =
+						document.getElementById(
+							"shopLocBlock"
+						);
+
+					const homeMapContainer =
+						document.getElementById(
+							"homeMapContainer"
+						);
+
+					const shopMapContainer =
+						document.getElementById(
+							"shopMapContainer"
+						);
+
+					const homeMap =
+						document.getElementById(
+							"homeGoogleMap"
+						);
+
+					const shopMap =
+						document.getElementById(
+							"shopGoogleMap"
+						);
+
+
+					/* Home */
+
+					if (
+						hLat &&
+						hLng &&
+						hLat !== "0" &&
+						hLng !== "0"
+					) {
+
+						homeSection.style.display =
+							"block";
+
+						document.getElementById(
+							"valHomeAddress"
+						).innerText =
+							homeAddress || "N/A";
+
+
+						const homeLat =
+							parseFloat(hLat);
+
+						const homeLng =
+							parseFloat(hLng);
+
+
+						if (
+							!Number.isNaN(homeLat) &&
+							!Number.isNaN(homeLng)
+						) {
+
+							homeMap.src =
+								"https://maps.google.com/maps?q=" +
+								encodeURIComponent(
+									homeLat + "," + homeLng
+								) +
+								"&z=17&output=embed";
+
+							homeMapContainer.style.display =
+								"block";
+
+						}
+						else {
+
+							homeMap.src = "";
+
+							homeMapContainer.style.display =
+								"none";
+
+						}
+
+					}
+					else {
+
+						homeSection.style.display =
+							"none";
+
+						homeMap.src =
+							"";
+
+						homeMapContainer.style.display =
+							"none";
+
+					}
+
+
+					/* Shop */
+
+					if (
+						sLat &&
+						sLng &&
+						sLat !== "0" &&
+						sLng !== "0"
+					) {
+
+						shopSection.style.display =
+							"block";
+
+						document.getElementById(
+							"valShopAddress"
+						).innerText =
+							shopAddress || "N/A";
+
+
+						const shopLat =
+							parseFloat(sLat);
+
+						const shopLng =
+							parseFloat(sLng);
+
+
+						if (
+							!Number.isNaN(shopLat) &&
+							!Number.isNaN(shopLng)
+						) {
+
+							shopMap.src =
+								"https://maps.google.com/maps?q=" +
+								encodeURIComponent(
+									shopLat + "," + shopLng
+								) +
+								"&z=17&output=embed";
+
+							shopMapContainer.style.display =
+								"block";
+
+						}
+						else {
+
+							shopMap.src = "";
+
+							shopMapContainer.style.display =
+								"none";
+
+						}
+
+					}
+					else {
+
+						shopSection.style.display =
+							"none";
+
+						shopMap.src =
+							"";
+
+						shopMapContainer.style.display =
+							"none";
+
+					}
+
+
+					/* Days */
+
+					const daysArray =
+						activeDays
+							.split(",")
+							.map(function (day) {
+
+								return day.trim();
+
+							})
+							.filter(function (day) {
+
+								return day.length > 0;
+
+							});
+
+
+					const allDays = [
+						"Mon",
+						"Tue",
+						"Wed",
+						"Thu",
+						"Fri",
+						"Sat",
+						"Sun"
+					];
+
+
+					allDays.forEach(function (day) {
+
+						const element =
+							document.getElementById(
+								"day-" + day
+							);
+
+
+						if (!element) {
+							return;
+						}
+
+
+						if (
+							daysArray.includes(day)
+						) {
+
+							element.classList.add(
+								"active"
+							);
+
+						}
+						else {
+
+							element.classList.remove(
+								"active"
+							);
+
+						}
+
+					});
+
+
+					/* Show modal */
+
+					const modal =
+						document.getElementById(
+							"deepReviewModal"
+						);
+
+
+					if (modal) {
+
+						modal.style.display =
+							"flex";
+
+						document.body.style.overflow =
+							"hidden";
+
+					}
+
+				}
+
+
+				/* Close review modal */
+
+				function closeDeepReviewModal() {
+
+					const video =
+						document.getElementById(
+							"providerWorkVideo"
+						);
+
+
+					if (video) {
+
+						video.pause();
+
+						video.removeAttribute("src");
+
+						video.load();
+
+					}
+
+
+					const homeMap =
+						document.getElementById(
+							"homeGoogleMap"
+						);
+
+					const shopMap =
+						document.getElementById(
+							"shopGoogleMap"
+						);
+
+
+					if (homeMap) {
+						homeMap.src = "";
+					}
+
+
+					if (shopMap) {
+						shopMap.src = "";
+					}
+
+
+					const modal =
+						document.getElementById(
+							"deepReviewModal"
+						);
+
+
+					if (modal) {
+
+						modal.style.display =
+							"none";
+
+					}
+
+
+					document.body.style.overflow =
+						"";
+
+				}
+
+
+				/* Image zoom */
+
+				function zoomImage(element) {
+
+					if (!element) {
+						return;
+					}
+
+
+					const image =
+						element.getElementsByTagName(
+							"img"
+						)[0];
+
+
+					if (
+						!image ||
+						!image.src
+					) {
+
+						return;
+
+					}
+
+
+					const lightbox =
+						document.getElementById(
+							"imageLightbox"
+						);
+
+					const lightboxImg =
+						document.getElementById(
+							"lightboxTargetImg"
+						);
+
+
+					if (
+						!lightbox ||
+						!lightboxImg
+					) {
+
+						return;
+
+					}
+
+
+					lightboxImg.src =
+						image.src;
+
+
+					lightbox.style.display =
+						"flex";
+
+
+					setTimeout(function () {
+
+						lightbox.classList.add(
+							"show"
+						);
+
+					}, 10);
+
+				}
+
+
+				/* Close lightbox */
+
+				function closeLightbox() {
+
+					const lightbox =
+						document.getElementById(
+							"imageLightbox"
+						);
+
+
+					if (!lightbox) {
+						return;
+					}
+
+
+					lightbox.classList.remove(
+						"show"
+					);
+
+
+					setTimeout(function () {
+
+						lightbox.style.display =
+							"none";
+
+					}, 200);
+
+				}
+
+
+				/* Modal outside click */
+
+				window.addEventListener(
+					"click",
+					function (event) {
+
+						const modal =
+							document.getElementById(
+								"deepReviewModal"
+							);
+
+
+						if (
+							modal &&
+							event.target === modal
+						) {
+
+							closeDeepReviewModal();
+
+						}
+
+					}
+				);
+
+
+				/* Escape */
+
+				document.addEventListener(
+					"keydown",
+					function (event) {
+
+						if (
+							event.key === "Escape"
+						) {
+
+							const modal =
+								document.getElementById(
+									"deepReviewModal"
+								);
+
+							const lightbox =
+								document.getElementById(
+									"imageLightbox"
+								);
+
+
+							if (
+								modal &&
+								modal.style.display ===
+								"flex"
+							) {
+
+								closeDeepReviewModal();
+
+							}
+
+
+							if (
+								lightbox &&
+								lightbox.classList.contains(
+									"show"
+								)
+							) {
+
+								closeLightbox();
+
+							}
+
+
+							closeSidebar();
+
+						}
+
+					}
+				);
+
+
+				/* Search */
+
+				function filterProvidersTable() {
+
+					const input =
+						document.getElementById(
+							"providerSearchInput"
+						);
+
+
+					if (!input) {
+						return;
+					}
+
+
+					const filter =
+						input.value.toLowerCase();
+
+
+					const table =
+						document.querySelector(
+							"table tbody"
+						);
+
+
+					if (!table) {
+						return;
+					}
+
+
+					const rows =
+						table.getElementsByTagName(
+							"tr"
+						);
+
+
+					for (
+						let i = 0;
+						i < rows.length;
+						i++
+					) {
+
+						const row =
+							rows[i];
+
+
+						const rowText =
+							row.textContent ||
+							row.innerText ||
+							"";
+
+
+						if (
+							rowText
+								.toLowerCase()
+								.indexOf(filter) > -1
+						) {
+
+							row.style.display =
+								"";
+
+						}
+						else {
+
+							row.style.display =
+								"none";
+
+						}
+
+					}
+
+				}
+
+	</script>
+
+
+	<script id="servicego-admin-load-more">
+		document.addEventListener("DOMContentLoaded", function () {
+			const PAGE_SIZE = 15;
+			const tables = Array.from(document.querySelectorAll("table tbody"));
+
+			tables.forEach(function (tbody) {
+				const rows = Array.from(tbody.children).filter(function (el) {
+					return el.tagName && el.tagName.toLowerCase() === "tr";
+				});
+
+				if (rows.length <= PAGE_SIZE) return;
+
+				let visible = PAGE_SIZE;
+
+				rows.forEach(function (row, index) {
+					if (index >= visible) row.style.display = "none";
+				});
+
+				const button = document.createElement("button");
+
+				button.type = "button";
+				button.className = "btn btn-outline-warning servicego-load-more";
+				button.textContent = "Load More";
+				button.style.cssText = "display:block;margin:18px auto 5px;min-width:130px;";
+
+				const wrapper = tbody.closest("table");
+
+				if (wrapper && wrapper.parentNode) {
+					wrapper.parentNode.insertBefore(button, wrapper.nextSibling);
+				}
+				else {
+					tbody.parentNode.appendChild(button);
+				}
+
+				button.addEventListener("click", function () {
+
+					const next =
+						Math.min(
+							visible + PAGE_SIZE,
+							rows.length
+						);
+
+					for (
+						let i = visible;
+						i < next;
+						i++
+					) {
+
+						rows[i].style.display = "";
+
+					}
+
+					visible = next;
+
+					if (
+						visible >= rows.length
+					) {
+
+						button.remove();
+
+					}
+
+				});
+
+			});
+
+		});
+	</script>
+
+
+	<!-- Logout modal -->
+
+	<script id="servicego-admin-logout-script">
+		document.addEventListener("DOMContentLoaded", function () {
+			document.querySelectorAll(".logout a").forEach(function (link) {
+				link.addEventListener("click", async function (event) {
+					event.preventDefault();
+
+					const result = await Swal.fire({
+						title: "Logout?",
+						text: "Are you sure you want to logout?",
+						icon: "warning",
+						showCancelButton: true,
+						confirmButtonText: "Yes, Logout",
+						cancelButtonText: "Cancel",
+						reverseButtons: true,
+						confirmButtonColor: "#d97600",
+						cancelButtonColor: "#6c757d"
+					});
+
+					if (result.isConfirmed) {
+						window.location.href = link.getAttribute("href");
+					}
+				});
+			});
+		});
+	</script>
+
+	<script id="servicego-unified-ui-script">
+		(function () {
+			function ready(fn) {
+				if (document.readyState !== "loading") fn();
+				else document.addEventListener("DOMContentLoaded", fn);
+			}
+
+			ready(function () {
+
+				/* 1. Highlight the current page in the sidebar and open its group */
+				try {
+					var path = location.pathname.replace(/\/+$/, "").toLowerCase();
+					document.querySelectorAll(".sidebar ul li a[href]").forEach(function (a) {
+						var href = (a.getAttribute("href") || "").replace(/\/+$/, "").toLowerCase();
+						if (href && href === path) {
+							a.classList.add("sg-current");
+							var group = a.closest(".dropdown-item");
+							if (group) group.classList.add("open");
+						}
+					});
+				} catch (e) { }
+
+				/* 2. Give every table cell a label (needed for the phone card layout) */
+				try {
+					document.querySelectorAll("table").forEach(function (table) {
+						var heads = table.querySelectorAll("thead th");
+						if (!heads.length) return;
+						table.querySelectorAll("tbody tr").forEach(function (row) {
+							Array.prototype.forEach.call(row.children, function (cell, i) {
+								if (cell.tagName === "TD" &&
+									!cell.hasAttribute("data-label") &&
+									!cell.hasAttribute("colspan") &&
+									heads[i]) {
+									cell.setAttribute("data-label", heads[i].textContent.trim());
+								}
+							});
+						});
+					});
+				} catch (e) { }
+
+				/* 3. Lock the page behind an open popup */
+				try {
+					var SEL = ".modal, .complaint-details-overlay";
+					var syncLock = function () {
+						var open = Array.prototype.some.call(document.querySelectorAll(SEL), function (el) {
+							var cs = getComputedStyle(el);
+							return cs.display !== "none" && cs.visibility !== "hidden" && cs.opacity !== "0";
+						});
+						document.documentElement.classList.toggle("sg-modal-open", open);
+					};
+					new MutationObserver(function (list) {
+						for (var i = 0; i < list.length; i++) {
+							if (list[i].target.matches && list[i].target.matches(SEL)) { syncLock(); return; }
+						}
+					}).observe(document.body, { subtree: true, attributes: true, attributeFilter: ["style", "class"] });
+					syncLock();
+				} catch (e) { }
+
+				/* 4. Swipe left on the menu to close it (uses the page's own close button) */
+				try {
+					var sidebar = document.querySelector(".sidebar");
+					var closeBtn = document.getElementById("sidebarCloseBtn");
+					var sx = null, sy = null;
+					if (sidebar && closeBtn) {
+						sidebar.addEventListener("touchstart", function (e) {
+							sx = e.touches[0].clientX; sy = e.touches[0].clientY;
+						}, { passive: true });
+						sidebar.addEventListener("touchend", function (e) {
+							if (sx === null) return;
+							var t = e.changedTouches[0];
+							var dx = t.clientX - sx, dy = Math.abs(t.clientY - sy);
+							sx = null;
+							if (dx < -70 && dy < 50 && getComputedStyle(closeBtn).display !== "none") closeBtn.click();
+						}, { passive: true });
+					}
+				} catch (e) { }
+			});
+		})();
+	</script>
+
+
+	<script id="sg-optional-docs">
+		/* Certificate / Affidavit optional: jo upload nahi hua uska card hide ho jata hai */
+		window.sgSetDoc = function (imgId, src) {
+			var img = document.getElementById(imgId);
+			if (!img) return;
+			var v = (src === null || src === undefined) ? "" : String(src).trim();
+			if (v === "null" || v === "undefined") v = "";
+			var card = img.closest(".media-card");
+			if (v) {
+				img.src = v;
+				if (card) card.style.display = "";
+			} else {
+				img.removeAttribute("src");
+				if (card) card.style.display = "none";
+			}
+		};
+	</script>
+</body>
+</html>

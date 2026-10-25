@@ -1,0 +1,2581 @@
+﻿@model IEnumerable<ServiceGo.Models.WalletRequestViewModel>
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>ServicesGo - Wallet Requests</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link rel="icon"
+          href="@Url.Content("~/images/Logo.png")"
+          type="image/x-icon" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            background: #f5f7fb;
+            display: flex;
+            overflow-x: hidden;
+        }
+
+        /* Mobile header */
+
+        .mobile-header {
+            display: none;
+            width: 100%;
+            height: 60px;
+            background: linear-gradient(135deg, #ffb45e, #ff7f36);
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 150;
+            padding: 0 20px;
+            align-items: center;
+            justify-content: space-between;
+            color: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .menu-toggle-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 22px;
+            cursor: pointer;
+        }
+
+        .ham-menu {
+            cursor: pointer;
+            font-size: 22px;
+            color: white;
+        }
+
+        .mobile-brand {
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        /* Sidebar */
+
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            background: linear-gradient(180deg, #ffb45e, #ff7f36);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 25px 0;
+            z-index: 200;
+            transition: transform 0.3s ease;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 0 25px;
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 25px;
+        }
+
+            .brand img {
+                width: 36px;
+                border-radius: 4px;
+            }
+
+        /* Sidebar Cross */
+
+        .sidebar-close-btn {
+            display: none;
+            position: absolute;
+            top: 14px;
+            right: 12px;
+            width: 34px;
+            height: 34px;
+            border: none;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.18);
+            color: white;
+            font-size: 17px;
+            cursor: pointer;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            transition: all 0.2s ease;
+        }
+
+            .sidebar-close-btn:hover {
+                background: rgba(255,255,255,0.30);
+                transform: scale(1.05);
+            }
+
+        .sidebar ul {
+            list-style: none;
+        }
+
+            .sidebar ul li a,
+            .sidebar .dropdown-toggle {
+                display: flex !important;
+                align-items: center;
+                justify-content: space-between;
+                padding: 14px 25px;
+                color: white;
+                text-decoration: none;
+                font-size: 15px;
+                opacity: 0.9;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                width: 100%;
+            }
+
+        .toggle-left {
+            display: flex;
+            align-items: center;
+        }
+
+        .sidebar ul li a i,
+        .sidebar .toggle-left i {
+            width: 20px;
+            margin-right: 12px;
+            text-align: center;
+        }
+
+        .sidebar ul li a:hover,
+        .sidebar .dropdown-toggle:hover {
+            background: rgba(255, 255, 255, 0.15);
+            opacity: 1;
+        }
+
+        .dropdown-item {
+            position: relative;
+        }
+
+        .arrow-icon {
+            font-size: 12px;
+            transition: transform 0.3s ease;
+        }
+
+        .submenu {
+            list-style: none;
+            background: rgba(0, 0, 0, 0.08);
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-in-out;
+            padding: 0;
+        }
+
+            .submenu li a {
+                display: block !important;
+                padding: 10px 25px 10px 57px !important;
+                font-size: 14px;
+                opacity: 0.85;
+            }
+
+        .dropdown-item.open .submenu {
+            max-height: 160px;
+        }
+
+        .dropdown-item.open .arrow-icon {
+            transform: rotate(180deg);
+        }
+
+        .logout {
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+            .logout a {
+                display: flex;
+                align-items: center;
+                color: white;
+                text-decoration: none;
+                font-size: 15px;
+                opacity: 0.9;
+                padding: 0 25px;
+            }
+
+                .logout a i {
+                    width: 20px;
+                    margin-right: 12px;
+                }
+
+        /* Sidebar overlay */
+
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.4);
+            z-index: 190;
+        }
+
+            .sidebar-overlay.active {
+                display: block;
+            }
+
+        /* Main content */
+
+        .main-content {
+            margin-left: 260px;
+            padding: 40px;
+            width: calc(100% - 260px);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .page-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            gap: 20px;
+        }
+
+        .page-title {
+            font-size: 26px;
+            font-weight: 600;
+            color: #222;
+        }
+
+        /* Search */
+
+        .search-container {
+            display: flex;
+            width: 320px;
+            position: relative;
+        }
+
+            .search-container input {
+                width: 100%;
+                padding: 10px 15px 10px 40px;
+                border: 1px solid #e2e8f0;
+                border-radius: 8px;
+                font-size: 14px;
+                outline: none;
+                background: white;
+            }
+
+                .search-container input:focus {
+                    border-color: #ff7f36;
+                }
+
+            .search-container i {
+                position: absolute;
+                left: 15px;
+                top: 14px;
+                color: #94a3b8;
+            }
+
+        /* Table */
+
+        .table-container {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th {
+            background: #f8fafc;
+            color: #64748b;
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            padding: 15px;
+            border-bottom: 2px solid #edf2f7;
+        }
+
+        td {
+            padding: 15px;
+            color: #334155;
+            font-size: 14px;
+            border-bottom: 1px solid #edf2f7;
+            vertical-align: middle;
+        }
+
+        tr:hover {
+            background: #fafafa;
+        }
+
+        /* Buttons */
+
+        .btn {
+            padding: 8px 14px;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-view {
+            background: #e0f2fe;
+            color: #0369a1;
+        }
+
+            .btn-view:hover {
+                background: #bae6fd;
+            }
+
+        .btn-approve {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+            .btn-approve:hover {
+                background: #bbf7d0;
+            }
+
+        .btn-reject {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+            .btn-reject:hover {
+                background: #fecaca;
+            }
+
+        /* Badge */
+
+        .badge {
+            padding: 4px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: 500;
+            display: inline-block;
+        }
+
+        .badge-pending {
+            background: #fef3c7;
+            color: #d97706;
+        }
+
+        /* Modal */
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 25px;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+
+            .modal-content h3 {
+                font-size: 18px;
+                color: #222;
+                margin-bottom: 5px;
+            }
+
+            .modal-content p {
+                font-size: 13px;
+                color: #64748b;
+                margin-bottom: 15px;
+            }
+
+            .modal-content img {
+                max-width: 100%;
+                max-height: 60vh;
+                border-radius: 8px;
+                object-fit: contain;
+                border: 1px solid #e2e8f0;
+            }
+
+        .actual-amount-box {
+            margin-top: 18px;
+            text-align: left;
+        }
+
+            .actual-amount-box label {
+                display: block;
+                margin-bottom: 7px;
+                color: #334155;
+                font-size: 13px;
+                font-weight: 600;
+            }
+
+        .actual-amount-input-wrap {
+            display: flex;
+            align-items: center;
+            border: 1px solid #dbe2ea;
+            border-radius: 8px;
+            background: #fff;
+            overflow: hidden;
+        }
+
+            .actual-amount-input-wrap span {
+                padding: 10px 12px;
+                background: #f8fafc;
+                color: #64748b;
+                font-weight: 600;
+                border-right: 1px solid #dbe2ea;
+            }
+
+            .actual-amount-input-wrap input {
+                width: 100%;
+                border: 0;
+                outline: 0;
+                padding: 10px 12px;
+                font-size: 14px;
+                color: #222;
+            }
+
+        .actual-amount-help {
+            margin-top: 6px;
+            color: #64748b;
+            font-size: 11px;
+        }
+
+        .modal-actions {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .close-modal {
+            position: absolute;
+            right: 20px;
+            top: 15px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #94a3b8;
+        }
+
+        /* Responsive */
+
+        @@media (max-width: 992px) {
+            .mobile-header {
+                display: flex;
+            }
+
+            .sidebar {
+                transform: translateX(-100%);
+                width: 260px;
+                padding-top: 25px;
+            }
+
+                .sidebar.active {
+                    transform: translateX(0);
+                }
+
+            .sidebar-close-btn {
+                display: flex;
+            }
+
+            .main-content {
+                margin-left: 0;
+                width: 100%;
+                padding: 85px 25px 30px;
+            }
+
+            .page-header-row {
+                flex-wrap: wrap;
+            }
+
+            .search-container {
+                width: 100%;
+                max-width: 400px;
+            }
+        }
+
+        @@media (max-width: 768px) {
+            body {
+                width: 100%;
+            }
+
+            .mobile-header {
+                height: 58px;
+                padding: 0 16px;
+            }
+
+            .mobile-brand {
+                font-size: 17px;
+            }
+
+            .main-content {
+                padding: 78px 15px 25px;
+            }
+
+            .page-header-row {
+                display: flex;
+                flex-direction: column;
+                align-items: stretch;
+                gap: 15px;
+                margin-bottom: 20px;
+            }
+
+            .page-title {
+                font-size: 22px;
+                line-height: 1.3;
+            }
+
+            .search-container {
+                width: 100%;
+                max-width: none;
+            }
+
+                .search-container input {
+                    height: 44px;
+                    padding-left: 42px;
+                }
+
+                .search-container i {
+                    top: 14px;
+                }
+            /* Mobile card-style table */
+
+            .table-container {
+                padding: 12px;
+                border-radius: 10px;
+                overflow-x: visible;
+                box-shadow: 0 3px 12px rgba(0,0,0,0.04);
+            }
+
+            table,
+            thead,
+            tbody,
+            tr,
+            th,
+            td {
+                display: block;
+                width: 100%;
+            }
+
+            thead {
+                display: none;
+            }
+
+            tbody {
+                width: 100%;
+            }
+
+                tbody tr {
+                    background: white;
+                    border: 1px solid #e5e7eb;
+                    border-radius: 10px;
+                    margin-bottom: 14px;
+                    padding: 5px 0;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+                }
+
+                    tbody tr:hover {
+                        background: white;
+                    }
+
+                    tbody tr:last-child {
+                        margin-bottom: 0;
+                    }
+
+            td {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 12px;
+                padding: 11px 12px;
+                border-bottom: 1px solid #edf2f7;
+                font-size: 13px;
+                min-height: 46px;
+                text-align: right;
+                word-break: break-word;
+            }
+
+                td:last-child {
+                    border-bottom: none;
+                    padding-bottom: 13px;
+                }
+
+                td::before {
+                    content: attr(data-label);
+                    color: #64748b;
+                    font-weight: 600;
+                    font-size: 12px;
+                    text-align: left;
+                    flex: 0 0 auto;
+                    margin-right: auto;
+                }
+
+                td > * {
+                    max-width: 62%;
+                }
+
+                td[data-label="Provider ID"] {
+                    color: #334155;
+                    font-weight: 500;
+                }
+
+                td[data-label="Provider Name"] {
+                    font-weight: 500;
+                }
+
+                td[data-label="Amount Sent"] {
+                    color: #334155;
+                    font-weight: 600;
+                }
+
+                td[data-label="Status"] {
+                    justify-content: space-between;
+                }
+
+                td[data-label="Transcript Receipt"] {
+                    align-items: center;
+                }
+
+            .btn-view {
+                padding: 9px 11px;
+                font-size: 12px;
+                white-space: nowrap;
+            }
+            /* Empty state */
+
+            td[colspan="5"] {
+                display: block;
+                text-align: center !important;
+                padding: 25px 15px;
+            }
+
+                td[colspan="5"]::before {
+                    display: none;
+                }
+            /* Modal */
+
+            .modal {
+                padding: 15px;
+            }
+
+            .modal-content {
+                padding: 20px 15px;
+                max-height: 90vh;
+                overflow-y: auto;
+            }
+
+                .modal-content h3 {
+                    font-size: 17px;
+                    padding-right: 25px;
+                }
+
+                .modal-content p {
+                    font-size: 12px;
+                    line-height: 1.5;
+                }
+
+                .modal-content img {
+                    max-height: 45vh;
+                }
+
+            .modal-actions {
+                gap: 8px;
+            }
+
+                .modal-actions .btn {
+                    flex: 1;
+                    justify-content: center;
+                    padding: 10px;
+                }
+
+            .close-modal {
+                right: 14px;
+                top: 10px;
+            }
+        }
+
+        @@media (max-width: 420px) {
+            .main-content {
+                padding-left: 10px;
+                padding-right: 10px;
+            }
+
+            .page-title {
+                font-size: 20px;
+            }
+
+            .table-container {
+                padding: 8px;
+            }
+
+            tbody tr {
+                border-radius: 9px;
+            }
+
+            td {
+                padding: 10px;
+                font-size: 12px;
+            }
+
+                td::before {
+                    font-size: 11px;
+                }
+
+                td > * {
+                    max-width: 58%;
+                }
+
+            .btn-view {
+                padding: 8px 9px;
+                font-size: 11px;
+                gap: 4px;
+            }
+
+                .btn-view i {
+                    font-size: 11px;
+                }
+
+            .badge {
+                font-size: 11px;
+                padding: 4px 8px;
+            }
+        }
+    </style>
+
+    <style id="servicego-admin-caret-fix">
+        body, body * {
+            caret-color: transparent !important;
+        }
+
+        input, textarea, select, [contenteditable="true"], [contenteditable=""] {
+            caret-color: auto !important;
+        }
+
+            input[type="button"], input[type="submit"], input[type="reset"], input[type="checkbox"], input[type="radio"], input[type="file"], select {
+                caret-color: transparent !important;
+            }
+    </style>
+
+    <style id="servicego-admin-logo-fix">
+        .servicego-home-logo {
+            display: inline-block;
+            text-decoration: none;
+            cursor: default;
+        }
+
+            .servicego-home-logo img {
+                cursor: default;
+            }
+    </style>
+
+    <style id="servicego-admin-logout-modal">
+        .servicego-logout-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 99999;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,.45);
+            padding: 20px;
+        }
+
+            .servicego-logout-modal.show {
+                display: flex;
+            }
+
+        .servicego-logout-box {
+            width: min(360px, 92vw);
+            background: #fff;
+            border-radius: 14px;
+            padding: 24px;
+            text-align: center;
+            box-shadow: 0 12px 40px rgba(0,0,0,.25);
+        }
+
+            .servicego-logout-box h3 {
+                margin: 0 0 8px;
+                font-size: 20px;
+                color: #222;
+            }
+
+            .servicego-logout-box p {
+                margin: 0 0 20px;
+                color: #666;
+                font-size: 14px;
+            }
+
+        .servicego-logout-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+            .servicego-logout-actions button {
+                border: 0;
+                border-radius: 8px;
+                padding: 9px 18px;
+                cursor: pointer;
+                font-size: 14px;
+            }
+
+        .servicego-logout-cancel {
+            background: #e9ecef;
+            color: #333;
+        }
+
+        .servicego-logout-confirm {
+            background: #d97600;
+            color: #fff;
+        }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style id="servicego-unified-ui">
+        /*
+                         * ServicesGo - unified mobile layout + popups (shared by all admin pages)
+                         * Only look & feel is changed here. No page logic is touched.
+                         */
+        :root {
+            --sg-orange: #ff7f36;
+            --sg-orange-2: #ffb45e;
+            --sg-ink: #1d2939;
+            --sg-muted: #64748b;
+            --sg-line: #e8ecf2;
+            --sg-pad: 24px;
+        }
+
+        @@keyframes sgFade {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @@keyframes sgPop {
+            from {
+                opacity: 0;
+                transform: translateY(18px) scale(.97);
+            }
+
+            to {
+                opacity: 1;
+                transform: none;
+            }
+        }
+
+        @@keyframes sgSheet {
+            from {
+                transform: translateY(100%);
+            }
+
+            to {
+                transform: none;
+            }
+        }
+
+        /* Sidebar: highlight the page you are on */
+        .sidebar ul li a.sg-current {
+            background: rgba(255,255,255,.22) !important;
+            opacity: 1 !important;
+            font-weight: 600;
+            box-shadow: inset 4px 0 0 #fff;
+        }
+
+        /* Load more button */
+        button.servicego-load-more {
+            border: 1.5px solid var(--sg-orange-2);
+            background: #fff;
+            color: #e8690f;
+            font-weight: 600;
+            font-size: 14px;
+            border-radius: 12px;
+            padding: 11px 24px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: background .2s ease, color .2s ease;
+        }
+
+            button.servicego-load-more:hover {
+                background: var(--sg-orange);
+                border-color: var(--sg-orange);
+                color: #fff;
+            }
+
+        /* Popups (all pages) */
+        .modal {
+            background: rgba(15,23,42,.62) !important;
+            -webkit-backdrop-filter: blur(4px);
+            backdrop-filter: blur(4px);
+            animation: sgFade .2s ease;
+        }
+
+        .modal-content {
+            border-radius: 22px !important;
+            padding: 26px var(--sg-pad) var(--sg-pad) !important;
+            box-shadow: 0 30px 80px rgba(15,23,42,.35) !important;
+            animation: sgPop .25s cubic-bezier(.2,.8,.2,1);
+            overscroll-behavior: contain;
+            scrollbar-width: thin;
+        }
+
+        .modal-title {
+            font-size: 21px !important;
+            font-weight: 600 !important;
+            color: var(--sg-ink) !important;
+            margin-bottom: 18px !important;
+        }
+
+        /* close (x) button */
+        .modal-close-x,
+        .close-modal {
+            position: absolute !important;
+            top: 14px !important;
+            right: 14px !important;
+            width: 38px;
+            height: 38px;
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: #f2f4f7;
+            color: #667085 !important;
+            font-size: 17px !important;
+            line-height: 1;
+            cursor: pointer;
+            z-index: 5;
+            transition: background .2s ease, color .2s ease;
+        }
+
+        .close-modal {
+            font-size: 24px !important;
+        }
+
+            .modal-close-x:hover,
+            .close-modal:hover {
+                background: #fff1e6;
+                color: var(--sg-orange) !important;
+            }
+
+        /* section headings inside review popups */
+        .modal-content .section-title {
+            font-size: 15px !important;
+            color: var(--sg-ink) !important;
+            text-transform: none !important;
+            letter-spacing: 0 !important;
+            border-bottom: 0 !important;
+            border-left: 4px solid var(--sg-orange);
+            padding: 2px 0 2px 10px !important;
+            margin: 24px 0 12px !important;
+        }
+
+        .modal-content .info-grid {
+            background: #fafbfc !important;
+            border: 1px solid #eef0f3 !important;
+            border-radius: 14px !important;
+        }
+
+        .modal-content .info-label {
+            font-size: 12px;
+            color: var(--sg-muted);
+            font-weight: 500;
+        }
+
+        .modal-content .info-value {
+            color: var(--sg-ink);
+        }
+
+        .modal-content .media-card,
+        .modal-content .service-video-block,
+        .modal-content .google-map-container {
+            border-radius: 14px !important;
+            border-color: #eef0f3 !important;
+        }
+
+        .modal-content .zoom-box {
+            border-radius: 10px;
+        }
+
+        .modal-content .pop-row {
+            border-bottom-color: #f1f4f8;
+        }
+
+        .modal-content .pop-label {
+            color: var(--sg-muted);
+            font-weight: 500;
+        }
+
+        .modal-content img {
+            border-radius: 14px;
+        }
+
+        /* wallet popup input */
+        .actual-amount-box {
+            background: #fff8f2;
+            border: 1px solid #ffe3cc;
+            border-radius: 14px;
+            padding: 14px;
+        }
+
+        .actual-amount-input-wrap {
+            border-radius: 10px !important;
+        }
+
+            .actual-amount-input-wrap:focus-within {
+                border-color: var(--sg-orange) !important;
+                box-shadow: 0 0 0 3px rgba(255,127,54,.15);
+            }
+
+        /* popup footer buttons: stay visible while the popup scrolls */
+        .pop-footer-buttons,
+        .modal-actions {
+            position: sticky;
+            bottom: 0;
+            z-index: 4;
+            margin: 26px calc(-1 * var(--sg-pad)) calc(-1 * var(--sg-pad)) !important;
+            padding: 14px var(--sg-pad) max(16px, env(safe-area-inset-bottom));
+            background: #fff;
+            border-top: 1px solid #eef0f3;
+            gap: 12px !important;
+        }
+
+            .pop-btn-block,
+            .pop-btn-close,
+            .pop-btn-approve,
+            .pop-btn-reject,
+            .modal-actions .btn {
+                border-radius: 12px !important;
+                padding: 12px 24px !important;
+                min-height: 46px;
+                min-width: 130px;
+                font-family: inherit;
+                font-weight: 600 !important;
+                font-size: 14px !important;
+                transition: transform .15s ease, filter .15s ease;
+            }
+
+                .pop-btn-block:active,
+                .pop-btn-close:active,
+                .pop-btn-approve:active,
+                .pop-btn-reject:active,
+                .modal-actions .btn:active {
+                    transform: scale(.97);
+                }
+
+        /* SweetAlert2 popups (every confirm / success / error) */
+        .swal2-container {
+            -webkit-backdrop-filter: blur(3px);
+            backdrop-filter: blur(3px);
+        }
+
+        .swal2-popup {
+            border-radius: 22px !important;
+            padding: 26px 22px 22px !important;
+            font-family: 'Poppins', sans-serif !important;
+            box-shadow: 0 30px 80px rgba(15,23,42,.35) !important;
+        }
+
+        .swal2-title {
+            font-size: 21px !important;
+            font-weight: 600 !important;
+            color: var(--sg-ink) !important;
+            padding: .3em 0 0 !important;
+        }
+
+        .swal2-html-container {
+            font-size: 14px !important;
+            line-height: 1.55;
+            color: #667085 !important;
+        }
+
+        .swal2-actions {
+            width: 100%;
+            gap: 10px;
+            flex-wrap: nowrap !important;
+            margin-top: 1.4em !important;
+        }
+
+        .swal2-styled {
+            flex: 1 1 0;
+            margin: 0 !important;
+            border-radius: 12px !important;
+            padding: 12px 14px !important;
+            font-size: 14px !important;
+            font-weight: 600 !important;
+            box-shadow: none !important;
+        }
+
+            .swal2-styled:focus {
+                box-shadow: 0 0 0 3px rgba(255,127,54,.25) !important;
+            }
+
+        /* scroll lock while a popup is open */
+        html.sg-modal-open,
+        html.sg-modal-open body {
+            overflow: hidden !important;
+        }
+
+        @@media (prefers-reduced-motion: reduce) {
+            .modal, .modal-content {
+                animation: none !important;
+            }
+        }
+
+        /* PHONE LAYOUT (same on every page) */
+        @@media (max-width: 768px) {
+            :root {
+                --sg-pad: 16px;
+            }
+            /* top bar */
+            .mobile-header {
+                height: 58px !important;
+                padding: 0 14px !important;
+                box-shadow: 0 4px 18px rgba(255,127,54,.28) !important;
+            }
+
+            .mobile-brand {
+                font-size: 18px !important;
+                font-weight: 700 !important;
+            }
+
+            .menu-toggle-btn {
+                width: 42px;
+                height: 42px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 12px !important;
+                font-size: 21px !important;
+            }
+
+                .menu-toggle-btn:active {
+                    background: rgba(255,255,255,.2) !important;
+                }
+
+            .mobile-header > :last-child:not(.mobile-brand) {
+                width: 42px !important;
+                flex: 0 0 42px;
+            }
+            /* slide-in menu */
+            .sidebar {
+                width: 285px !important;
+                max-width: 84% !important;
+                box-shadow: 10px 0 30px rgba(15,23,42,.22) !important;
+            }
+
+            .sidebar-overlay {
+                background: rgba(15,23,42,.5) !important;
+            }
+            /* page frame */
+            .main-content {
+                padding: 76px 14px 28px !important;
+            }
+
+            .page-header-row,
+            .page-header {
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 12px !important;
+                margin-bottom: 16px !important;
+            }
+
+                .page-title,
+                .page-header h1,
+                .welcome-section h1 {
+                    font-size: 22px !important;
+                    line-height: 1.3 !important;
+                }
+
+            .search-container,
+            .search-box {
+                width: 100% !important;
+                max-width: none !important;
+            }
+
+                .search-container input,
+                .search-box input {
+                    height: 46px !important;
+                    font-size: 14px !important;
+                    border-radius: 12px !important;
+                }
+
+                .search-container > i {
+                    top: 50% !important;
+                    transform: translateY(-50%) !important;
+                }
+            /* dashboard cards */
+            .metrics-grid .card {
+                min-width: 100% !important;
+                border-radius: 16px !important;
+            }
+            /* tables become cards (rows keep their own show/hide logic) */
+            .table-container {
+                background: transparent !important;
+                padding: 0 !important;
+                border: 0 !important;
+                box-shadow: none !important;
+                overflow: visible !important;
+            }
+
+                .table-container table,
+                .table-container tbody {
+                    display: block !important;
+                    width: 100% !important;
+                    min-width: 0 !important;
+                }
+
+                .table-container thead {
+                    display: none !important;
+                }
+
+                .table-container tbody tr {
+                    width: 100% !important;
+                    background: #fff !important;
+                    border: 1px solid var(--sg-line) !important;
+                    border-radius: 16px !important;
+                    margin: 0 0 12px !important;
+                    padding: 6px 14px !important;
+                    box-shadow: 0 5px 16px rgba(16,24,40,.06) !important;
+                }
+
+                .table-container tbody td {
+                    display: flex !important;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 12px;
+                    width: 100% !important;
+                    min-height: 44px;
+                    padding: 11px 0 !important;
+                    border: 0 !important;
+                    border-bottom: 1px solid #f1f4f8 !important;
+                    font-size: 13px !important;
+                    text-align: right !important;
+                    white-space: normal !important;
+                    overflow-wrap: anywhere;
+                    word-break: break-word;
+                }
+
+                    .table-container tbody td:last-child {
+                        border-bottom: 0 !important;
+                    }
+
+                    .table-container tbody td::before {
+                        content: attr(data-label);
+                        flex: 0 0 auto;
+                        max-width: 42%;
+                        margin-right: auto;
+                        text-align: left;
+                        color: var(--sg-muted);
+                        font-size: 12px;
+                        font-weight: 600;
+                        text-transform: none !important;
+                        letter-spacing: 0 !important;
+                    }
+                    /* action cell = one full-width button */
+                    .table-container tbody td[data-label="Actions"],
+                    .table-container tbody td[data-label="Action"],
+                    .table-container tbody td:has(.btn-view) {
+                        display: block !important;
+                        padding: 12px 0 8px !important;
+                    }
+
+                        .table-container tbody td[data-label="Actions"]::before,
+                        .table-container tbody td[data-label="Action"]::before,
+                        .table-container tbody td:has(.btn-view)::before {
+                            display: none !important;
+                        }
+
+                    .table-container tbody td .btn-view {
+                        width: 100% !important;
+                        max-width: 100% !important;
+                        justify-content: center;
+                        padding: 11px 14px !important;
+                        font-size: 13px !important;
+                        border-radius: 12px !important;
+                    }
+                    /* empty row */
+                    .table-container tbody td[colspan] {
+                        display: block !important;
+                        text-align: center !important;
+                        padding: 26px 10px !important;
+                    }
+
+                        .table-container tbody td[colspan]::before {
+                            display: none !important;
+                        }
+
+                .table-container .badge,
+                .badge {
+                    font-size: 11px !important;
+                    padding: 5px 10px !important;
+                    border-radius: 999px;
+                }
+
+            button.servicego-load-more {
+                width: 100%;
+                max-width: none;
+            }
+            /* complaints page: same card feel, readable sizes */
+            #complaintsTable tbody td,
+            #warningsTable tbody td {
+                font-size: 12.5px !important;
+            }
+
+                #complaintsTable tbody td::before {
+                    font-size: 11px !important;
+                    font-weight: 600 !important;
+                    text-transform: none !important;
+                    letter-spacing: 0 !important;
+                    color: var(--sg-muted) !important;
+                    flex: 0 0 auto !important;
+                }
+
+            #warningsTable,
+            #warningsTable tbody {
+                display: block;
+                width: 100%;
+            }
+
+                #warningsTable thead {
+                    display: none;
+                }
+
+                #warningsTable tbody tr {
+                    display: block;
+                    background: #fff;
+                    border: 1px solid var(--sg-line);
+                    border-radius: 16px;
+                    margin: 0 0 12px;
+                    padding: 8px 12px;
+                    box-shadow: 0 5px 16px rgba(16,24,40,.06);
+                }
+
+                #warningsTable tbody td {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 10px;
+                    padding: 10px 4px;
+                    border: 0;
+                    border-bottom: 1px solid #f1f4f8;
+                    text-align: right;
+                }
+
+                    #warningsTable tbody td:last-child {
+                        border-bottom: 0;
+                    }
+
+                    #warningsTable tbody td::before {
+                        content: attr(data-label);
+                        color: var(--sg-muted);
+                        font-size: 11px;
+                        font-weight: 600;
+                        flex: 0 0 auto;
+                    }
+
+                    #warningsTable tbody td:first-child::before {
+                        display: none;
+                    }
+
+            .filter-btn {
+                font-size: 12px !important;
+            }
+            /* popups become bottom sheets */
+            .modal {
+                align-items: flex-end !important;
+                padding: 0 !important;
+            }
+
+            .modal-content {
+                width: 100% !important;
+                max-width: 100% !important;
+                max-height: 92vh !important;
+                border-radius: 24px 24px 0 0 !important;
+                padding: 22px var(--sg-pad) var(--sg-pad) !important;
+                animation: sgSheet .3s cubic-bezier(.2,.8,.2,1);
+            }
+
+                .modal-content::before {
+                    content: "";
+                    display: block;
+                    width: 42px;
+                    height: 4px;
+                    border-radius: 4px;
+                    background: #d0d5dd;
+                    margin: -10px auto 16px;
+                }
+
+            .modal-close-x,
+            .close-modal {
+                top: 12px !important;
+                right: 12px !important;
+            }
+
+            .pop-footer-buttons,
+            .modal-actions {
+                margin-top: 22px !important;
+            }
+
+                .pop-btn-block,
+                .pop-btn-close,
+                .pop-btn-approve,
+                .pop-btn-reject,
+                .modal-actions .btn {
+                    flex: 1 1 0 !important;
+                    max-width: none !important;
+                    min-width: 0;
+                    width: auto;
+                }
+
+            .modal-content .info-grid {
+                grid-template-columns: repeat(2, 1fr) !important;
+            }
+        }
+
+        @@media (max-width: 576px) {
+            .modal-content .info-grid {
+                grid-template-columns: 1fr !important;
+            }
+            /* SweetAlert2 also slides up from the bottom on phones */
+            .swal2-container {
+                padding: 0 !important;
+            }
+
+                .swal2-container.swal2-center > .swal2-popup {
+                    grid-column: 1 / -1 !important;
+                    place-self: end stretch !important;
+                    width: 100% !important;
+                    max-width: 100% !important;
+                    margin: 0 !important;
+                    border-radius: 24px 24px 0 0 !important;
+                    padding-bottom: calc(20px + env(safe-area-inset-bottom)) !important;
+                }
+        }
+    </style>
+
+
+    <style id="sg-wallet-modal-fix">
+        /* Popup scroll + buttons always reachable (desktop + mobile) */
+        .modal {
+            overflow: hidden;
+        }
+
+        .modal-content {
+            max-height: 90vh !important;
+            overflow-y: auto !important;
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-y;
+        }
+
+            .modal-content img {
+                max-height: 40vh !important;
+            }
+
+        #walletActionForm {
+            display: contents;
+        }
+
+        .modal-actions {
+            position: sticky;
+            bottom: 0;
+            z-index: 10;
+            pointer-events: auto;
+        }
+
+            .modal-actions .btn {
+                position: relative;
+                z-index: 11;
+                pointer-events: auto;
+                cursor: pointer;
+            }
+    </style>
+
+    <style id="sg-receipt-viewer-css">
+        #receiptImg {
+            cursor: zoom-in;
+        }
+
+        .receipt-zoom-hint {
+            font-size: 11px;
+            color: #94a3b8;
+            margin-top: 6px;
+            text-align: center;
+        }
+
+        .rv {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 5000;
+            background: rgba(0,0,0,.94);
+            overflow: hidden;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+            .rv.show {
+                display: block;
+            }
+
+        .rv-stage {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: grab;
+        }
+
+            .rv-stage.dragging {
+                cursor: grabbing;
+            }
+
+        #rvImg {
+            max-width: 96vw;
+            max-height: 86vh;
+            object-fit: contain;
+            transform-origin: center center;
+            will-change: transform;
+            border: 0 !important;
+            border-radius: 6px !important;
+            background: #fff;
+            pointer-events: none;
+            -webkit-user-drag: none;
+        }
+
+        .rv-bar {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            z-index: 5002;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .rv-btn {
+            min-width: 42px;
+            height: 42px;
+            padding: 0 12px;
+            border: 0;
+            border-radius: 21px;
+            background: #fff;
+            color: #222;
+            font-size: 22px;
+            line-height: 1;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: 600;
+        }
+
+            .rv-btn:active {
+                transform: scale(.95);
+            }
+
+        .rv-level {
+            color: #fff;
+            font-size: 13px;
+            min-width: 46px;
+            text-align: center;
+        }
+
+        .rv-help {
+            position: absolute;
+            bottom: 14px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: #cbd5e1;
+            font-size: 12px;
+            pointer-events: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Mobile header -->
+
+    <div class="mobile-header">
+        <div class="ham-menu" id="hamMenu">
+            <i class="fa-solid fa-bars"></i>
+        </div>
+
+        <div class="mobile-brand">
+            <span>ServicesGo</span>
+        </div>
+
+        <div style="width: 22px;"></div>
+    </div>
+
+    <!-- Sidebar overlay -->
+
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Sidebar -->
+
+    <div class="sidebar" id="sidebar">
+
+        <!-- Sidebar Cross -->
+        <button type="button"
+                class="sidebar-close-btn"
+                id="sidebarCloseBtn"
+                aria-label="Close Menu">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+
+        <div>
+
+            <div class="brand">
+                <span class="servicego-home-logo"><img src="/images/Logo.png" alt="Logo" /></span>
+                <span>ServicesGo</span>
+            </div>
+
+            <ul>
+
+                <li>
+                    <a href="/Admin/Dashboard">
+                        <span class="toggle-left">
+                            <i class="fa-solid fa-house"></i>
+                            <span>Dashboard</span>
+                        </span>
+                    </a>
+                </li>
+
+                <!-- Customers -->
+
+                <li class="dropdown-item">
+
+                    <div class="dropdown-toggle">
+
+                        <div class="toggle-left">
+                            <i class="fa-solid fa-users"></i>
+                            <span>Customers</span>
+                        </div>
+
+                        <i class="fa-solid fa-chevron-down arrow-icon"></i>
+
+                    </div>
+
+                    <ul class="submenu">
+
+                        <li>
+                            <a href="/Admin/ActiveCustomers">
+                                Active
+                            </a>
+                        </li>
+
+                        <li>
+                            <a href="/Admin/BlockedCustomers">
+                                Blocked
+                            </a>
+                        </li>
+
+                    </ul>
+
+                </li>
+
+                <!-- Service Providers -->
+
+                <li class="dropdown-item">
+
+                    <div class="dropdown-toggle">
+
+                        <div class="toggle-left">
+                            <i class="fa-solid fa-user-gear"></i>
+                            <span>Service Providers</span>
+                        </div>
+
+                        <i class="fa-solid fa-chevron-down arrow-icon"></i>
+
+                    </div>
+
+                    <ul class="submenu">
+
+                        <li>
+                            <a href="/Admin/ActiveProviders">
+                                Active
+                            </a>
+                        </li>
+
+                        <li>
+                            <a href="/Admin/PendingProviders">
+                                Pending
+                            </a>
+                        </li>
+
+                        <li>
+                            <a href="/Admin/BlockedProviders">
+                                Blocked
+                            </a>
+                        </li>
+
+                    </ul>
+
+                </li>
+
+                <!-- Complaints -->
+
+                <li>
+                    <a href="/Admin/Complaint">
+
+                        <span class="toggle-left">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                            <span>Complaints</span>
+                        </span>
+
+                    </a>
+                </li>
+
+                <!-- Wallet Requests -->
+
+                <li>
+                    <a href="/Admin/WalletRequests"
+                       style="background: rgba(255,255,255,0.15);">
+
+                        <span class="toggle-left">
+                            <i class="fa-solid fa-wallet"></i>
+                            <span>Wallet Requests</span>
+                        </span>
+
+                    </a>
+                </li>
+
+                <!-- Setting -->
+            </ul>
+
+        </div>
+
+        <!-- Logout -->
+
+        <div class="logout">
+            <a href="/Admin/Logout">
+
+                <i class="fa-solid fa-right-from-bracket"></i>
+                <span>Logout</span>
+            </a>
+
+        </div>
+
+    </div>
+
+    <!-- Main content -->
+
+    <div class="main-content">
+
+        <div class="page-header-row">
+
+            <h1 class="page-title">
+                Wallet Deposit Requests
+            </h1>
+
+            <div class="search-container">
+
+                <input type="text"
+                       id="walletSearchInput"
+                       onkeyup="filterWalletTable()"
+                       placeholder="Search by Name or ID..." />
+
+                <i class="fa-solid fa-magnifying-glass"></i>
+
+            </div>
+
+        </div>
+
+        <!-- Table -->
+
+        <div class="table-container">
+
+            <table>
+
+                <thead>
+
+                    <tr>
+                        <th>Provider ID</th>
+                        <th>Provider Name</th>
+                        <th>Amount Sent</th>
+                        <th>Status</th>
+                        <th>Transcript Receipt</th>
+                    </tr>
+
+                </thead>
+
+                <tbody>
+
+                    @if (Model != null && Model.Any())
+                    {
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+
+                                <td data-label="Provider ID">
+                                    @item.ProviderFormattedId
+                                </td>
+
+                                <td data-label="Provider Name">
+                                    @item.ProviderName
+                                </td>
+
+                                <td data-label="Amount Sent">
+                                    Rs. @(Convert.ToDecimal(item.Amount).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))
+                                </td>
+
+                                <td data-label="Status">
+                                    <span class="badge badge-pending">
+                                        @item.Status
+                                    </span>
+                                </td>
+
+                                <td data-label="Transcript Receipt">
+
+                                    <button class="btn btn-view"
+                                            onclick="openReceiptModal('@item.Id', '@item.ProviderFormattedId', '@item.ProviderName', '@(Convert.ToDecimal(item.Amount).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))', '@item.ReceiptImagePath')">
+
+                                        <i class="fa-solid fa-image"></i>
+
+                                        View Transcript
+
+                                    </button>
+
+                                </td>
+
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+
+                            <td colspan="5" style="text-align:center;">
+                                No pending requests found.
+                            </td>
+
+                        </tr>
+                    }
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+    <!-- Receipt modal -->
+
+    <div id="receiptModal" class="modal">
+
+        <div class="modal-content">
+
+            <span class="close-modal"
+                  onclick="closeReceiptModal()">
+                &times;
+            </span>
+
+            <h3 id="modalProviderName"></h3>
+
+            <p id="modalProviderMeta"></p>
+
+            <img id="receiptImg"
+                 src=""
+                 alt="Receipt Image"
+                 title="Click to zoom" />
+
+            <div class="receipt-zoom-hint">Click the receipt to open and zoom</div>
+
+            <div class="actual-amount-box">
+                <label for="actualAmount">Actual Amount Received</label>
+
+                <div class="actual-amount-input-wrap">
+                    <span>Rs.</span>
+                    <input type="number"
+                           id="actualAmount"
+                           name="actualAmount"
+                           form="walletActionForm"
+                           min="1"
+                           step="any"
+                           inputmode="decimal"
+                           required />
+                </div>
+
+                <div class="actual-amount-help">
+                    Check the uploaded receipt and enter the amount that was actually received.
+                </div>
+            </div>
+
+            <!-- Modal with Form to avoid HTTP 405 -->
+
+            <form id="walletActionForm"
+                  method="post"
+                  action="/Admin/UpdateWalletStatus">
+
+                <input type="hidden"
+                       id="modalRequestId"
+                       name="id" />
+
+                <input type="hidden"
+                       id="modalActionType"
+                       name="actionType" />
+
+                <input type="hidden"
+                       id="rejectReasonInput"
+                       name="rejectReason" />
+
+                <div class="modal-actions">
+
+                    <button type="submit"
+                            class="btn btn-approve"
+                            onclick="return approveWalletRequest();">
+
+                        Approve
+
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-reject"
+                            onclick="rejectWalletRequest()">
+
+                        Reject
+
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+    <!-- Javascript -->
+
+    <script>
+
+        /* Sidebar */
+
+        const hamMenu = document.getElementById("hamMenu");
+        const sidebar = document.getElementById("sidebar");
+        const sidebarOverlay = document.getElementById("sidebarOverlay");
+        const sidebarCloseBtn = document.getElementById("sidebarCloseBtn");
+
+
+        function openSidebar() {
+
+            sidebar.classList.add("active");
+            sidebarOverlay.classList.add("active");
+
+        }
+
+
+        function closeSidebar() {
+
+            sidebar.classList.remove("active");
+            sidebarOverlay.classList.remove("active");
+
+        }
+
+
+        function toggleSidebar() {
+
+            if (sidebar.classList.contains("active")) {
+
+                closeSidebar();
+
+            } else {
+
+                openSidebar();
+
+            }
+
+        }
+
+
+        hamMenu.addEventListener("click", function () {
+
+            toggleSidebar();
+
+        });
+
+
+        sidebarCloseBtn.addEventListener("click", function () {
+
+            closeSidebar();
+
+        });
+
+
+        sidebarOverlay.addEventListener("click", function () {
+
+            closeSidebar();
+
+        });
+
+
+        /* Sidebar links close on mobile */
+
+        document.querySelectorAll(".sidebar a").forEach(function (link) {
+
+            link.addEventListener("click", function () {
+
+                if (window.innerWidth <= 992) {
+
+                    closeSidebar();
+
+                }
+
+            });
+
+        });
+
+
+        /* ESC key closes sidebar */
+
+        document.addEventListener("keydown", function (event) {
+
+            if (event.key === "Escape") {
+
+                closeSidebar();
+
+            }
+
+        });
+
+
+        /* Sidebar dropdowns */
+
+        document.querySelectorAll(".dropdown-toggle").forEach(function (toggle) {
+
+            toggle.addEventListener("click", function () {
+
+                const parent = this.closest(".dropdown-item");
+
+                document.querySelectorAll(".dropdown-item").forEach(function (item) {
+
+                    if (item !== parent) {
+
+                        item.classList.remove("open");
+
+                    }
+
+                });
+
+                parent.classList.toggle("open");
+
+            });
+
+        });
+
+
+        /* Receipt modal */
+
+        function openReceiptModal(
+            id,
+            formattedId,
+            name,
+            amount,
+            imageSrc
+        ) {
+
+            document.getElementById("modalRequestId").value = id;
+
+            // 1234.00 / 1234,00 -> 1234
+            var cleanAmount = String(amount).trim();
+            if (/^\d+,\d{1,2}$/.test(cleanAmount)) cleanAmount = cleanAmount.replace(",", ".");
+            cleanAmount = cleanAmount.replace(/,/g, "");
+            var numAmount = Number(cleanAmount);
+            amount = Number.isFinite(numAmount) ? String(numAmount) : cleanAmount;
+
+            document.getElementById("receiptImg").src = imageSrc;
+
+            document.getElementById("modalProviderName").innerText =
+                "Transcript from " + name;
+
+            document.getElementById("modalProviderMeta").innerText =
+                "Provider ID: " + formattedId +
+                " | Requested Balance: Rs. " + amount;
+
+            // Default to the amount typed by the provider, but allow Admin
+            // to correct it after checking the receipt.
+            document.getElementById("actualAmount").value = amount;
+
+            document.getElementById("receiptModal").style.display = "flex";
+
+        }
+
+
+        function setAction(type) {
+
+            document.getElementById("modalActionType").value = type;
+
+        }
+
+        function approveWalletRequest() {
+
+            const input = document.getElementById("actualAmount");
+            const value = Number(input.value);
+
+            if (!Number.isFinite(value) || value <= 0) {
+                Swal.fire({
+                    icon: "warning",
+                    title: "Amount Required",
+                    text: "Please enter the actual amount received.",
+                    confirmButtonColor: "#d97600"
+                });
+                input.focus();
+                return false;
+            }
+
+            setAction("Approve");
+            return true;
+        }
+
+
+        // Ask for a reason, then reject. The provider sees this reason in a notification.
+        async function rejectWalletRequest() {
+
+            const result = await Swal.fire({
+                title: "Reject this request?",
+                html:
+                    '<p style="margin:0 0 10px;color:#6c757d;font-size:.9rem;">The provider will be notified with this reason.</p>' +
+                    '<select id="rejectReasonSelect" class="swal2-select" style="width:100%;margin:0 0 10px;">' +
+                    '<option value="">Select a reason</option>' +
+                    '<option value="We could not find this payment in our account">Payment not received</option>' +
+                    '<option value="The receipt could not be verified">Receipt could not be verified</option>' +
+                    '<option value="other">Other</option>' +
+                    '</select>' +
+                    '<textarea id="rejectReasonNote" class="swal2-textarea" rows="2" style="margin:0;width:100%;" placeholder="Additional note (optional)"></textarea>',
+                showCancelButton: true,
+                focusConfirm: false,
+                confirmButtonText: "Reject",
+                cancelButtonText: "Cancel",
+                confirmButtonColor: "#dc3545",
+                preConfirm: function () {
+                    const choice = document.getElementById("rejectReasonSelect").value;
+                    const note = document.getElementById("rejectReasonNote").value.trim();
+
+                    if (!choice) {
+                        Swal.showValidationMessage("Please select a reason.");
+                        return false;
+                    }
+
+                    if (choice === "other") {
+                        if (!note) {
+                            Swal.showValidationMessage("Please write the reason.");
+                            return false;
+                        }
+                        return note;
+                    }
+
+                    return note ? choice + ". " + note : choice;
+                }
+            });
+
+            if (!result.isConfirmed) {
+                return;
+            }
+
+            document.getElementById("rejectReasonInput").value = result.value;
+            setAction("Reject");
+            document.getElementById("walletActionForm").submit();
+        }
+
+
+        function closeReceiptModal() {
+
+            document.getElementById("receiptModal").style.display = "none";
+
+        }
+
+
+        /* Search */
+
+        function filterWalletTable() {
+
+            var input =
+                document.getElementById("walletSearchInput");
+
+            var filter =
+                input.value.toUpperCase();
+
+            var table =
+                document.querySelector("table");
+
+            var tr =
+                table.getElementsByTagName("tr");
+
+
+            for (var i = 1; i < tr.length; i++) {
+
+                var tdId =
+                    tr[i].getElementsByTagName("td")[0];
+
+                var tdName =
+                    tr[i].getElementsByTagName("td")[1];
+
+
+                if (tdId || tdName) {
+
+                    var txtValueId =
+                        tdId.textContent || tdId.innerText;
+
+                    var txtValueName =
+                        tdName.textContent || tdName.innerText;
+
+
+                    if (
+                        txtValueId.toUpperCase().indexOf(filter) > -1 ||
+                        txtValueName.toUpperCase().indexOf(filter) > -1
+                    ) {
+
+                        tr[i].style.display = "";
+
+                    } else {
+
+                        tr[i].style.display = "none";
+
+                    }
+
+                }
+
+            }
+
+        }
+
+
+        /* Modal outside click */
+
+        document.getElementById("receiptModal")
+            .addEventListener("click", function (event) {
+
+                if (event.target === this) {
+
+                    closeReceiptModal();
+
+                }
+
+            });
+
+    </script>
+
+
+    <script id="servicego-admin-load-more">
+        document.addEventListener("DOMContentLoaded", function () {
+            const PAGE_SIZE = 15;
+            const tables = Array.from(document.querySelectorAll("table tbody"));
+
+            tables.forEach(function (tbody) {
+                const rows = Array.from(tbody.children).filter(function (el) {
+                    return el.tagName && el.tagName.toLowerCase() === "tr";
+                });
+
+                if (rows.length <= PAGE_SIZE) return;
+
+                let visible = PAGE_SIZE;
+                rows.forEach(function (row, index) {
+                    if (index >= visible) row.style.display = "none";
+                });
+
+                const button = document.createElement("button");
+                button.type = "button";
+                button.className = "btn btn-outline-warning servicego-load-more";
+                button.textContent = "Load More";
+                button.style.cssText = "display:block;margin:18px auto 5px;min-width:130px;";
+
+                const wrapper = tbody.closest("table");
+                if (wrapper && wrapper.parentNode) {
+                    wrapper.parentNode.insertBefore(button, wrapper.nextSibling);
+                } else {
+                    tbody.parentNode.appendChild(button);
+                }
+
+                button.addEventListener("click", function () {
+                    const next = Math.min(visible + PAGE_SIZE, rows.length);
+                    for (let i = visible; i < next; i++) rows[i].style.display = "";
+                    visible = next;
+                    if (visible >= rows.length) button.remove();
+                });
+            });
+        });
+    </script>
+
+    <div id="servicegoLogoutModal" class="servicego-logout-modal" aria-hidden="true">
+        <div class="servicego-logout-box" role="dialog" aria-modal="true" aria-labelledby="servicegoLogoutTitle">
+            <h3 id="servicegoLogoutTitle">Logout</h3>
+            <p>Are you sure you want to logout?</p>
+            <div class="servicego-logout-actions">
+                <button type="button" class="servicego-logout-cancel" id="servicegoLogoutCancel">Cancel</button>
+                <button type="button" class="servicego-logout-confirm" id="servicegoLogoutConfirm">Yes, Logout</button>
+            </div>
+        </div>
+    </div>
+
+    <script id="servicego-admin-logout-script">
+        document.addEventListener("DOMContentLoaded", function () {
+            document.querySelectorAll(".logout a").forEach(function (link) {
+                link.addEventListener("click", async function (event) {
+                    event.preventDefault();
+
+                    const result = await Swal.fire({
+                        title: "Logout?",
+                        text: "Are you sure you want to logout?",
+                        icon: "warning",
+                        showCancelButton: true,
+                        confirmButtonText: "Yes, Logout",
+                        cancelButtonText: "Cancel",
+                        reverseButtons: true,
+                        confirmButtonColor: "#d97600",
+                        cancelButtonColor: "#6c757d"
+                    });
+
+                    if (result.isConfirmed) {
+                        window.location.href = link.getAttribute("href");
+                    }
+                });
+            });
+        });
+    </script>
+
+    <script id="servicego-unified-ui-script">
+        (function () {
+            function ready(fn) {
+                if (document.readyState !== "loading") fn();
+                else document.addEventListener("DOMContentLoaded", fn);
+            }
+
+            ready(function () {
+
+                /* 1. Highlight the current page in the sidebar and open its group */
+                try {
+                    var path = location.pathname.replace(/\/+$/, "").toLowerCase();
+                    document.querySelectorAll(".sidebar ul li a[href]").forEach(function (a) {
+                        var href = (a.getAttribute("href") || "").replace(/\/+$/, "").toLowerCase();
+                        if (href && href === path) {
+                            a.classList.add("sg-current");
+                            var group = a.closest(".dropdown-item");
+                            if (group) group.classList.add("open");
+                        }
+                    });
+                } catch (e) { }
+
+                /* 2. Give every table cell a label (needed for the phone card layout) */
+                try {
+                    document.querySelectorAll("table").forEach(function (table) {
+                        var heads = table.querySelectorAll("thead th");
+                        if (!heads.length) return;
+                        table.querySelectorAll("tbody tr").forEach(function (row) {
+                            Array.prototype.forEach.call(row.children, function (cell, i) {
+                                if (cell.tagName === "TD" &&
+                                    !cell.hasAttribute("data-label") &&
+                                    !cell.hasAttribute("colspan") &&
+                                    heads[i]) {
+                                    cell.setAttribute("data-label", heads[i].textContent.trim());
+                                }
+                            });
+                        });
+                    });
+                } catch (e) { }
+
+                /* 3. Lock the page behind an open popup */
+                try {
+                    var SEL = ".modal, .complaint-details-overlay";
+                    var syncLock = function () {
+                        var open = Array.prototype.some.call(document.querySelectorAll(SEL), function (el) {
+                            var cs = getComputedStyle(el);
+                            return cs.display !== "none" && cs.visibility !== "hidden" && cs.opacity !== "0";
+                        });
+                        document.documentElement.classList.toggle("sg-modal-open", open);
+                    };
+                    new MutationObserver(function (list) {
+                        for (var i = 0; i < list.length; i++) {
+                            if (list[i].target.matches && list[i].target.matches(SEL)) { syncLock(); return; }
+                        }
+                    }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ["style", "class"] });
+                    syncLock();
+                } catch (e) { }
+
+                /* 4. Swipe left on the menu to close it (uses the page's own close button) */
+                try {
+                    var sidebar = document.querySelector(".sidebar");
+                    var closeBtn = document.getElementById("sidebarCloseBtn");
+                    var sx = null, sy = null;
+                    if (sidebar && closeBtn) {
+                        sidebar.addEventListener("touchstart", function (e) {
+                            sx = e.touches[0].clientX; sy = e.touches[0].clientY;
+                        }, { passive: true });
+                        sidebar.addEventListener("touchend", function (e) {
+                            if (sx === null) return;
+                            var t = e.changedTouches[0];
+                            var dx = t.clientX - sx, dy = Math.abs(t.clientY - sy);
+                            sx = null;
+                            if (dx < -70 && dy < 50 && getComputedStyle(closeBtn).display !== "none") closeBtn.click();
+                        }, { passive: true });
+                    }
+                } catch (e) { }
+            });
+        })();
+    </script>
+
+    <div id="receiptViewer" class="rv" aria-hidden="true">
+        <div class="rv-bar">
+            <span class="rv-level" id="rvLevel">100%</span>
+            <button type="button" class="rv-btn" id="rvOut" aria-label="Zoom out">&minus;</button>
+            <button type="button" class="rv-btn" id="rvIn" aria-label="Zoom in">+</button>
+            <button type="button" class="rv-btn" id="rvReset" aria-label="Reset" style="font-size:14px;">Reset</button>
+            <button type="button" class="rv-btn" id="rvClose" aria-label="Close">&times;</button>
+        </div>
+        <div class="rv-stage" id="rvStage"><img id="rvImg" src="" alt="Receipt" draggable="false" /></div>
+        <div class="rv-help">Scroll / pinch / + - to zoom &bull; drag to move &bull; double-click to zoom &bull; Esc to close</div>
+    </div>
+    <script id="sg-receipt-viewer-js">
+        (function () {
+            var viewer = document.getElementById("receiptViewer");
+            var stage = document.getElementById("rvStage");
+            var img = document.getElementById("rvImg");
+            var level = document.getElementById("rvLevel");
+            var MIN = 1, MAX = 8;
+            var scale = 1, tx = 0, ty = 0;
+            var pointers = {}, startDist = 0, startScale = 1, lastX = 0, lastY = 0, moved = false;
+
+            function apply() {
+                img.style.transform = "translate(" + tx + "px," + ty + "px) scale(" + scale + ")";
+                level.textContent = Math.round(scale * 100) + "%";
+            }
+            function clampPan() {
+                if (scale <= 1) { tx = 0; ty = 0; return; }
+                var w = img.clientWidth * scale, h = img.clientHeight * scale;
+                var maxX = Math.max(0, (w - window.innerWidth) / 2 + 60);
+                var maxY = Math.max(0, (h - window.innerHeight) / 2 + 60);
+                tx = Math.max(-maxX, Math.min(maxX, tx));
+                ty = Math.max(-maxY, Math.min(maxY, ty));
+            }
+            function setScale(ns, cx, cy) {
+                ns = Math.max(MIN, Math.min(MAX, ns));
+                if (cx !== undefined) {
+                    // keep the point under the cursor fixed
+                    var r = stage.getBoundingClientRect();
+                    var ox = cx - (r.left + r.width / 2), oy = cy - (r.top + r.height / 2);
+                    tx = ox - (ox - tx) * (ns / scale);
+                    ty = oy - (oy - ty) * (ns / scale);
+                }
+                scale = ns; clampPan(); apply();
+            }
+            function reset() { scale = 1; tx = 0; ty = 0; apply(); }
+
+            window.openReceiptFull = function () {
+                var src = document.getElementById("receiptImg").getAttribute("src");
+                if (!src) return;
+                img.src = src; reset();
+                viewer.classList.add("show");
+                viewer.setAttribute("aria-hidden", "false");
+            };
+            window.closeReceiptFull = function () {
+                viewer.classList.remove("show");
+                viewer.setAttribute("aria-hidden", "true");
+                img.removeAttribute("src");
+            };
+
+            document.getElementById("receiptImg").addEventListener("click", window.openReceiptFull);
+            document.getElementById("rvClose").addEventListener("click", window.closeReceiptFull);
+            document.getElementById("rvIn").addEventListener("click", function () { setScale(scale * 1.5); });
+            document.getElementById("rvOut").addEventListener("click", function () { setScale(scale / 1.5); });
+            document.getElementById("rvReset").addEventListener("click", reset);
+
+            document.addEventListener("keydown", function (e) {
+                if (!viewer.classList.contains("show")) return;
+                if (e.key === "Escape") window.closeReceiptFull();
+                else if (e.key === "+" || e.key === "=") setScale(scale * 1.5);
+                else if (e.key === "-") setScale(scale / 1.5);
+            });
+
+            // mouse wheel / trackpad
+            stage.addEventListener("wheel", function (e) {
+                e.preventDefault();
+                setScale(scale * (e.deltaY < 0 ? 1.2 : 1 / 1.2), e.clientX, e.clientY);
+            }, { passive: false });
+
+            // double click / double tap
+            stage.addEventListener("dblclick", function (e) {
+                if (scale > 1.05) reset(); else setScale(2.5, e.clientX, e.clientY);
+            });
+
+            // drag + pinch (mouse, touch, pen)
+            stage.addEventListener("pointerdown", function (e) {
+                stage.setPointerCapture(e.pointerId);
+                pointers[e.pointerId] = { x: e.clientX, y: e.clientY };
+                moved = false;
+                var ids = Object.keys(pointers);
+                if (ids.length === 2) {
+                    var a = pointers[ids[0]], b = pointers[ids[1]];
+                    startDist = Math.hypot(a.x - b.x, a.y - b.y); startScale = scale;
+                } else { lastX = e.clientX; lastY = e.clientY; stage.classList.add("dragging"); }
+            });
+            stage.addEventListener("pointermove", function (e) {
+                if (!pointers[e.pointerId]) return;
+                pointers[e.pointerId] = { x: e.clientX, y: e.clientY };
+                var ids = Object.keys(pointers);
+                if (ids.length === 2) {
+                    var a = pointers[ids[0]], b = pointers[ids[1]];
+                    var d = Math.hypot(a.x - b.x, a.y - b.y);
+                    if (startDist) setScale(startScale * d / startDist, (a.x + b.x) / 2, (a.y + b.y) / 2);
+                    moved = true;
+                } else if (ids.length === 1 && scale > 1) {
+                    tx += e.clientX - lastX; ty += e.clientY - lastY;
+                    lastX = e.clientX; lastY = e.clientY;
+                    clampPan(); apply(); moved = true;
+                }
+            });
+            function endPointer(e) {
+                delete pointers[e.pointerId];
+                stage.classList.remove("dragging");
+                var ids = Object.keys(pointers);
+                if (ids.length === 1) { lastX = pointers[ids[0]].x; lastY = pointers[ids[0]].y; }
+                startDist = 0;
+            }
+            stage.addEventListener("pointerup", endPointer);
+            stage.addEventListener("pointercancel", endPointer);
+
+            // click on the dark area (not the image) closes when not zoomed
+            stage.addEventListener("click", function (e) {
+                if (e.target === stage && !moved && scale <= 1) window.closeReceiptFull();
+            });
+        })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,2462 @@
+﻿@model IEnumerable<ServiceGo.Models.ActiveCustomerViewModel>
+@inject IConfiguration Configuration
+
+@functions {
+    private string FormatDictionaryValue(object value, string fallback)
+    {
+        if (value == null) return fallback;
+
+        if (value is IFormattable formattable)
+            return formattable.ToString(null, System.Globalization.CultureInfo.InvariantCulture);
+
+        var text = value.ToString();
+        return string.IsNullOrWhiteSpace(text) ? fallback : text;
+    }
+
+    private string SafeDictionaryValue(object dictionaryObject, string key, string fallback = "")
+    {
+        if (dictionaryObject is System.Collections.IDictionary dictionary)
+        {
+            if (dictionary.Contains(key))
+                return FormatDictionaryValue(dictionary[key], fallback);
+
+            // Some records use "CUS-1004" while the view model contains "1004".
+            var alternateKey = key.StartsWith("CUS-", StringComparison.OrdinalIgnoreCase)
+                ? key.Substring(4)
+                : "CUS-" + key;
+
+            if (dictionary.Contains(alternateKey))
+                return FormatDictionaryValue(dictionary[alternateKey], fallback);
+        }
+
+        return fallback;
+    }
+}
+
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>ServicesGo - Active Customers</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link rel="icon"
+          href="@Url.Content("~/images/Logo.png")"
+          type="image/x-icon" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        html,
+        body {
+            width: 100%;
+            min-height: 100%;
+        }
+
+        body {
+            background: #f5f7fb;
+            overflow-x: hidden;
+        }
+
+        /* Mobile header */
+
+        .mobile-header {
+            display: none;
+            width: 100%;
+            height: 60px;
+            background: linear-gradient(135deg, #ffb45e, #ff7f36);
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 150;
+            padding: 0 18px;
+            align-items: center;
+            justify-content: space-between;
+            color: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.12);
+        }
+
+        .menu-toggle-btn {
+            width: 42px;
+            height: 42px;
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 22px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+        }
+
+            .menu-toggle-btn:hover {
+                background: rgba(255,255,255,0.15);
+            }
+
+        .mobile-brand {
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .mobile-header-space {
+            width: 42px;
+        }
+
+        /* Sidebar */
+
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            background: linear-gradient(180deg, #ffb45e, #ff7f36);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 25px 0;
+            z-index: 200;
+            transition: transform 0.3s ease;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 0 25px;
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 25px;
+        }
+
+            .brand img {
+                width: 36px;
+                height: 36px;
+                object-fit: cover;
+                border-radius: 4px;
+            }
+
+        .sidebar ul {
+            list-style: none;
+        }
+
+            .sidebar ul li a,
+            .sidebar .dropdown-toggle {
+                display: flex !important;
+                align-items: center;
+                justify-content: space-between;
+                padding: 14px 25px;
+                color: white;
+                text-decoration: none;
+                font-size: 15px;
+                opacity: 0.9;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                width: 100%;
+                box-sizing: border-box;
+            }
+
+        .toggle-left {
+            display: flex;
+            align-items: center;
+        }
+
+        .sidebar ul li a i,
+        .sidebar .toggle-left i {
+            width: 20px;
+            margin-right: 12px;
+            text-align: center;
+        }
+
+        .sidebar ul li a:hover,
+        .sidebar .dropdown-toggle:hover {
+            background: rgba(255,255,255,0.15);
+            opacity: 1;
+        }
+
+        .dropdown-item {
+            position: relative;
+        }
+
+        .arrow-icon {
+            font-size: 12px;
+            transition: transform 0.3s ease;
+        }
+
+        .submenu {
+            list-style: none;
+            background: rgba(0,0,0,0.08);
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-in-out;
+            padding: 0;
+        }
+
+            .submenu li a {
+                display: block !important;
+                padding: 10px 25px 10px 57px !important;
+                font-size: 14px;
+                opacity: 0.85;
+            }
+
+        .dropdown-item.open .submenu {
+            max-height: 160px;
+        }
+
+        .dropdown-item.open .arrow-icon {
+            transform: rotate(180deg);
+        }
+
+        /* Mobile sidebar close button */
+        .sidebar-close-btn {
+            display: none;
+            position: absolute;
+            top: 14px;
+            right: 12px;
+            width: 34px;
+            height: 34px;
+            border: none;
+            background: rgba(255,255,255,0.18);
+            color: white;
+            border-radius: 50%;
+            font-size: 17px;
+            cursor: pointer;
+            align-items: center;
+            justify-content: center;
+        }
+
+            .sidebar-close-btn:hover {
+                background: rgba(255,255,255,0.28);
+            }
+
+        .logout {
+            padding-top: 20px;
+            border-top: 1px solid rgba(255,255,255,0.2);
+        }
+
+            .logout a {
+                display: flex;
+                align-items: center;
+                color: white;
+                text-decoration: none;
+                font-size: 15px;
+                opacity: 0.9;
+                padding: 0 25px;
+            }
+
+                .logout a i {
+                    width: 20px;
+                    margin-right: 12px;
+                }
+
+        /* Mobile overlay */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.42);
+            z-index: 180;
+        }
+
+            .sidebar-overlay.show {
+                display: block;
+            }
+
+        /* Main content */
+
+        .main-content {
+            margin-left: 260px;
+            padding: 40px;
+            width: calc(100% - 260px);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .page-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            gap: 15px;
+        }
+
+        .page-title {
+            font-size: 26px;
+            font-weight: 600;
+            color: #222;
+        }
+
+        /* Search */
+
+        .search-container {
+            display: flex;
+            width: 320px;
+            position: relative;
+        }
+
+            .search-container input {
+                width: 100%;
+                padding: 12px 15px 12px 45px;
+                border: 1px solid #e2e8f0;
+                border-radius: 8px;
+                font-size: 14px;
+                outline: none;
+                background: white;
+            }
+
+                .search-container input:focus {
+                    border-color: #ff7f36;
+                }
+
+            .search-container i {
+                position: absolute;
+                left: 18px;
+                top: 16px;
+                color: #94a3b8;
+            }
+
+        /* Table */
+
+        .table-container {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+            border: 1px solid rgba(0,0,0,0.02);
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th {
+            background: #f8fafc;
+            color: #64748b;
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            padding: 15px;
+            border-bottom: 2px solid #edf2f7;
+        }
+
+        td {
+            padding: 15px;
+            color: #334155;
+            font-size: 14px;
+            border-bottom: 1px solid #edf2f7;
+            vertical-align: middle;
+        }
+
+        tr:hover {
+            background: #fafafa;
+        }
+
+        /* Buttons */
+
+        .btn {
+            padding: 8px 14px;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-view {
+            background: #e0f2fe;
+            color: #0369a1;
+        }
+
+            .btn-view:hover {
+                background: #bae6fd;
+            }
+
+        .badge {
+            padding: 4px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: 500;
+            display: inline-block;
+        }
+
+        .badge-active {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+        /* Popup */
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.4);
+            justify-content: center;
+            align-items: center;
+            padding: 15px;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 30px 25px;
+            border-radius: 12px;
+            max-width: 550px;
+            width: 100%;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-title {
+            font-size: 22px;
+            font-weight: 600;
+            color: #1e293b;
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .pop-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 14px 0;
+            border-bottom: 1px solid #f1f5f9;
+            gap: 15px;
+        }
+
+        .pop-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #475569;
+            min-width: 90px;
+        }
+
+        .pop-value {
+            font-size: 14px;
+            color: #1e293b;
+            text-align: right;
+            word-break: break-word;
+        }
+
+        .pop-status {
+            color: #16a34a;
+            font-weight: 600;
+        }
+
+        .pop-footer-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 35px;
+        }
+
+        .pop-btn-block {
+            background: #e11d48;
+            color: white;
+            padding: 10px 24px;
+            border-radius: 6px;
+            font-size: 14px;
+            border: none;
+            cursor: pointer;
+            flex: 1;
+            max-width: 120px;
+        }
+
+            .pop-btn-block:hover {
+                background: #be123c;
+            }
+
+        .pop-btn-close {
+            background: #64748b;
+            color: white;
+            padding: 10px 24px;
+            border-radius: 6px;
+            font-size: 14px;
+            border: none;
+            cursor: pointer;
+            flex: 1;
+            max-width: 120px;
+        }
+
+            .pop-btn-close:hover {
+                background: #475569;
+            }
+
+        /* Tablet */
+
+        @@media (max-width: 900px) {
+            .main-content {
+                padding: 30px 20px;
+            }
+
+            .page-header-row {
+                align-items: flex-start;
+            }
+
+            .search-container {
+                width: 280px;
+            }
+
+            .table-container {
+                padding: 15px;
+            }
+
+            th,
+            td {
+                padding: 12px 10px;
+            }
+        }
+
+        /* Mobile */
+
+        @@media (max-width: 768px) {
+            body {
+                display: block;
+                background: #f5f7fb;
+            }
+            /* Orange mobile header */
+            .mobile-header {
+                display: flex;
+            }
+            /* Sidebar becomes slide-in menu */
+            .sidebar {
+                width: 285px;
+                max-width: 82%;
+                height: 100vh;
+                left: 0;
+                top: 0;
+                transform: translateX(-105%);
+                box-shadow: 8px 0 25px rgba(0,0,0,0.15);
+                padding-top: 25px;
+            }
+
+                .sidebar.mobile-open {
+                    transform: translateX(0);
+                }
+
+            .sidebar-close-btn {
+                display: flex;
+            }
+
+            .brand {
+                padding-right: 55px;
+            }
+            /* Main content */
+            .main-content {
+                margin-left: 0;
+                width: 100%;
+                min-height: 100vh;
+                padding: 82px 15px 25px;
+            }
+
+            .page-header-row {
+                display: flex;
+                flex-direction: column;
+                align-items: stretch;
+                gap: 14px;
+                margin-bottom: 18px;
+            }
+
+            .page-title {
+                font-size: 22px;
+            }
+
+            .search-container {
+                width: 100%;
+            }
+
+                .search-container input {
+                    height: 46px;
+                    padding-left: 43px;
+                }
+            /* Table -> customer cards */
+
+            .table-container {
+                background: transparent;
+                padding: 0;
+                border: none;
+                box-shadow: none;
+                overflow: visible;
+            }
+
+            table,
+            tbody {
+                display: block;
+                width: 100%;
+            }
+
+            thead {
+                display: none;
+            }
+
+            tbody tr {
+                display: block;
+                width: 100%;
+                background: white;
+                border-radius: 14px;
+                margin-bottom: 14px;
+                padding: 8px 16px 14px;
+                box-shadow: 0 3px 12px rgba(0,0,0,0.06);
+                border: 1px solid #edf2f7;
+            }
+
+                tbody tr:hover {
+                    background: white;
+                }
+
+            tbody td {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                width: 100%;
+                padding: 12px 0;
+                border-bottom: 1px solid #f1f5f9;
+                font-size: 13px;
+                gap: 15px;
+                text-align: right;
+            }
+
+                tbody td:last-child {
+                    border-bottom: none;
+                    padding-top: 15px;
+                    justify-content: center;
+                }
+
+                tbody td::before {
+                    content: attr(data-label);
+                    font-weight: 600;
+                    color: #64748b;
+                    text-align: left;
+                    flex-shrink: 0;
+                }
+
+                tbody td strong {
+                    font-size: 14px;
+                    color: #1e293b;
+                }
+
+                tbody td[data-label="Customer ID"] {
+                    padding-top: 14px;
+                }
+
+                tbody td[data-label="Actions"]::before {
+                    display: none;
+                }
+
+                tbody td[data-label="Actions"] .btn {
+                    width: 100%;
+                    justify-content: center;
+                    padding: 11px 14px;
+                    font-size: 13px;
+                }
+
+            .badge {
+                font-size: 11px;
+                padding: 5px 10px;
+            }
+            /* No data row */
+            tbody tr td[colspan] {
+                display: block;
+                text-align: center;
+                border-bottom: none;
+                padding: 25px 10px;
+            }
+
+                tbody tr td[colspan]::before {
+                    display: none;
+                }
+            /* Mobile popup */
+
+            .modal {
+                padding: 12px;
+                align-items: center;
+            }
+
+            .modal-content {
+                width: 100%;
+                max-width: 100%;
+                max-height: 88vh;
+                padding: 22px 18px;
+                border-radius: 14px;
+            }
+
+            .modal-title {
+                font-size: 20px;
+                margin-bottom: 18px;
+            }
+
+            .pop-row {
+                padding: 12px 0;
+                gap: 10px;
+            }
+
+            .pop-label {
+                min-width: 85px;
+                font-size: 13px;
+            }
+
+            .pop-value {
+                font-size: 13px;
+                max-width: 65%;
+            }
+
+            .pop-footer-buttons {
+                margin-top: 24px;
+                gap: 10px;
+            }
+
+            .pop-btn-block,
+            .pop-btn-close {
+                max-width: none;
+                padding: 11px 15px;
+            }
+        }
+
+        /* Small mobile */
+
+        @@media (max-width: 420px) {
+            .mobile-header {
+                padding: 0 12px;
+            }
+
+            .mobile-brand {
+                font-size: 17px;
+            }
+
+            .main-content {
+                padding-left: 10px;
+                padding-right: 10px;
+            }
+
+            .page-title {
+                font-size: 20px;
+            }
+
+            tbody tr {
+                padding-left: 13px;
+                padding-right: 13px;
+            }
+
+            tbody td {
+                font-size: 12px;
+            }
+
+                tbody td strong {
+                    font-size: 13px;
+                }
+
+            .pop-row {
+                align-items: flex-start;
+            }
+
+            .pop-label {
+                min-width: 78px;
+                font-size: 12px;
+            }
+
+            .pop-value {
+                font-size: 12px;
+            }
+        }
+    </style>
+
+    <style id="servicego-admin-caret-fix">
+        body, body * {
+            caret-color: transparent !important;
+        }
+
+        input, textarea, select, [contenteditable="true"], [contenteditable=""] {
+            caret-color: auto !important;
+        }
+
+            input[type="button"], input[type="submit"], input[type="reset"], input[type="checkbox"], input[type="radio"], input[type="file"], select {
+                caret-color: transparent !important;
+            }
+    </style>
+
+    <style id="servicego-admin-logo-fix">
+        .servicego-home-logo {
+            display: inline-block;
+            text-decoration: none;
+            cursor: default;
+        }
+
+            .servicego-home-logo img {
+                cursor: default;
+            }
+    </style>
+
+    <style id="servicego-no-direct-block-fix">
+        #popBlockActionBtn, #btnBlock {
+            display: none !important;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style id="servicego-swal-layer-fix">
+        .swal2-container {
+            z-index: 10000000 !important;
+        }
+
+        .swal2-popup {
+            border-radius: 16px !important;
+        }
+    </style>
+
+    <style id="servicego-table-overlap-fix">
+        /* Long names / emails must wrap inside their own cell and never overlap. */
+        .table-container {
+            overflow-x: auto;
+        }
+
+            .table-container table {
+                width: 100%;
+                table-layout: fixed;
+            }
+
+            /* Data cells: long names / emails wrap inside their own cell. */
+            .table-container td {
+                white-space: normal !important;
+                overflow-wrap: anywhere;
+                word-break: break-word;
+                line-height: 1.45;
+                vertical-align: middle;
+            }
+
+            /*
+                     * Header cells: wrap only BETWEEN words, never in the middle of a word
+                     * (so "CUSTOMER ID" never turns into "CUSTOME / R ID").
+                     */
+            .table-container th {
+                white-space: normal !important;
+                overflow-wrap: normal;
+                word-break: keep-all;
+                line-height: 1.3;
+                font-size: 12px;
+                padding-left: 12px;
+                padding-right: 12px;
+                vertical-align: middle;
+            }
+
+                .table-container td[data-label="Actions"],
+                .table-container td[data-label="Action"],
+                .table-container th:last-child {
+                    white-space: nowrap !important;
+                    overflow: visible;
+                }
+
+            .table-container .btn,
+            .table-container .btn-view {
+                white-space: nowrap;
+                max-width: 100%;
+            }
+
+            .table-container table th:nth-child(1), .table-container table td:nth-child(1) {
+                width: 15%;
+            }
+
+            .table-container table th:nth-child(2), .table-container table td:nth-child(2) {
+                width: 18%;
+            }
+
+            .table-container table th:nth-child(3), .table-container table td:nth-child(3) {
+                width: 25%;
+            }
+
+            .table-container table th:nth-child(4), .table-container table td:nth-child(4) {
+                width: 15%;
+            }
+
+            .table-container table th:nth-child(5), .table-container table td:nth-child(5) {
+                width: 11%;
+            }
+
+            .table-container table th:nth-child(6), .table-container table td:nth-child(6) {
+                width: 16%;
+            }
+
+        @@media (max-width: 900px) {
+            .table-container table {
+                min-width: 760px;
+            }
+        }
+
+        @@media (max-width: 768px) {
+            /* Mobile cards: no fixed widths, values wrap on the right side. */
+            .table-container {
+                overflow-x: visible;
+            }
+
+                .table-container table {
+                    table-layout: auto;
+                    min-width: 0;
+                }
+
+                .table-container th,
+                .table-container td {
+                    width: 100% !important;
+                }
+
+                    .table-container td[data-label]:not([data-label="Actions"]):not([data-label="Action"]) {
+                        overflow-wrap: anywhere;
+                        word-break: break-word;
+                    }
+
+                    .table-container td[data-label]:not([data-label="Actions"])::before {
+                        flex: 0 0 auto;
+                        margin-right: 12px;
+                    }
+
+                    .table-container td > strong,
+                    .table-container td > span {
+                        min-width: 0;
+                        max-width: 65%;
+                        text-align: right;
+                        overflow-wrap: anywhere;
+                    }
+        }
+    </style>
+    <style id="servicego-unified-ui">
+        /*
+                 * ServicesGo - unified mobile layout + popups (shared by all admin pages)
+                 * Only look & feel is changed here. No page logic is touched.
+                 */
+        :root {
+            --sg-orange: #ff7f36;
+            --sg-orange-2: #ffb45e;
+            --sg-ink: #1d2939;
+            --sg-muted: #64748b;
+            --sg-line: #e8ecf2;
+            --sg-pad: 24px;
+        }
+
+        @@keyframes sgFade {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @@keyframes sgPop {
+            from {
+                opacity: 0;
+                transform: translateY(18px) scale(.97);
+            }
+
+            to {
+                opacity: 1;
+                transform: none;
+            }
+        }
+
+        @@keyframes sgSheet {
+            from {
+                transform: translateY(100%);
+            }
+
+            to {
+                transform: none;
+            }
+        }
+
+        /* Sidebar: highlight the page you are on */
+        .sidebar ul li a.sg-current {
+            background: rgba(255,255,255,.22) !important;
+            opacity: 1 !important;
+            font-weight: 600;
+            box-shadow: inset 4px 0 0 #fff;
+        }
+
+        /* Load more button */
+        button.servicego-load-more {
+            border: 1.5px solid var(--sg-orange-2);
+            background: #fff;
+            color: #e8690f;
+            font-weight: 600;
+            font-size: 14px;
+            border-radius: 12px;
+            padding: 11px 24px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: background .2s ease, color .2s ease;
+        }
+
+            button.servicego-load-more:hover {
+                background: var(--sg-orange);
+                border-color: var(--sg-orange);
+                color: #fff;
+            }
+
+        /* Popups (all pages) */
+        .modal {
+            background: rgba(15,23,42,.62) !important;
+            -webkit-backdrop-filter: blur(4px);
+            backdrop-filter: blur(4px);
+            animation: sgFade .2s ease;
+        }
+
+        .modal-content {
+            border-radius: 22px !important;
+            padding: 26px var(--sg-pad) var(--sg-pad) !important;
+            box-shadow: 0 30px 80px rgba(15,23,42,.35) !important;
+            animation: sgPop .25s cubic-bezier(.2,.8,.2,1);
+            overscroll-behavior: contain;
+            scrollbar-width: thin;
+        }
+
+        .modal-title {
+            font-size: 21px !important;
+            font-weight: 600 !important;
+            color: var(--sg-ink) !important;
+            margin-bottom: 18px !important;
+        }
+
+        /* close (x) button */
+        .modal-close-x,
+        .close-modal {
+            position: absolute !important;
+            top: 14px !important;
+            right: 14px !important;
+            width: 38px;
+            height: 38px;
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: #f2f4f7;
+            color: #667085 !important;
+            font-size: 17px !important;
+            line-height: 1;
+            cursor: pointer;
+            z-index: 5;
+            transition: background .2s ease, color .2s ease;
+        }
+
+        .close-modal {
+            font-size: 24px !important;
+        }
+
+            .modal-close-x:hover,
+            .close-modal:hover {
+                background: #fff1e6;
+                color: var(--sg-orange) !important;
+            }
+
+        #detailsPopupModal .pop-footer-buttons {
+            display: none !important;
+        }
+
+        /* cross stays pinned to the card corner even while the popup scrolls */
+        .modal-close-x.sg-card-close {
+            position: sticky !important;
+            top: 0 !important;
+            right: auto !important;
+            float: right;
+            margin: -8px -6px 0 10px;
+            padding: 0;
+            border: 0;
+        }
+
+        /* section headings inside review popups */
+        .modal-content .section-title {
+            font-size: 15px !important;
+            color: var(--sg-ink) !important;
+            text-transform: none !important;
+            letter-spacing: 0 !important;
+            border-bottom: 0 !important;
+            border-left: 4px solid var(--sg-orange);
+            padding: 2px 0 2px 10px !important;
+            margin: 24px 0 12px !important;
+        }
+
+        .modal-content .info-grid {
+            background: #fafbfc !important;
+            border: 1px solid #eef0f3 !important;
+            border-radius: 14px !important;
+        }
+
+        .modal-content .info-label {
+            font-size: 12px;
+            color: var(--sg-muted);
+            font-weight: 500;
+        }
+
+        .modal-content .info-value {
+            color: var(--sg-ink);
+        }
+
+        .modal-content .media-card,
+        .modal-content .service-video-block,
+        .modal-content .google-map-container {
+            border-radius: 14px !important;
+            border-color: #eef0f3 !important;
+        }
+
+        .modal-content .zoom-box {
+            border-radius: 10px;
+        }
+
+        .modal-content .pop-row {
+            border-bottom-color: #f1f4f8;
+        }
+
+        .modal-content .pop-label {
+            color: var(--sg-muted);
+            font-weight: 500;
+        }
+
+        .modal-content img {
+            border-radius: 14px;
+        }
+
+        /* wallet popup input */
+        .actual-amount-box {
+            background: #fff8f2;
+            border: 1px solid #ffe3cc;
+            border-radius: 14px;
+            padding: 14px;
+        }
+
+        .actual-amount-input-wrap {
+            border-radius: 10px !important;
+        }
+
+            .actual-amount-input-wrap:focus-within {
+                border-color: var(--sg-orange) !important;
+                box-shadow: 0 0 0 3px rgba(255,127,54,.15);
+            }
+
+        /* popup footer buttons: stay visible while the popup scrolls */
+        .pop-footer-buttons,
+        .modal-actions {
+            position: sticky;
+            bottom: 0;
+            z-index: 4;
+            margin: 26px calc(-1 * var(--sg-pad)) calc(-1 * var(--sg-pad)) !important;
+            padding: 14px var(--sg-pad) max(16px, env(safe-area-inset-bottom));
+            background: #fff;
+            border-top: 1px solid #eef0f3;
+            gap: 12px !important;
+        }
+
+            .pop-btn-block,
+            .pop-btn-close,
+            .pop-btn-approve,
+            .pop-btn-reject,
+            .modal-actions .btn {
+                border-radius: 12px !important;
+                padding: 12px 24px !important;
+                min-height: 46px;
+                min-width: 130px;
+                font-family: inherit;
+                font-weight: 600 !important;
+                font-size: 14px !important;
+                transition: transform .15s ease, filter .15s ease;
+            }
+
+                .pop-btn-block:active,
+                .pop-btn-close:active,
+                .pop-btn-approve:active,
+                .pop-btn-reject:active,
+                .modal-actions .btn:active {
+                    transform: scale(.97);
+                }
+
+        /* SweetAlert2 popups (every confirm / success / error) */
+        .swal2-container {
+            -webkit-backdrop-filter: blur(3px);
+            backdrop-filter: blur(3px);
+        }
+
+        .swal2-popup {
+            border-radius: 22px !important;
+            padding: 26px 22px 22px !important;
+            font-family: 'Poppins', sans-serif !important;
+            box-shadow: 0 30px 80px rgba(15,23,42,.35) !important;
+        }
+
+        .swal2-title {
+            font-size: 21px !important;
+            font-weight: 600 !important;
+            color: var(--sg-ink) !important;
+            padding: .3em 0 0 !important;
+        }
+
+        .swal2-html-container {
+            font-size: 14px !important;
+            line-height: 1.55;
+            color: #667085 !important;
+        }
+
+        .swal2-actions {
+            width: 100%;
+            gap: 10px;
+            flex-wrap: nowrap !important;
+            margin-top: 1.4em !important;
+        }
+
+        .swal2-styled {
+            flex: 1 1 0;
+            margin: 0 !important;
+            border-radius: 12px !important;
+            padding: 12px 14px !important;
+            font-size: 14px !important;
+            font-weight: 600 !important;
+            box-shadow: none !important;
+        }
+
+            .swal2-styled:focus {
+                box-shadow: 0 0 0 3px rgba(255,127,54,.25) !important;
+            }
+
+        /* scroll lock while a popup is open */
+        html.sg-modal-open,
+        html.sg-modal-open body {
+            overflow: hidden !important;
+        }
+
+        @@media (prefers-reduced-motion: reduce) {
+            .modal, .modal-content {
+                animation: none !important;
+            }
+        }
+
+        /* PHONE LAYOUT (same on every page) */
+        @@media (max-width: 768px) {
+            :root {
+                --sg-pad: 16px;
+            }
+            /* top bar */
+            .mobile-header {
+                height: 58px !important;
+                padding: 0 14px !important;
+                box-shadow: 0 4px 18px rgba(255,127,54,.28) !important;
+            }
+
+            .mobile-brand {
+                font-size: 18px !important;
+                font-weight: 700 !important;
+            }
+
+            .menu-toggle-btn {
+                width: 42px;
+                height: 42px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 12px !important;
+                font-size: 21px !important;
+            }
+
+                .menu-toggle-btn:active {
+                    background: rgba(255,255,255,.2) !important;
+                }
+
+            .mobile-header > :last-child:not(.mobile-brand) {
+                width: 42px !important;
+                flex: 0 0 42px;
+            }
+            /* slide-in menu */
+            .sidebar {
+                width: 285px !important;
+                max-width: 84% !important;
+                box-shadow: 10px 0 30px rgba(15,23,42,.22) !important;
+            }
+
+            .sidebar-overlay {
+                background: rgba(15,23,42,.5) !important;
+            }
+            /* page frame */
+            .main-content {
+                padding: 76px 14px 28px !important;
+            }
+
+            .page-header-row,
+            .page-header {
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 12px !important;
+                margin-bottom: 16px !important;
+            }
+
+                .page-title,
+                .page-header h1,
+                .welcome-section h1 {
+                    font-size: 22px !important;
+                    line-height: 1.3 !important;
+                }
+
+            .search-container,
+            .search-box {
+                width: 100% !important;
+                max-width: none !important;
+            }
+
+                .search-container input,
+                .search-box input {
+                    height: 46px !important;
+                    font-size: 14px !important;
+                    border-radius: 12px !important;
+                }
+
+                .search-container > i {
+                    top: 50% !important;
+                    transform: translateY(-50%) !important;
+                }
+            /* dashboard cards */
+            .metrics-grid .card {
+                min-width: 100% !important;
+                border-radius: 16px !important;
+            }
+            /* tables become cards (rows keep their own show/hide logic) */
+            .table-container {
+                background: transparent !important;
+                padding: 0 !important;
+                border: 0 !important;
+                box-shadow: none !important;
+                overflow: visible !important;
+            }
+
+                .table-container table,
+                .table-container tbody {
+                    display: block !important;
+                    width: 100% !important;
+                    min-width: 0 !important;
+                }
+
+                .table-container thead {
+                    display: none !important;
+                }
+
+                .table-container tbody tr {
+                    width: 100% !important;
+                    background: #fff !important;
+                    border: 1px solid var(--sg-line) !important;
+                    border-radius: 16px !important;
+                    margin: 0 0 12px !important;
+                    padding: 6px 14px !important;
+                    box-shadow: 0 5px 16px rgba(16,24,40,.06) !important;
+                }
+
+                .table-container tbody td {
+                    display: flex !important;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 12px;
+                    width: 100% !important;
+                    min-height: 44px;
+                    padding: 11px 0 !important;
+                    border: 0 !important;
+                    border-bottom: 1px solid #f1f4f8 !important;
+                    font-size: 13px !important;
+                    text-align: right !important;
+                    white-space: normal !important;
+                    overflow-wrap: anywhere;
+                    word-break: break-word;
+                }
+
+                    .table-container tbody td:last-child {
+                        border-bottom: 0 !important;
+                    }
+
+                    .table-container tbody td::before {
+                        content: attr(data-label);
+                        flex: 0 0 auto;
+                        max-width: 42%;
+                        margin-right: auto;
+                        text-align: left;
+                        color: var(--sg-muted);
+                        font-size: 12px;
+                        font-weight: 600;
+                        text-transform: none !important;
+                        letter-spacing: 0 !important;
+                    }
+                    /* action cell = one full-width button */
+                    .table-container tbody td[data-label="Actions"],
+                    .table-container tbody td[data-label="Action"],
+                    .table-container tbody td:has(.btn-view) {
+                        display: block !important;
+                        padding: 12px 0 8px !important;
+                    }
+
+                        .table-container tbody td[data-label="Actions"]::before,
+                        .table-container tbody td[data-label="Action"]::before,
+                        .table-container tbody td:has(.btn-view)::before {
+                            display: none !important;
+                        }
+
+                    .table-container tbody td .btn-view {
+                        width: 100% !important;
+                        max-width: 100% !important;
+                        justify-content: center;
+                        padding: 11px 14px !important;
+                        font-size: 13px !important;
+                        border-radius: 12px !important;
+                    }
+                    /* empty row */
+                    .table-container tbody td[colspan] {
+                        display: block !important;
+                        text-align: center !important;
+                        padding: 26px 10px !important;
+                    }
+
+                        .table-container tbody td[colspan]::before {
+                            display: none !important;
+                        }
+
+                .table-container .badge,
+                .badge {
+                    font-size: 11px !important;
+                    padding: 5px 10px !important;
+                    border-radius: 999px;
+                }
+
+            button.servicego-load-more {
+                width: 100%;
+                max-width: none;
+            }
+            /* complaints page: same card feel, readable sizes */
+            #complaintsTable tbody td,
+            #warningsTable tbody td {
+                font-size: 12.5px !important;
+            }
+
+                #complaintsTable tbody td::before {
+                    font-size: 11px !important;
+                    font-weight: 600 !important;
+                    text-transform: none !important;
+                    letter-spacing: 0 !important;
+                    color: var(--sg-muted) !important;
+                    flex: 0 0 auto !important;
+                }
+
+            #warningsTable,
+            #warningsTable tbody {
+                display: block;
+                width: 100%;
+            }
+
+                #warningsTable thead {
+                    display: none;
+                }
+
+                #warningsTable tbody tr {
+                    display: block;
+                    background: #fff;
+                    border: 1px solid var(--sg-line);
+                    border-radius: 16px;
+                    margin: 0 0 12px;
+                    padding: 8px 12px;
+                    box-shadow: 0 5px 16px rgba(16,24,40,.06);
+                }
+
+                #warningsTable tbody td {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 10px;
+                    padding: 10px 4px;
+                    border: 0;
+                    border-bottom: 1px solid #f1f4f8;
+                    text-align: right;
+                }
+
+                    #warningsTable tbody td:last-child {
+                        border-bottom: 0;
+                    }
+
+                    #warningsTable tbody td::before {
+                        content: attr(data-label);
+                        color: var(--sg-muted);
+                        font-size: 11px;
+                        font-weight: 600;
+                        flex: 0 0 auto;
+                    }
+
+                    #warningsTable tbody td:first-child::before {
+                        display: none;
+                    }
+
+            .filter-btn {
+                font-size: 12px !important;
+            }
+            /* popups become bottom sheets */
+            .modal {
+                align-items: flex-end !important;
+                padding: 0 !important;
+            }
+
+            .modal-content {
+                width: 100% !important;
+                max-width: 100% !important;
+                max-height: 92vh !important;
+                border-radius: 24px 24px 0 0 !important;
+                padding: 22px var(--sg-pad) var(--sg-pad) !important;
+                animation: sgSheet .3s cubic-bezier(.2,.8,.2,1);
+            }
+
+                .modal-content::before {
+                    content: "";
+                    display: block;
+                    width: 42px;
+                    height: 4px;
+                    border-radius: 4px;
+                    background: #d0d5dd;
+                    margin: -10px auto 16px;
+                }
+
+            .modal-close-x,
+            .close-modal {
+                top: 12px !important;
+                right: 12px !important;
+            }
+
+            .pop-footer-buttons,
+            .modal-actions {
+                margin-top: 22px !important;
+            }
+
+                .pop-btn-block,
+                .pop-btn-close,
+                .pop-btn-approve,
+                .pop-btn-reject,
+                .modal-actions .btn {
+                    flex: 1 1 0 !important;
+                    max-width: none !important;
+                    min-width: 0;
+                    width: auto;
+                }
+
+            .modal-content .info-grid {
+                grid-template-columns: repeat(2, 1fr) !important;
+            }
+        }
+
+        @@media (max-width: 576px) {
+            .modal-content .info-grid {
+                grid-template-columns: 1fr !important;
+            }
+            /* SweetAlert2 also slides up from the bottom on phones */
+            .swal2-container {
+                padding: 0 !important;
+            }
+
+                .swal2-container.swal2-center > .swal2-popup {
+                    grid-column: 1 / -1 !important;
+                    place-self: end stretch !important;
+                    width: 100% !important;
+                    max-width: 100% !important;
+                    margin: 0 !important;
+                    border-radius: 24px 24px 0 0 !important;
+                    padding-bottom: calc(20px + env(safe-area-inset-bottom)) !important;
+                }
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <!-- Mobile header -->
+
+    <div class="mobile-header">
+
+        <button class="menu-toggle-btn"
+                id="menuToggleBtn"
+                type="button"
+                aria-label="Open Menu">
+            <i class="fa-solid fa-bars"></i>
+        </button>
+
+        <div class="mobile-brand">
+            <span>ServicesGo</span>
+        </div>
+
+        <div class="mobile-header-space"></div>
+
+    </div>
+
+
+    <!-- Sidebar -->
+
+    <div class="sidebar" id="sidebarMenu">
+
+        <!-- Mobile Close Button -->
+        <button class="sidebar-close-btn"
+                id="sidebarCloseBtn"
+                type="button"
+                aria-label="Close Menu">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+
+        <div>
+
+            <div class="brand">
+                <span class="servicego-home-logo"><img src="/images/Logo.png" alt="Logo" /></span>
+                <span class="servicego-home-logo servicego-home-text" style="color:inherit;">ServicesGo</span>
+            </div>
+
+            <ul>
+
+                <li>
+                    <a href="/Admin/Dashboard">
+                        <span class="toggle-left">
+                            <i class="fa-solid fa-house"></i>
+                            <span>Dashboard</span>
+                        </span>
+                    </a>
+                </li>
+
+                <li class="dropdown-item open">
+
+                    <div class="dropdown-toggle">
+
+                        <div class="toggle-left">
+                            <i class="fa-solid fa-users"></i>
+                            <span>Customers</span>
+                        </div>
+
+                        <i class="fa-solid fa-chevron-down arrow-icon"></i>
+
+                    </div>
+
+                    <ul class="submenu">
+
+                        <li>
+                            <a href="/Admin/ActiveCustomers">
+                                Active
+                            </a>
+                        </li>
+
+                        <li>
+                            <a href="/Admin/BlockedCustomers">
+                                Blocked
+                            </a>
+                        </li>
+
+                    </ul>
+
+                </li>
+                <!-- Service providers -->
+
+                <li class="dropdown-item">
+
+                    <div class="dropdown-toggle">
+
+                        <div class="toggle-left">
+
+                            <i class="fa-solid fa-user-gear"></i>
+
+                            <span>
+                                Service Providers
+                            </span>
+
+                        </div>
+
+                        <i class="fa-solid fa-chevron-down arrow-icon"></i>
+
+                    </div>
+
+
+                    <ul class="submenu">
+
+                        <li>
+
+                            <a href="/Admin/ActiveProviders">
+
+                                Active
+
+                            </a>
+
+                        </li>
+
+                        <li>
+
+                            <a href="/Admin/PendingProviders">
+
+                                Pending
+
+                            </a>
+
+                        </li>
+
+                        <li>
+
+                            <a href="/Admin/BlockedProviders">
+
+                                Blocked
+
+                            </a>
+
+                        </li>
+
+                    </ul>
+
+                </li>
+
+
+                <li>
+                    <a href="/Admin/Complaint">
+                        <span class="toggle-left">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                            <span>Complaints</span>
+                        </span>
+                    </a>
+                </li>
+
+                <li>
+                    <a href="/Admin/WalletRequests">
+                        <span class="toggle-left">
+                            <i class="fa-solid fa-wallet"></i>
+                            <span>Wallet Requests</span>
+                        </span>
+                    </a>
+                </li>
+            </ul>
+
+        </div>
+
+        <div class="logout">
+
+            <a href="@Url.Action("Logout", "Admin")" class="servicego-admin-logout-link">
+                <i class="fa-solid fa-right-from-bracket"></i>
+                <span>Logout</span>
+            </a>
+
+        </div>
+
+    </div>
+
+
+    <!-- Mobile Sidebar Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+
+    <!-- Main content -->
+
+    <div class="main-content">
+
+        <div class="page-header-row">
+
+            <h1 class="page-title">
+                Active Customers
+            </h1>
+
+            <div class="search-container">
+
+                <input type="text"
+                       id="customerSearchInput"
+                       onkeyup="filterCustomerTable()"
+                       placeholder="Search by Name, Email or ID..." />
+
+                <i class="fa-solid fa-magnifying-glass"></i>
+
+            </div>
+
+        </div>
+
+
+        <!-- Customer table -->
+
+        <div class="table-container">
+
+            <table>
+
+                <thead>
+
+                    <tr>
+                        <th>Customer ID</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+
+                </thead>
+
+                <tbody>
+
+                    @if (Model != null && Model.Any())
+                    {
+                        foreach (var cust in Model)
+                        {
+                            var customerCode = "CUS-" + cust.CustomerId;
+
+                            <tr>
+
+                                <td data-label="Customer ID">
+                                    @customerCode
+                                </td>
+
+                                <td data-label="Name">
+                                    <strong>@cust.Name</strong>
+                                </td>
+
+                                <td data-label="Email">
+                                    @cust.Email
+                                </td>
+
+                                <td data-label="Phone">
+                                    @cust.Phone
+                                </td>
+
+                                <td data-label="Status">
+                                    <span class="badge badge-active">
+                                        @cust.Status
+                                    </span>
+                                </td>
+
+                                <td data-label="Actions">
+
+                                    <button type="button"
+                                            class="btn btn-view customer-details-btn"
+                                            data-id="@customerCode"
+                                            data-user="@cust.Name"
+                                            data-email="@cust.Email"
+                                            data-phone="@cust.Phone"
+                                            data-city="@SafeDictionaryValue(ViewBag.CustomerCities, cust.CustomerId.ToString(), "N/A")"
+                                            data-address="@cust.Address"
+                                            data-profile-image="@SafeDictionaryValue(ViewBag.CustomerProfileImages, cust.CustomerId.ToString(), "")"
+                                            data-latitude="@SafeDictionaryValue(ViewBag.CustomerLatitudes, cust.CustomerId.ToString(), "")"
+                                            data-longitude="@SafeDictionaryValue(ViewBag.CustomerLongitudes, cust.CustomerId.ToString(), "")"
+                                            data-date="@cust.JoinedDate">
+
+                                        <i class="fa-solid fa-eye"></i>
+
+                                        Details
+
+                                    </button>
+
+                                </td>
+
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+
+                            <td colspan="6"
+                                style="text-align:center; padding:20px;">
+
+                                No active customers found.
+
+                            </td>
+
+                        </tr>
+                    }
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+
+    <!-- Customer details popup -->
+
+    <div id="detailsPopupModal" class="modal">
+
+        <div class="modal-content">
+
+            <button type="button"
+                    class="modal-close-x sg-card-close"
+                    aria-label="Close"
+                    onclick="closePopModal()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <h2 class="modal-title">
+                Customer Details
+            </h2>
+
+            <div class="pop-row">
+                <span class="pop-label">ID</span>
+                <span class="pop-value" id="popId">N/A</span>
+            </div>
+
+            <div class="pop-row">
+                <span class="pop-label">User</span>
+                <span class="pop-value" id="popUser">N/A</span>
+            </div>
+
+            <div class="pop-row">
+                <span class="pop-label">Email</span>
+                <span class="pop-value" id="popEmail">N/A</span>
+            </div>
+
+            <div class="pop-row">
+                <span class="pop-label">Phone</span>
+                <span class="pop-value" id="popPhone">N/A</span>
+            </div>
+
+            <div class="pop-row">
+                <span class="pop-label">City</span>
+                <span class="pop-value" id="popCity">N/A</span>
+            </div>
+
+            <div class="pop-row">
+                <span class="pop-label">Address</span>
+                <span class="pop-value" id="popAddress">N/A</span>
+            </div>
+
+            <div class="pop-row">
+                <span class="pop-label">Profile Picture</span>
+                <span class="pop-value">
+                    <img id="popProfileImage"
+                         src=""
+                         alt="Customer Profile"
+                         style="width:80px;height:80px;border-radius:50%;object-fit:cover;display:none;border:2px solid #eee;" />
+                    <span id="popProfileImageEmpty">Not Provided</span>
+                </span>
+            </div>
+
+            <div class="pop-row" style="display:block;">
+                <span class="pop-label d-block mb-2">Permanent Location</span>
+                <div id="customerDetailsMap" style="width:100%;height:260px;border-radius:10px;background:#e9ecef;"></div>
+                <a id="customerGoogleMapsLink" href="#" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary mt-2 d-none">
+                    <i class="fa-solid fa-map-location-dot me-1"></i> Open in Google Maps
+                </a>
+            </div>
+
+            <div class="pop-row">
+                <span class="pop-label">Joined Date</span>
+                <span class="pop-value" id="popDate">N/A</span>
+            </div>
+
+            <div class="pop-row">
+                <span class="pop-label">Status</span>
+                <span class="pop-status">Active</span>
+            </div>
+
+            <div class="pop-footer-buttons">
+
+                <button class="pop-btn-block"
+                        id="popBlockActionBtn"
+                        type="button">
+                    Block
+                </button>
+
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- Javascript -->
+
+    <script>
+
+        /* Sidebar mobile open / close */
+
+        document.addEventListener("DOMContentLoaded", function () {
+
+            const sidebar = document.getElementById("sidebarMenu");
+            const menuToggleBtn = document.getElementById("menuToggleBtn");
+            const sidebarCloseBtn = document.getElementById("sidebarCloseBtn");
+            const sidebarOverlay = document.getElementById("sidebarOverlay");
+
+            function openSidebar() {
+
+                sidebar.classList.add("mobile-open");
+                sidebarOverlay.classList.add("show");
+
+                document.body.style.overflow = "hidden";
+            }
+
+            function closeSidebar() {
+
+                sidebar.classList.remove("mobile-open");
+                sidebarOverlay.classList.remove("show");
+
+                document.body.style.overflow = "";
+            }
+
+            /* ☰ button */
+            if (menuToggleBtn) {
+
+                menuToggleBtn.addEventListener("click", function () {
+
+                    openSidebar();
+
+                });
+
+            }
+
+            /* X button */
+            if (sidebarCloseBtn) {
+
+                sidebarCloseBtn.addEventListener("click", function () {
+
+                    closeSidebar();
+
+                });
+
+            }
+
+            /* Outside overlay click */
+            if (sidebarOverlay) {
+
+                sidebarOverlay.addEventListener("click", function () {
+
+                    closeSidebar();
+
+                });
+
+            }
+
+            /* Escape key */
+            document.addEventListener("keydown", function (event) {
+
+                if (event.key === "Escape") {
+
+                    closeSidebar();
+
+                    closePopModal();
+
+                }
+
+            });
+
+
+            /* Sidebar dropdown */
+
+            const dropdownToggles =
+                document.querySelectorAll(".dropdown-toggle");
+
+            dropdownToggles.forEach(function (toggle) {
+
+                toggle.addEventListener("click", function () {
+
+                    this.parentElement.classList.toggle("open");
+
+                });
+
+            });
+
+
+            /* Close sidebar after navigation */
+
+            const sidebarLinks =
+                document.querySelectorAll(".sidebar a");
+
+            sidebarLinks.forEach(function (link) {
+
+                link.addEventListener("click", function () {
+
+                    if (window.innerWidth <= 768) {
+
+                        closeSidebar();
+
+                    }
+
+                });
+
+            });
+
+        });
+
+
+        /* Customer search */
+
+        function filterCustomerTable() {
+
+            var input =
+                document.getElementById("customerSearchInput");
+
+            var filter =
+                input.value.toUpperCase();
+
+            var table =
+                document.querySelector("table");
+
+            var tr =
+                table.getElementsByTagName("tr");
+
+
+            for (var i = 1; i < tr.length; i++) {
+
+                var tds =
+                    tr[i].getElementsByTagName("td");
+
+                if (tds.length > 1) {
+
+                    var txtId =
+                        tds[0].textContent ||
+                        tds[0].innerText;
+
+                    var txtName =
+                        tds[1].textContent ||
+                        tds[1].innerText;
+
+                    var txtEmail =
+                        tds[2].textContent ||
+                        tds[2].innerText;
+
+
+                    if (
+                        txtId.toUpperCase().indexOf(filter) > -1 ||
+                        txtName.toUpperCase().indexOf(filter) > -1 ||
+                        txtEmail.toUpperCase().indexOf(filter) > -1
+                    ) {
+
+                        tr[i].style.display = "";
+
+                    }
+                    else {
+
+                        tr[i].style.display = "none";
+
+                    }
+
+                }
+
+            }
+
+        }
+
+
+        /* Customer details popup */
+
+        let currentCustomerId = null;
+        let customerDetailsMap = null;
+        let customerDetailsMarker = null;
+
+        document.addEventListener("DOMContentLoaded", function () {
+            document.querySelectorAll(".customer-details-btn").forEach(function (button) {
+                button.addEventListener("click", function () {
+                    openPopModal(
+                        this.getAttribute("data-id") || "",
+                        this.getAttribute("data-user") || "",
+                        this.getAttribute("data-email") || "",
+                        this.getAttribute("data-phone") || "",
+                        this.getAttribute("data-city") || "",
+                        this.getAttribute("data-address") || "",
+                        this.getAttribute("data-profile-image") || "",
+                        this.getAttribute("data-latitude") || "",
+                        this.getAttribute("data-longitude") || "",
+                        this.getAttribute("data-date") || ""
+                    );
+                });
+            });
+        });
+
+        function openPopModal(id, user, email, phone, city, address, profileImage, latitude, longitude, joinedDate) {
+            currentCustomerId = id;
+
+            document.getElementById("popId").innerText = id || "N/A";
+            document.getElementById("popUser").innerText = user || "N/A";
+            document.getElementById("popEmail").innerText = email || "N/A";
+            document.getElementById("popPhone").innerText = phone || "N/A";
+            document.getElementById("popCity").innerText = city || "N/A";
+            document.getElementById("popAddress").innerText = address || "N/A";
+            document.getElementById("popDate").innerText = joinedDate || "N/A";
+
+            const profileImg = document.getElementById("popProfileImage");
+            const profileEmpty = document.getElementById("popProfileImageEmpty");
+
+            if (profileImage && profileImg) {
+                profileImg.src = profileImage;
+                profileImg.style.display = "block";
+                if (profileEmpty) profileEmpty.style.display = "none";
+            } else if (profileImg) {
+                profileImg.removeAttribute("src");
+                profileImg.style.display = "none";
+                if (profileEmpty) profileEmpty.style.display = "inline";
+            }
+
+            const lat = parseFloat(latitude);
+            const lng = parseFloat(longitude);
+            const mapElement = document.getElementById("customerDetailsMap");
+            const mapsLink = document.getElementById("customerGoogleMapsLink");
+
+            /*
+             * Location display
+             * 1) If latitude/longitude are available, use the exact coordinates.
+             * 2) If coordinates are missing, use the customer's saved address/city.
+             * This also avoids showing "No permanent location saved" when the
+             * customer has an address but does not have GPS coordinates saved.
+             * The embedded Google Maps iframe does not depend on the Maps
+             * JavaScript API key.
+             */
+            const hasCoordinates = Number.isFinite(lat) && Number.isFinite(lng);
+            const locationText = [address, city].filter(function (value) {
+                return value && value.trim();
+            }).join(", ");
+
+            let googleMapsQuery = "";
+
+            if (hasCoordinates) {
+                googleMapsQuery = lat + "," + lng;
+            } else if (locationText) {
+                googleMapsQuery = locationText;
+            }
+
+            if (mapElement && googleMapsQuery) {
+                const encodedQuery = encodeURIComponent(googleMapsQuery);
+
+                mapElement.innerHTML =
+                    '<iframe ' +
+                    'src="https://www.google.com/maps?q=' + encodedQuery + '&output=embed" ' +
+                    'width="100%" height="100%" style="border:0;" ' +
+                    'loading="lazy" allowfullscreen ' +
+                    'referrerpolicy="no-referrer-when-downgrade" ' +
+                    'title="Customer permanent location"></iframe>';
+
+                if (mapsLink) {
+                    mapsLink.href =
+                        "https://www.google.com/maps/search/?api=1&query=" +
+                        encodedQuery;
+                    mapsLink.classList.remove("d-none");
+                }
+            } else {
+                if (mapElement) {
+                    mapElement.innerHTML =
+                        '<div style="height:100%;display:flex;align-items:center;justify-content:center;color:#6c757d;">No address or permanent location saved.</div>';
+                }
+
+                if (mapsLink) {
+                    mapsLink.classList.add("d-none");
+                }
+            }
+
+            const blockButton = document.getElementById("popBlockActionBtn");
+            if (blockButton) {
+                blockButton.onclick = async function () {
+                    const result = await Swal.fire({
+                        title: "Block Customer?",
+                        text: "Are you sure you want to block " + (user || "this customer") + "?",
+                        icon: "warning",
+                        showCancelButton: true,
+                        confirmButtonText: "Yes, Block",
+                        cancelButtonText: "Cancel",
+                        reverseButtons: true,
+                        confirmButtonColor: "#d97600",
+                        cancelButtonColor: "#6c757d"
+                    });
+
+                    if (!result.isConfirmed) return;
+
+                    var form = document.createElement("form");
+                    form.method = "POST";
+                    form.action = "/Admin/BlockCustomer";
+
+                    var input = document.createElement("input");
+                    input.type = "hidden";
+                    input.name = "id";
+                    input.value = currentCustomerId;
+
+                    form.appendChild(input);
+                    document.body.appendChild(form);
+                    form.submit();
+                };
+            }
+
+            document.getElementById("detailsPopupModal").style.display = "flex";
+        }
+
+        function closePopModal() {
+
+            document.getElementById("detailsPopupModal").style.display =
+                "none";
+
+        }
+
+
+        /* Close popup when clicking outside */
+
+        document.getElementById("detailsPopupModal")
+            .addEventListener("click", function (event) {
+
+                if (event.target === this) {
+
+                    closePopModal();
+
+                }
+
+            });
+
+    </script>
+
+
+    <script id="servicego-admin-load-more">
+        document.addEventListener("DOMContentLoaded", function () {
+            const PAGE_SIZE = 15;
+            const tables = Array.from(document.querySelectorAll("table tbody"));
+
+            tables.forEach(function (tbody) {
+                const rows = Array.from(tbody.children).filter(function (el) {
+                    return el.tagName && el.tagName.toLowerCase() === "tr";
+                });
+
+                if (rows.length <= PAGE_SIZE) return;
+
+                let visible = PAGE_SIZE;
+                rows.forEach(function (row, index) {
+                    if (index >= visible) row.style.display = "none";
+                });
+
+                const button = document.createElement("button");
+                button.type = "button";
+                button.className = "btn btn-outline-warning servicego-load-more";
+                button.textContent = "Load More";
+                button.style.cssText = "display:block;margin:18px auto 5px;min-width:130px;";
+
+                const wrapper = tbody.closest("table");
+                if (wrapper && wrapper.parentNode) {
+                    wrapper.parentNode.insertBefore(button, wrapper.nextSibling);
+                } else {
+                    tbody.parentNode.appendChild(button);
+                }
+
+                button.addEventListener("click", function () {
+                    const next = Math.min(visible + PAGE_SIZE, rows.length);
+                    for (let i = visible; i < next; i++) rows[i].style.display = "";
+                    visible = next;
+                    if (visible >= rows.length) button.remove();
+                });
+            });
+        });
+    </script>
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=@Configuration["GoogleMaps:ApiKey"]"></script>
+
+    <script id="servicego-admin-logout-script">
+        document.addEventListener("DOMContentLoaded", function () {
+            document.querySelectorAll(".logout a").forEach(function (link) {
+                link.addEventListener("click", async function (event) {
+                    event.preventDefault();
+
+                    const result = await Swal.fire({
+                        title: "Logout?",
+                        text: "Are you sure you want to logout?",
+                        icon: "warning",
+                        showCancelButton: true,
+                        confirmButtonText: "Yes, Logout",
+                        cancelButtonText: "Cancel",
+                        reverseButtons: true,
+                        confirmButtonColor: "#d97600",
+                        cancelButtonColor: "#6c757d"
+                    });
+
+                    if (result.isConfirmed) {
+                        window.location.replace(link.getAttribute("href"));
+                    }
+                });
+            });
+        });
+    </script>
+
+    <script id="servicego-unified-ui-script">
+        (function () {
+            function ready(fn) {
+                if (document.readyState !== "loading") fn();
+                else document.addEventListener("DOMContentLoaded", fn);
+            }
+
+            ready(function () {
+
+                /* 1. Highlight the current page in the sidebar and open its group */
+                try {
+                    var path = location.pathname.replace(/\/+$/, "").toLowerCase();
+                    document.querySelectorAll(".sidebar ul li a[href]").forEach(function (a) {
+                        var href = (a.getAttribute("href") || "").replace(/\/+$/, "").toLowerCase();
+                        if (href && href === path) {
+                            a.classList.add("sg-current");
+                            var group = a.closest(".dropdown-item");
+                            if (group) group.classList.add("open");
+                        }
+                    });
+                } catch (e) { }
+
+                /* 2. Give every table cell a label (needed for the phone card layout) */
+                try {
+                    document.querySelectorAll("table").forEach(function (table) {
+                        var heads = table.querySelectorAll("thead th");
+                        if (!heads.length) return;
+                        table.querySelectorAll("tbody tr").forEach(function (row) {
+                            Array.prototype.forEach.call(row.children, function (cell, i) {
+                                if (cell.tagName === "TD" &&
+                                    !cell.hasAttribute("data-label") &&
+                                    !cell.hasAttribute("colspan") &&
+                                    heads[i]) {
+                                    cell.setAttribute("data-label", heads[i].textContent.trim());
+                                }
+                            });
+                        });
+                    });
+                } catch (e) { }
+
+                /* 3. Lock the page behind an open popup */
+                try {
+                    var SEL = ".modal, .complaint-details-overlay";
+                    var syncLock = function () {
+                        var open = Array.prototype.some.call(document.querySelectorAll(SEL), function (el) {
+                            var cs = getComputedStyle(el);
+                            return cs.display !== "none" && cs.visibility !== "hidden" && cs.opacity !== "0";
+                        });
+                        document.documentElement.classList.toggle("sg-modal-open", open);
+                    };
+                    new MutationObserver(function (list) {
+                        for (var i = 0; i < list.length; i++) {
+                            if (list[i].target.matches && list[i].target.matches(SEL)) { syncLock(); return; }
+                        }
+                    }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ["style", "class"] });
+                    syncLock();
+                } catch (e) { }
+
+                /* 4. Swipe left on the menu to close it (uses the page's own close button) */
+                try {
+                    var sidebar = document.querySelector(".sidebar");
+                    var closeBtn = document.getElementById("sidebarCloseBtn");
+                    var sx = null, sy = null;
+                    if (sidebar && closeBtn) {
+                        sidebar.addEventListener("touchstart", function (e) {
+                            sx = e.touches[0].clientX; sy = e.touches[0].clientY;
+                        }, { passive: true });
+                        sidebar.addEventListener("touchend", function (e) {
+                            if (sx === null) return;
+                            var t = e.changedTouches[0];
+                            var dx = t.clientX - sx, dy = Math.abs(t.clientY - sy);
+                            sx = null;
+                            if (dx < -70 && dy < 50 && getComputedStyle(closeBtn).display !== "none") closeBtn.click();
+                        }, { passive: true });
+                    }
+                } catch (e) { }
+            });
+        })();
+    </script>
+
+</body>
+</html>

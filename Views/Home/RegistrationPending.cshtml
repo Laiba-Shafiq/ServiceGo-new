@@ -1,0 +1,327 @@
+﻿@{
+    Layout = null;
+
+    string homeUrl = Url.Action("Index", "Home") ?? "/";
+}
+
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Request Pending - ServiceGo</title>
+
+
+    <style>
+
+        /* Global */
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+        }
+
+
+        html,
+        body {
+            width: 100%;
+            min-height: 100%;
+        }
+
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            width: 100%;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f8f9fa;
+            background-image: linear-gradient( 135deg, #f8f9fa 0%, #e9ecef 100% );
+            caret-color: transparent;
+        }
+
+
+        /* Pending card */
+
+        .pending-card {
+            width: 100%;
+            max-width: 500px;
+            padding: 50px;
+            background-color: #ffffff;
+            border-radius: 25px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.10);
+            text-align: center;
+        }
+
+
+        /* Icon */
+
+        .icon-box {
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #fff8f0;
+            border: 2px solid #f0ad4e;
+            border-radius: 50%;
+        }
+
+
+        .clock-icon {
+            width: 50px;
+            height: 50px;
+            display: block;
+        }
+
+
+        /* Heading */
+
+        .pending-card h2 {
+            margin: 0 0 12px;
+            color: #212529;
+            font-size: 1.75rem;
+            font-weight: 700;
+            line-height: 1.3;
+        }
+
+
+        /* Description */
+
+        .description {
+            margin: 0 0 24px;
+            color: #6c757d;
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+
+
+            .description strong {
+                color: #212529;
+            }
+
+
+        /* Warning note */
+
+        .notice {
+            margin-bottom: 24px;
+            padding: 14px 16px;
+            background-color: #fff3cd;
+            border: 1px solid #ffecb5;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+            color: #212529;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            text-align: left;
+        }
+
+
+            .notice strong {
+                font-weight: 700;
+            }
+
+
+        /* Home button */
+
+        .btn-home {
+            display: block;
+            width: 100%;
+            padding: 12px 30px;
+            background-color: #f0ad4e;
+            color: #ffffff;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: 600;
+            line-height: 1.5;
+            text-align: center;
+            text-decoration: none;
+            transition: background-color 0.2s ease, transform 0.2s ease;
+        }
+
+
+            .btn-home:hover {
+                background-color: #d97600;
+                color: #ffffff;
+                transform: translateY(-3px);
+            }
+
+
+            .btn-home:active {
+                transform: translateY(0);
+            }
+
+
+            .btn-home:focus-visible {
+                outline: 3px solid rgba(240, 173, 78, 0.35);
+                outline-offset: 3px;
+            }
+
+
+        /* Mobile */
+
+        @@media (max-width: 576px) {
+            body {
+                padding: 15px;
+            }
+
+
+            .pending-card {
+                padding: 35px 22px;
+                border-radius: 20px;
+            }
+
+
+            .icon-box {
+                width: 85px;
+                height: 85px;
+                margin-bottom: 20px;
+            }
+
+
+            .clock-icon {
+                width: 42px;
+                height: 42px;
+            }
+
+
+            .pending-card h2 {
+                font-size: 1.45rem;
+            }
+
+
+            .description {
+                font-size: 0.95rem;
+            }
+
+
+            .notice {
+                font-size: 0.85rem;
+            }
+        }
+
+
+        /* Very small mobile */
+
+        @@media (max-width: 360px) {
+            body {
+                padding: 10px;
+            }
+
+
+            .pending-card {
+                padding: 30px 18px;
+            }
+
+
+                .pending-card h2 {
+                    font-size: 1.3rem;
+                }
+
+
+            .btn-home {
+                padding: 11px 20px;
+                font-size: 0.95rem;
+            }
+        }
+
+
+        /* Caret */
+
+        input,
+        textarea,
+        select,
+        button,
+        [contenteditable="true"] {
+            caret-color: auto;
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+    <main class="pending-card">
+
+
+        <!-- Icon -->
+
+        <div class="icon-box"
+             aria-hidden="true">
+
+            <svg class="clock-icon"
+                 xmlns="http://www.w3.org/2000/svg"
+                 viewBox="0 0 16 16"
+                 fill="#f0ad4e">
+
+                <path d="M8.5 5.6a.5.5 0 1 0-1 0v2.9h-3a.5.5 0 0 0 0 1H8a.5.5 0 0 0 .5-.5V5.6z" />
+
+                <path d="M6.5 1A.5.5 0 0 1 7 .5h2a.5.5 0 0 1 0 1v.57c1.36.196 2.594.78 3.584 1.64a.715.715 0 0 1 .012-.013l.354-.354-.354-.353a.5.5 0 0 1 .707-.708l1.414 1.415a.5.5 0 1 1-.707.707l-.353-.354-.354.354a.512.512 0 0 1-.013.012A7 7 0 1 1 7 2.071V1.5a.5.5 0 0 1-.5-.5zM8 3a6 6 0 1 0 .001 12A6 6 0 0 0 8 3z" />
+
+            </svg>
+
+        </div>
+
+
+        <!-- Title -->
+
+        <h2>
+            Verification in Progress
+        </h2>
+
+
+        <!-- Description -->
+
+        <p class="description">
+
+            Thank you for registering with
+            <strong>ServiceGo</strong>.
+
+            Your documents have been submitted and are currently
+            under review by our administration team.
+
+        </p>
+
+
+        <!-- Notice -->
+
+        <div class="notice">
+
+            <strong>Note:</strong>
+
+            Access to your dashboard will be granted once your
+            profile is verified. Please check back within 24 hours.
+
+        </div>
+
+
+        <!-- Home button -->
+
+        <a href="@homeUrl"
+           class="btn-home">
+
+            Back to Home Page
+
+        </a>
+
+
+    </main>
+
+
+</body>
+
+</html>
